@@ -30,7 +30,9 @@ export class GufeSolvent extends GufeElement<SolventComponentViz> {
     host.appendChild(body);
 
     // Every field the schema requires, in the order a reader asks for them:
-    // what the solvent is, then what is dissolved in it, then its identity.
+    // what the solvent is, then what is dissolved in it. The gufe key is not
+    // among them: it is the identity gufe hashes objects by, not a fact about
+    // the solvent, and a reader looking at bulk conditions has no use for it.
     const panel = card();
     panel.style.maxWidth = "560px";
     panel.style.width = "100%";
@@ -40,7 +42,6 @@ export class GufeSolvent extends GufeElement<SolventComponentViz> {
     panel.appendChild(fieldRow("Negative ion", payload.negative_ion));
     panel.appendChild(fieldRow("Ion concentration", payload.ion_concentration));
     panel.appendChild(fieldRow("Neutralize", payload.neutralize ? "yes" : "no"));
-    panel.appendChild(fieldRow("gufe key", payload["gufe-key"], true));
     body.appendChild(panel);
 
     return {};

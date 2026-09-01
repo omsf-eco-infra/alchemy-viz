@@ -101,9 +101,15 @@ function labelsOf(stateA: ChemicalSystemViz, stateB: ChemicalSystemViz): string[
   return [...new Set([...Object.keys(stateA.components ?? {}), ...Object.keys(stateB.components ?? {})])].sort();
 }
 
-function describe(component: ComponentViz | undefined): { name: string; type: string } | null {
+/**
+ * A cell's two lines: what the component is called, and - only where nothing
+ * can draw it - its gufe class. The class name of a component that does draw
+ * says nothing the row's own label and the picture do not, so it is left off
+ * here as it is in the chemical-system list.
+ */
+function describe(component: ComponentViz | undefined): { name: string; type: string | null } | null {
   if (!component) return null;
-  const type = component.type === "UnknownComponentViz" ? component.gufe_type : component.type.replace(/Viz$/, "");
+  const type = component.type === "UnknownComponentViz" ? component.gufe_type : null;
   return { name: component.name || "(unnamed)", type };
 }
 
@@ -139,7 +145,7 @@ function componentCell(
   }
   cell.style.borderColor = status === "unchanged" ? T.cardBorder : STATUS_COLOR[status];
   cell.appendChild(el("span", `font-size:${FONT.body};font-weight:600;color:${T.textPrimary};`, described.name));
-  cell.appendChild(typeBadge(described.type));
+  if (described.type) cell.appendChild(typeBadge(described.type));
   return { cell, sideMark };
 }
 

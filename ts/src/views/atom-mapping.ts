@@ -917,7 +917,10 @@ export class GufeAtomMapping extends GufeElement<LigandAtomMappingViz> {
       );
       stage.appendChild(body);
 
-      // With no header strip, Info is where the payload identifies itself.
+      // With no header strip, Info is where the payload names itself. Only
+      // names it: the gufe class and the gufe key that used to sit under and
+      // after this line were Python and hashing vocabulary, and what this
+      // payload is, the two molecules and the correspondence already say.
       const heading = el("div", "display:flex;flex-direction:column;gap:2px;");
       heading.appendChild(
         el(
@@ -926,7 +929,6 @@ export class GufeAtomMapping extends GufeElement<LigandAtomMappingViz> {
           payload.name || `${nameA} to ${nameB}`,
         ),
       );
-      heading.appendChild(el("div", `font-size:${FONT.body};color:${TEXT.faint};`, "LigandAtomMapping"));
       body.appendChild(heading);
 
       // The chips are the whole of the colour legend, and in a view with no
@@ -1044,13 +1046,6 @@ export class GufeAtomMapping extends GufeElement<LigandAtomMappingViz> {
         body.appendChild(notes);
       }
 
-      body.appendChild(
-        el(
-          "div",
-          `${NOTE}overflow-wrap:anywhere;`,
-          `gufe key: ${payload["gufe-key"]}`,
-        ),
-      );
     };
 
     const render = (): void => {

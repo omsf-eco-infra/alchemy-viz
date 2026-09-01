@@ -40,7 +40,6 @@ export class GufeProtocol extends GufeElement<ProtocolViz> {
     panel.style.maxWidth = "460px";
     panel.appendChild(fieldRow("gufe class", payload.gufe_type, true));
     if (payload.name) panel.appendChild(fieldRow("Name", payload.name));
-    panel.appendChild(fieldRow("gufe key", payload["gufe-key"], true));
     panel.appendChild(
       el(
         "div",

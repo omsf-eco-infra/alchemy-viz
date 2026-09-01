@@ -40,16 +40,24 @@ export function systemPayloadFor(system: ChemicalSystemViz, registry: RegistryIn
   return { ...system, registry: entriesFor(registry, Object.values(system.components ?? {})) };
 }
 
-/** What to call a component in the list: its own name, or its type. */
+/** What to call a component in the list: its own name, or what little is left. */
 function componentLabel(component: ComponentViz): string {
-  return component.name || component.type.replace(/Viz$/, "");
+  if (component.name) return component.name;
+  return component.type === "UnknownComponentViz" ? component.gufe_type : "(unnamed)";
 }
 
-/** The gufe class a component payload stands for, for the badge. */
-function componentType(component: ComponentViz): string {
-  return component.type === "UnknownComponentViz"
-    ? component.gufe_type
-    : component.type.replace(/Viz$/, "");
+/**
+ * The badge under a component, where there is one worth drawing.
+ *
+ * A component this can draw says what it is by being drawn: a picture of a
+ * molecule and a table of bulk conditions are not mistakeable for one another,
+ * so "SmallMoleculeComponent" and "SolventComponent" beside them are Python
+ * class names spent on a distinction the pane below already makes. A component
+ * nothing can draw is the exception - its gufe class is the only thing the
+ * payload says about it, so that one keeps its badge.
+ */
+function componentBadge(component: ComponentViz): HTMLSpanElement | null {
+  return component.type === "UnknownComponentViz" ? typeBadge(component.gufe_type) : null;
 }
 
 export class GufeChemicalSystem extends GufeElement<ChemicalSystemViz> {
@@ -145,7 +153,8 @@ export class GufeChemicalSystem extends GufeElement<ChemicalSystemViz> {
       );
       button.appendChild(el("span", `font-weight:700;color:${T.textPrimary};`, label));
       button.appendChild(el("span", `font-size:${FONT.small};color:${T.textMuted};`, componentLabel(component)));
-      button.appendChild(typeBadge(componentType(component)));
+      const badge = componentBadge(component);
+      if (badge) button.appendChild(badge);
       button.onclick = () => select(index);
       buttons.push(button);
       list.appendChild(button);

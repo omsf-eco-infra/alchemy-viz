@@ -613,15 +613,18 @@ describe("<gufe-solvent>", () => {
     document.body.replaceChildren();
   });
 
-  it("prints every field a SolventComponent carries", () => {
+  it("prints the conditions a SolventComponent carries, and not its gufe key", () => {
     const payload = readExample("solvent.json");
     const node = mount("gufe-solvent", payload);
     const text = node.textContent ?? "";
 
-    for (const field of ["name", "smiles", "positive_ion", "negative_ion", "ion_concentration", "gufe-key"] as const) {
+    for (const field of ["name", "smiles", "positive_ion", "negative_ion", "ion_concentration"] as const) {
       expect(text).toContain(String(payload[field]));
     }
     expect(text).toContain(payload.neutralize ? "yes" : "no");
+    // The key is how gufe hashes the object, not a fact about the solvent, and
+    // it drags the class name in with it.
+    expect(text).not.toContain(String(payload["gufe-key"]));
   });
 
   it("draws no picture: there is nothing structural to draw", () => {
@@ -715,6 +718,34 @@ describe("<gufe-chemical-system>", () => {
     await flush();
 
     expect(node.querySelector("gufe-view")).toBe(before);
+  });
+
+  it("badges a component nobody can draw, and no class name beside one it can", async () => {
+    // A ligand and a solvent are told apart by the pictures under them - a
+    // depiction and a table of conditions - so "SmallMoleculeComponent" and
+    // "SolventComponent" in the strip were Python vocabulary the reader is
+    // not owed. A component with no view is the exception: its gufe class is
+    // all the payload says about it.
+    const payload = structuredClone(readExample("chemical_system.json")) as {
+      components: Record<string, string>;
+      registry: { type: string; "gufe-key": string; name: string; gufe_type?: string }[];
+    };
+    payload.components["mystery"] = "SomethingElse-1";
+    payload.registry.push({
+      type: "UnknownComponentViz",
+      "gufe-key": "SomethingElse-1",
+      name: "",
+      gufe_type: "SomethingElse",
+    });
+
+    const node = mount("gufe-chemical-system", payload);
+    await flush();
+
+    const strip = node.querySelectorAll("button");
+    const text = Array.from(strip, (b) => b.textContent ?? "").join(" ");
+    expect(text).not.toContain("SmallMoleculeComponent");
+    expect(text).not.toContain("SolventComponent");
+    expect(text).toContain("SomethingElse");
   });
 
   it("survives a label whose key resolves to nothing, and says so", async () => {
@@ -1247,7 +1278,10 @@ describe("<gufe-atom-mapping>", () => {
     // Uppercased by CSS rather than shouted in the DOM, so the text a
     // screen reader gets is sentence case.
     expect(text).toContain("Correspondence");
-    expect(text).toContain("gufe key");
+    // The gufe key and the class name are not among them: neither says anything
+    // about the mapping that the numbers and the correspondence do not.
+    expect(text).not.toContain("gufe key");
+    expect(text).not.toContain("LigandAtomMapping");
   });
 
   it("gives the correspondence a row per atom rather than one run-on line", async () => {
@@ -1506,7 +1540,6 @@ describe("<gufe-alchemical-network>", () => {
     expect(embedded, "the node pane did not mount the chemical-system view").toBeTruthy();
     const text = embedded!.textContent ?? "";
     expect(text).toContain("ligand");
-    expect(text).toContain("SmallMoleculeComponent");
     expect(text).not.toContain("not in its registry");
     // The nested dispatcher drew the ligand rather than stopping at the list.
     expect(embedded!.querySelector("gufe-small-molecule")).toBeTruthy();
