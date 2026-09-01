@@ -621,10 +621,26 @@ describe("<gufe-solvent>", () => {
     for (const field of ["name", "smiles", "positive_ion", "negative_ion", "ion_concentration"] as const) {
       expect(text).toContain(String(payload[field]));
     }
-    expect(text).toContain(payload.neutralize ? "yes" : "no");
+    // The concentration is set as a number and a unit, and still copies out as
+    // the one string the payload carried - which the loop above checks.
+    expect(text).toContain("Neutralized");
     // The key is how gufe hashes the object, not a fact about the solvent, and
     // it drags the class name in with it.
     expect(text).not.toContain(String(payload["gufe-key"]));
+  });
+
+  it("says a solvent is not neutralized rather than leaving the reader to a 'no'", () => {
+    const payload = { ...readExample("solvent.json"), neutralize: false };
+    const text = mount("gufe-solvent", payload).textContent ?? "";
+    expect(text).toContain("Not neutralized");
+  });
+
+  it("does not repeat the name when it is the composition gufe already prints", () => {
+    // gufe names a solvent after what is in it, so a name that is the SMILES
+    // over again is not a second fact.
+    const payload = { ...readExample("solvent.json"), name: "O" };
+    const text = mount("gufe-solvent", payload).textContent ?? "";
+    expect(text).not.toContain("Name");
   });
 
   it("draws no picture: there is nothing structural to draw", () => {
@@ -1493,6 +1509,20 @@ describe("<gufe-transformation>", () => {
     // The two systems share a solvent and differ in their ligand.
     expect(text).toContain("solvent");
     expect(text).toContain("ligand");
+  });
+
+  it("writes a label the two states agree on once, not once per state", async () => {
+    const node = mount("gufe-transformation", readExample("transformation.json"));
+    await flush();
+    // Both states name the same solvent by the same gufe key, so a second copy
+    // of it would be a second reading of one fact - and the diff is a column
+    // beside the molecules now, where that row is the scarce thing.
+    const solvent = "O, Na+, Cl-";
+    const text = node.textContent ?? "";
+    expect(text.split(solvent)).toHaveLength(2);
+    // The ligand does differ, so that one is written twice, marked A and B.
+    expect(text).toContain("State A");
+    expect(text).toContain("State B");
   });
 
   it("embeds the mapping view rather than drawing its own", async () => {

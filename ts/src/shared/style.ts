@@ -39,6 +39,13 @@ export const FONT = {
   heading: "13px",
   /** A view's title. */
   title: "15px",
+  /**
+   * The one value a card is built around: a formula, a concentration. Large
+   * enough that a reader takes it from the shape of the card rather than from
+   * reading a row, which is the only reason to use it - a card with two of
+   * these has no hierarchy left.
+   */
+  display: "26px",
 } as const;
 
 export const WEIGHT = {
@@ -278,6 +285,12 @@ export const CHIP = {
     `border:1px solid transparent;border-radius:${RADIUS.pill};` +
     `font-family:inherit;font-size:${FONT.small};color:${T.textMuted};`,
   button: `cursor:pointer;background:none;border-color:${T.btnBorder};`,
+  /**
+   * A chip that is read rather than clicked: a value the card is quoting, in a
+   * box that says so. Drawn like a button and deliberately not one, so it does
+   * not invite the click a `button` chip answers.
+   */
+  outline: `background:${T.btnBg};border-color:${T.btnBorder};color:${T.textPrimary};`,
   active: `cursor:pointer;background:${T.cardBgActive};border-color:${T.btnBorder};color:${T.textPrimary};`,
 } as const;
 

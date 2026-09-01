@@ -2,20 +2,33 @@
  * `<gufe-transformation>` - what changes between two chemical systems, and how
  * the atoms line up while it changes.
  *
- * The top half is a diff. Both states are dictionaries keyed by label, so the
+ * One of them is a diff. Both states are dictionaries keyed by label, so the
  * comparison is done per label rather than per position: "protein" in state A is
  * compared with "protein" in state B, and a label present on one side only is an
  * addition or a removal rather than a silent mismatch.
  *
- * The bottom half embeds `<gufe-atom-mapping>` - the same element the standalone
+ * The other embeds `<gufe-atom-mapping>` - the same element the standalone
  * mapping payload renders through, and the same one the ligand-network view
  * embeds. A NonTransformation arrives here as a diff with no differences and no
  * mappings, which is exactly what it is.
+ *
+ * They sit side by side, the diff in a column beside the molecules rather than
+ * in a band above them, because the place this view is read most is an
+ * alchemical network's detail pane - a tall, narrow pane, where a diff stacked
+ * on top of a picture spent the height on the half that needs it least, and
+ * both halves came out cramped. The diff wants width for a name and nothing
+ * more; the molecules want everything left over, in both directions.
+ *
+ * The diff is therefore written down the column rather than across it: a label,
+ * then what each state has under it, which is one line when the two states
+ * agree - a solvent shared by both sides is one fact, not two - and two marked
+ * A and B when they do not. Under a pane too narrow for two columns of
+ * anything, the same blocks become a band above the molecules instead.
  */
 
 import { buttonGroup, centredMessage, el, headerStrip, onWidth, statChip, typeBadge } from "../shared/dom.js";
 import { defineElement, GufeElement, type ViewHandle } from "../shared/element.js";
-import { FONT, PANE_LABEL } from "../shared/style.js";
+import { FONT, PANE_LABEL, RADIUS, SPACE, WEIGHT } from "../shared/style.js";
 import { T } from "../shared/theme.js";
 import { buildRegistry, entriesFor, entryLabel, lookup, lookupOfType, type RegistryIndex } from "../schema/registry.js";
 import { mappingPayloadFor } from "./atom-mapping.js";
@@ -31,14 +44,20 @@ import type {
 export type DiffStatus = "unchanged" | "changed" | "added" | "removed";
 
 /**
- * The width below which the two states stop being columns and become rows.
+ * The width below which the diff stops being a column beside the molecules and
+ * becomes a band above them.
  *
- * A diff is two cells and a label gutter, and this view is mounted inside an
- * alchemical network's detail pane as often as it is opened on its own. Below
- * this, side by side leaves each state about a hundred pixels, which is not
- * enough to read a ligand's name in.
+ * Below this, taking a column's worth of width off the picture leaves it too
+ * little to draw two molecules in, and the diff is the one of the two that
+ * still reads at any width.
  */
 const STACK_BELOW = 460;
+
+/** How wide that column is, where there is room for one. */
+const STATES_WIDTH = 210;
+
+/** ... and how much of the view it may take, on a pane barely wider than it. */
+const STATES_MAX_SHARE = "42%";
 
 /**
  * A transformation, cut loose as a payload that stands on its own.
@@ -114,39 +133,86 @@ function describe(component: ComponentViz | undefined): { name: string; type: st
 }
 
 /**
- * One side of one row: what this state has under this label, if anything.
+ * What one state has under one label: a marked line, or a dashed "absent".
  *
- * The `side` marker is what the column headings say when the two cells are side
- * by side, so it is built hidden and shown only once they stack - at which point
- * nothing else on the row distinguishes state A's cell from state B's.
+ * `side` is drawn on the line rather than over a column of them, which is what
+ * lets the two states be written down the column instead of across it. It is
+ * left off where the states agree, because such a line is drawn once and stands
+ * for both of them.
  */
-function componentCell(
+function componentLine(
   component: ComponentViz | undefined,
   status: DiffStatus,
-  side: "A" | "B",
-): { cell: HTMLDivElement; sideMark: HTMLSpanElement } {
-  const cell = el(
+  side: "A" | "B" | null,
+): HTMLDivElement {
+  const line = el(
     "div",
-    "flex:1 1 50%;min-width:0;display:flex;flex-direction:column;gap:4px;padding:8px 10px;border-radius:8px;" +
-      `background:${T.cardBg};border:1px solid ${T.cardBorder};`,
+    `min-width:0;display:flex;align-items:baseline;gap:${SPACE.md};padding:5px ${SPACE.lg};` +
+      `border-radius:${RADIUS.md};background:${T.cardBg};border:1px solid ${T.cardBorder};`,
   );
-  const sideMark = el(
-    "span",
-    `display:none;font-size:${FONT.tiny};font-weight:700;letter-spacing:.08em;color:${T.textMuted2};`,
-    side,
-  );
-  cell.appendChild(sideMark);
+  if (side) {
+    line.appendChild(
+      el(
+        "span",
+        `flex:0 0 auto;font-size:${FONT.tiny};font-weight:${WEIGHT.bold};letter-spacing:.08em;color:${T.textMuted2};`,
+        side,
+      ),
+    );
+  }
   const described = describe(component);
   if (!described) {
-    cell.style.background = "transparent";
-    cell.style.borderStyle = "dashed";
-    cell.appendChild(el("span", `font-size:${FONT.body};color:${T.textMuted2};`, "absent"));
-    return { cell, sideMark };
+    line.style.background = "transparent";
+    line.style.borderStyle = "dashed";
+    line.appendChild(el("span", `font-size:${FONT.body};color:${T.textMuted2};`, "absent"));
+    return line;
   }
-  cell.style.borderColor = status === "unchanged" ? T.cardBorder : STATUS_COLOR[status];
-  cell.appendChild(el("span", `font-size:${FONT.body};font-weight:600;color:${T.textPrimary};`, described.name));
-  if (described.type) cell.appendChild(typeBadge(described.type));
-  return { cell, sideMark };
+  line.style.borderColor = status === "unchanged" ? T.cardBorder : STATUS_COLOR[status];
+  const name = el(
+    "span",
+    `min-width:0;font-size:${FONT.body};font-weight:600;color:${T.textPrimary};overflow-wrap:anywhere;`,
+    described.name,
+  );
+  name.title = described.name;
+  line.appendChild(name);
+  if (described.type) line.appendChild(typeBadge(described.type));
+  return line;
+}
+
+/**
+ * One label of the diff: what it is called, then what the states have under it.
+ *
+ * An unchanged label is one line rather than the same line twice. The two
+ * states hold the same gufe key there, so a second copy would be a second
+ * reading of one fact - and in a column this narrow, the row it costs is the
+ * row a changed label further down needs.
+ */
+function diffBlock(
+  label: string,
+  status: DiffStatus,
+  a: ComponentViz | undefined,
+  b: ComponentViz | undefined,
+): HTMLDivElement {
+  const block = el("div", `display:flex;flex-direction:column;gap:${SPACE.sm};min-width:0;`);
+  const head = el("div", `display:flex;align-items:center;gap:${SPACE.md};min-width:0;`);
+  head.appendChild(
+    el("span", `width:8px;height:8px;border-radius:50%;flex-shrink:0;background:${STATUS_COLOR[status]};`),
+  );
+  const name = el(
+    "span",
+    `min-width:0;font-size:${FONT.body};font-weight:${WEIGHT.bold};color:${T.textPrimary};overflow-wrap:anywhere;`,
+    label,
+  );
+  name.title = status;
+  head.appendChild(name);
+  block.appendChild(head);
+
+  if (status === "unchanged") {
+    block.appendChild(componentLine(a, status, null));
+    return block;
+  }
+  block.appendChild(componentLine(a, status, "A"));
+  block.appendChild(componentLine(b, status, "B"));
+  return block;
 }
 
 /** "A to B" for a mapping whose endpoints are keys, for the picker. */
@@ -185,11 +251,27 @@ export class GufeTransformation extends GufeElement<TransformationViz> {
     }
     const labels = labelsOf(stateA, stateB);
 
-    // --- the diff ---
-    const diff = el("div", "flex:0 0 auto;max-height:45%;overflow:auto;padding:12px 14px;");
-    host.appendChild(diff);
+    // The two halves, in a row: the diff on the left, everything the mapping
+    // draws on the right. The width watcher below turns this into a column on a
+    // pane too narrow to divide.
+    const body = el("div", "flex:1;min-width:0;min-height:0;display:flex;overflow:hidden;");
+    host.appendChild(body);
 
-    const heads = el("div", "display:flex;gap:10px;padding:0 0 6px 120px;");
+    // --- the diff ---
+    const diff = el(
+      "div",
+      `min-width:0;min-height:0;overflow:auto;padding:12px 14px;display:flex;flex-direction:column;` +
+        `gap:12px;background:${T.panelBg};`,
+    );
+    body.appendChild(diff);
+
+    const mappingSide = el("div", "flex:1;min-width:0;min-height:0;display:flex;flex-direction:column;");
+    body.appendChild(mappingSide);
+
+    // Which state is which, once at the top, rather than as headings over two
+    // columns of cells - there are no columns to head any more, and the A and B
+    // marks on the lines below point back up at these two.
+    const heads = el("div", `display:flex;flex-direction:column;gap:${SPACE.xs};`);
     for (const [side, state] of [
       ["State A", stateA],
       ["State B", stateB],
@@ -197,80 +279,71 @@ export class GufeTransformation extends GufeElement<TransformationViz> {
       heads.appendChild(
         el(
           "div",
-          `flex:1 1 50%;min-width:0;font-size:${FONT.small};font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:${T.textMuted2};`,
+          `min-width:0;font-size:${FONT.small};font-weight:${WEIGHT.bold};letter-spacing:.06em;` +
+            `text-transform:uppercase;color:${T.textMuted2};overflow-wrap:anywhere;`,
           `${side}${state.name ? ` - ${state.name}` : ""}`,
         ),
       );
     }
     diff.appendChild(heads);
 
-    // Kept so the width watcher below can turn every row from two columns into
-    // two rows without rebuilding the diff.
-    const rows: HTMLDivElement[] = [];
-    const gutters: HTMLDivElement[] = [];
-    const sideMarks: HTMLSpanElement[] = [];
-
+    const present = new Set<DiffStatus>();
     for (const label of labels) {
       const keyA = stateA.components?.[label];
       const keyB = stateB.components?.[label];
       const status = diffStatus(keyA, keyB);
-      const a = lookup(registry, keyA) as ComponentViz | undefined;
-      const b = lookup(registry, keyB) as ComponentViz | undefined;
-
-      const row = el("div", "display:flex;align-items:stretch;gap:10px;padding:4px 0;");
-      const gutter = el("div", "display:flex;align-items:center;gap:6px;min-width:0;");
-      gutter.appendChild(
-        el("span", `width:8px;height:8px;border-radius:50%;flex-shrink:0;background:${STATUS_COLOR[status]};`),
+      present.add(status);
+      diff.appendChild(
+        diffBlock(
+          label,
+          status,
+          lookup(registry, keyA) as ComponentViz | undefined,
+          lookup(registry, keyB) as ComponentViz | undefined,
+        ),
       );
-      const name = el("span", `font-size:${FONT.body};font-weight:700;color:${T.textPrimary};overflow-wrap:anywhere;`, label);
-      name.title = status;
-      gutter.appendChild(name);
-      row.appendChild(gutter);
-      for (const [component, side] of [
-        [a, "A"],
-        [b, "B"],
-      ] as const) {
-        const drawn = componentCell(component, status, side);
-        row.appendChild(drawn.cell);
-        sideMarks.push(drawn.sideMark);
-      }
-      rows.push(row);
-      gutters.push(gutter);
-      diff.appendChild(row);
     }
 
-    // Two columns while there is room for two, one column under the label when
-    // there is not. The column headings only mean anything in the first of
-    // those, so they hand over to the per-cell A/B marks in the second.
+    // Only the statuses this transformation actually has, and only once there
+    // are two of them to tell apart: a key to a single colour explains a
+    // distinction the reader is not being asked to make.
+    if (present.size > 1) {
+      const legend = el(
+        "div",
+        `display:flex;flex-wrap:wrap;gap:${SPACE.lg} 12px;padding-top:${SPACE.sm};` +
+          `font-size:${FONT.small};color:${T.textMuted};`,
+      );
+      for (const status of ["unchanged", "changed", "added", "removed"] as DiffStatus[]) {
+        if (present.has(status)) legend.appendChild(statChip(status, "", STATUS_COLOR[status]));
+      }
+      diff.appendChild(legend);
+    }
+
+    // --- the mappings ---
+    // Named only where the two halves are stacked, which is the one arrangement
+    // in which a reader could take the picture for more of the diff. Beside it,
+    // the label is a band of height spent saying what the molecules under it
+    // already say.
+    const mappingLabel = el("div", PANE_LABEL, "Atom mapping");
+    mappingSide.appendChild(mappingLabel);
+
+    // A column beside the molecules while there is room for one, a band above
+    // them when there is not.
     let stacked: boolean | null = null;
     const stopWatching = onWidth(host, (width) => {
       const narrow = width > 0 && width < STACK_BELOW;
       if (narrow === stacked) return;
       stacked = narrow;
-      heads.style.display = narrow ? "none" : "flex";
-      for (const row of rows) row.style.flexDirection = narrow ? "column" : "row";
-      for (const gutter of gutters) gutter.style.flex = narrow ? "0 0 auto" : "0 0 110px";
-      for (const mark of sideMarks) mark.style.display = narrow ? "block" : "none";
+      body.style.flexDirection = narrow ? "column" : "row";
+      diff.style.flex = narrow ? "0 0 auto" : `0 0 ${STATES_WIDTH}px`;
+      diff.style.maxWidth = narrow ? "none" : STATES_MAX_SHARE;
+      diff.style.maxHeight = narrow ? "45%" : "none";
+      diff.style.borderRight = narrow ? "none" : `1px solid ${T.splitBorder}`;
+      diff.style.borderBottom = narrow ? `1px solid ${T.splitBorder}` : "none";
+      mappingLabel.style.display = narrow ? "block" : "none";
     });
 
-    const legend = el(
-      "div",
-      `display:flex;flex-wrap:wrap;gap:12px;padding:8px 0 0;font-size:${FONT.small};color:${T.textMuted};`,
-    );
-    for (const status of ["unchanged", "changed", "added", "removed"] as DiffStatus[]) {
-      legend.appendChild(statChip(status, "", STATUS_COLOR[status]));
-    }
-    diff.appendChild(legend);
-
-    // --- the mappings ---
-    const mappingLabel = el(
-      "div",PANE_LABEL,
-      "Atom mapping",
-    );
-    host.appendChild(mappingLabel);
-
     if (!mappings.length) {
-      host.appendChild(
+      mappingSide.appendChild(
         centredMessage(
           "This transformation carries no atom mapping - nothing here maps one small molecule onto another.",
         ),
@@ -308,10 +381,10 @@ export class GufeTransformation extends GufeElement<TransformationViz> {
           (id) => show(Number(id)),
         ),
       );
-      host.appendChild(picker);
+      mappingSide.appendChild(picker);
     }
 
-    host.appendChild(child);
+    mappingSide.appendChild(child);
 
     return {
       onResize: () => child.resize?.(),
