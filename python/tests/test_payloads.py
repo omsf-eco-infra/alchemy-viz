@@ -497,6 +497,51 @@ class TestBuilders:
         assert "pdb" not in solvent
         _validate(payload)
 
+    def test_the_complex_fixture_carries_a_ligand_actually_in_the_binding_site(self):
+        """The one claim ``chemical_system_complex.json`` exists to make.
+
+        A protein and a ligand in one system prove nothing on their own: a view
+        that draws both at once is only worth having if the two share a frame,
+        and a fixture whose ligand floats a hundred angstrom off the protein
+        would make that view look broken while the code was right. Nothing
+        arranges the pose - the ligands were docked upstream in OpenFE's RBFE
+        tutorial and are carried through gufe unmoved - so this asserts the
+        property rather than a transformation: the ligand is in contact with the
+        protein, and not on top of it.
+
+        The bounds are loose on purpose. This is not re-deriving the docking; it
+        is catching a fixture rebuilt from ligands and a protein that no longer
+        belong together, which is a hundred-angstrom error and not a tenth of
+        one.
+        """
+        import math
+
+        from .conftest import read_example
+
+        payload = read_example("chemical_system_complex.json")
+        registry = _registry(payload)
+        ligand = registry[payload["components"]["ligand"]]
+        protein = registry[payload["components"]["protein"]]
+
+        lines = ligand["sdf"].splitlines()
+        atom_count = int(lines[3][0:3])
+        ligand_atoms = [tuple(float(line[i : i + 10]) for i in (0, 10, 20)) for line in lines[4 : 4 + atom_count]]
+        assert ligand_atoms
+
+        protein_atoms = [
+            (float(line[30:38]), float(line[38:46]), float(line[46:54]))
+            for line in protein["pdb"].splitlines()
+            if line.startswith(("ATOM", "HETATM"))
+        ]
+        assert protein_atoms
+
+        nearest = min(math.dist(a, b) for a in protein_atoms for b in ligand_atoms)
+        # Touching: a docked ligand is in van der Waals contact with the site.
+        assert nearest < 4.0, f"the ligand is {nearest:.1f} A from the nearest protein atom, so it is not bound"
+        # And not fused into it, which is what a frame mismatch that happened to
+        # land nearby would look like.
+        assert nearest > 1.0, f"the ligand overlaps the protein at {nearest:.1f} A"
+
     def test_transformation_names_its_states_and_protocol_by_key(self, every_payload_type):
         """A transformation's states are complete ChemicalSystemViz objects, and
         its protocol is a complete ProtocolViz - both reached through the

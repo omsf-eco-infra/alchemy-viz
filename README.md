@@ -518,7 +518,7 @@ instead.
 
 ### How the two sides are kept honest
 
-`examples/*.json` is the hinge. The same sixteen golden payloads - built from real
+`examples/*.json` is the hinge. The same golden payloads - built from real
 gufe objects by `scripts/make_examples.py` - feed pytest, vitest, the
 drag-and-drop page and the gallery. `python/tests/mutations.json` declares a mutation
 matrix **once, as data**, and both suites apply it against the same schema file:

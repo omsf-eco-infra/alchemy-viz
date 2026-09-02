@@ -23,7 +23,11 @@ export interface ThreeDmolViewer {
   setStyle(selection: object, style: object): void;
   removeAllSurfaces(): void;
   addSurface(type: unknown, style: object, selection: object): unknown;
-  zoomTo(): void;
+  /**
+   * Frame the scene, or just the part of it `selection` names - which is how a
+   * 30-atom ligand is found inside a 5000-atom protein.
+   */
+  zoomTo(selection?: object): void;
   /** Multiply the current zoom. `shared/interact.ts` is what bounds it. */
   zoom(factor: number): void;
   /**

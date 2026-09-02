@@ -233,9 +233,10 @@
       "expect": "valid"
     },
     {
-      "$comment": "Registry entries are sorted by (type, gufe-key), so entry 0 of a chemical system's registry and of a ligand network's registry is a small molecule in both. The rows below that need a specific type say so with `types`; the rest hold for any entry at all.",
+      "$comment": "Registry entries are sorted by (type, gufe-key), so which type sits at a given index depends on what else is in the payload. A row that only holds for some of them says so with `pathType`, which selects on the entry rather than on its position; `types` selects on the payload the entry is in. The rest hold for any entry at all.",
       "id": "registry-entry-carrying-two-structure-formats",
       "why": "The same exclusivity, one level down: a component in a registry is validated as itself, so the rule holds there identically. This is what replaces the old 'nested component' rows - components are reached through the registry now, not inlined.",
+      "pathType": ["ChemicalSystemViz", "SmallMoleculeComponentViz"],
       "op": "add",
       "path": "/registry/0/pdb",
       "value": "ATOM      1  N   ALA A   1\nEND\n",
@@ -244,13 +245,25 @@
     },
     {
       "id": "registry-solvent-carrying-an-sdf",
-      "why": "Same, from the other side: a chemical system's registry holds its solvent at entry 1, and a solvent is a specification rather than a structure.",
+      "why": "Same, from the other side: a solvent is a specification rather than a structure, so an sdf is as foreign to it in a registry as anywhere else.",
       "types": ["ChemicalSystemViz"],
+      "pathType": ["SolventComponentViz"],
       "op": "add",
       "path": "/registry/1/sdf",
       "value": "solvent\n  0  0\nEND\n",
       "expect": "invalid",
       "pointerContains": "/registry/1"
+    },
+    {
+      "id": "registry-protein-carrying-an-sdf",
+      "why": "A bound complex is the one payload whose registry holds a pdb entry beside an sdf entry, so it is the one that can ask whether an entry may be both. It may not: each component subschema declares only its own structure field.",
+      "types": ["ChemicalSystemViz"],
+      "pathType": ["ProteinComponentViz", "SolvatedPDBComponentViz", "ProteinMembraneComponentViz"],
+      "op": "add",
+      "path": "/registry/0/sdf",
+      "value": "ligand\n  0  0\nEND\n",
+      "expect": "invalid",
+      "pointerContains": "/registry/0"
     },
     {
       "id": "registry-small-molecule-carrying-solvent-fields",

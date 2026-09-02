@@ -282,6 +282,48 @@ def _tyk2_rbfe_network() -> gufe.AlchemicalNetwork:
     )
 
 
+def _tyk2_ligand(name: str) -> gufe.SmallMoleculeComponent:
+    """The TYK2 ligand called ``name``, out of the tutorial's network.
+
+    Named rather than indexed for the reason :func:`_mapping_between` is: a
+    network's nodes are a frozenset, so the n-th of them differs between runs
+    and these files are committed.
+    """
+    for node in _tyk2_network().nodes:
+        if node.name == name:
+            return node
+    raise LookupError(f"the TYK2 network has no ligand called {name!r}")
+
+
+def _tyk2_complex() -> gufe.ChemicalSystem:
+    """One TYK2 ligand in its binding site, as a system on its own.
+
+    The complex legs of :func:`_tyk2_rbfe_network` already hold this - a ligand,
+    the kinase and a solvent - but only inside a 200-node campaign. This is one
+    of those nodes standing alone, because a view of a bound complex is a view
+    of a chemical system, and developing or testing one against the campaign
+    means paying for the whole campaign to reach a single node.
+
+    The two structures share a frame, which is the whole point and is not
+    something this script arranges: the ligands were docked into this protein
+    upstream in OpenFE's RBFE tutorial, and are carried through the GraphML and
+    the PDB unmoved. ``lig_ejm_31`` sits 2.5 A off the nearest protein atom with
+    22 residues inside 4.5 A of it - the ATP site, hinge and glycine-rich loop -
+    so anything that draws both components at once draws a pose, and anything
+    that silently recentres one of them is visible immediately.
+    """
+    from gufe import ChemicalSystem, ProteinComponent, SolventComponent
+
+    return ChemicalSystem(
+        {
+            "ligand": _tyk2_ligand("lig_ejm_31"),
+            "protein": ProteinComponent.from_pdb_file(str(DATA / "tyk2_protein.pdb"), name="tyk2"),
+            "solvent": SolventComponent(),
+        },
+        name="lig_ejm_31 bound to TYK2",
+    )
+
+
 def _large_alchemical_network() -> gufe.AlchemicalNetwork:
     """The two-hundred-ligand load fixture, one layer up.
 
@@ -491,10 +533,15 @@ def build() -> dict[str, GufeTokenizable]:
         "alchemical_network_large.json": _large_alchemical_network(),
         # Not a gufe class at all, which is the only way to produce this type.
         "unknown_component.json": _somebodys_own_component(),
+        # A chemical system on its own, in the two shapes a campaign is built
+        # from: a solvated ligand, and the same idea with a protein around it.
+        # The second is the only fixture where two components share a coordinate
+        # frame, which is what a view of a bound complex needs.
         "chemical_system.json": ChemicalSystem(
             {"ligand": benzene, "solvent": SolventComponent()},
             name="benzene in water",
         ),
+        "chemical_system_complex.json": _tyk2_complex(),
     }
 
 

@@ -116,6 +116,13 @@ NOTES = {
         "view its own type gets - so a chemical system is a chooser over the views above rather "
         "than a picture of its own."
     ),
+    "chemical_system_complex": (
+        "The same chooser with one more thing to choose: a ligand and the protein it is bound to "
+        "share a coordinate frame, so there is a picture of the two together that neither "
+        "component has on its own. That pose is the point of a binding campaign, and drawing the "
+        "components one at a time is the only way to lose it - hence `Complex` first in the strip, "
+        "opening framed on the site rather than on the whole kinase."
+    ),
     "solvent": (
         "A solvent component is a specification rather than a structure, so its view is a settings "
         "card beside a schematic that shows which ions are present - and says under itself, in "

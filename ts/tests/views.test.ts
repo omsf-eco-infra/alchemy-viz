@@ -736,6 +736,58 @@ describe("<gufe-chemical-system>", () => {
     expect(node.querySelector("gufe-view")).toBe(before);
   });
 
+  it("opens on the label last opened, and on the first where it has none", async () => {
+    // A reader who opened the solvent of one system and clicked to the next is
+    // asking for that system's solvent. The label is what is remembered, not
+    // the index: the systems of a network carry the same roles as each other
+    // and different components under them.
+    const payload = readExample("chemical_system.json") as unknown as { components: Record<string, string> };
+    const labels = Object.keys(payload.components);
+    expect(labels.length).toBeGreaterThan(1);
+
+    const first = mount("gufe-chemical-system", readExample("chemical_system.json"));
+    await flush();
+    const openOn = (node: Element): unknown =>
+      (node.querySelector("gufe-view") as HTMLElement & { payload?: { "gufe-key"?: string } }).payload?.["gufe-key"];
+    // The component strip's own buttons, not the mode switcher of whatever it
+    // has drawn below them.
+    const strip = (node: Element): HTMLButtonElement[] =>
+      Array.from(node.querySelectorAll("button")).filter((button) =>
+        labels.includes(button.querySelector("span")?.textContent ?? ""),
+      );
+    const buttons = strip(first);
+    expect(buttons).toHaveLength(labels.length);
+    buttons[buttons.length - 1].click();
+    await flush();
+    const wanted = openOn(first);
+    expect(wanted).not.toBe(undefined);
+
+    // A fresh mount of the same payload, which is what selecting another node
+    // of a network builds.
+    document.body.replaceChildren();
+    const again = mount("gufe-chemical-system", readExample("chemical_system.json"));
+    await flush();
+    expect(openOn(again)).toBe(wanted);
+
+    // A system with nothing under that label opens on its own first component
+    // rather than on an empty pane - and does not write that fallback back.
+    // A network of complex and solvent legs is read by clicking between the
+    // two, and a fallback that wrote would forget the protein on the way past
+    // every solvent leg.
+    document.body.replaceChildren();
+    const other = structuredClone(readExample("chemical_system.json")) as { components: Record<string, string> };
+    for (const label of labels.slice(1)) delete other.components[label];
+    const narrowed = mount("gufe-chemical-system", other);
+    await flush();
+    expect(narrowed.textContent).toContain(labels[0]);
+    expect(narrowed.querySelector("gufe-view")).toBeTruthy();
+
+    document.body.replaceChildren();
+    const back = mount("gufe-chemical-system", readExample("chemical_system.json"));
+    await flush();
+    expect(openOn(back)).toBe(wanted);
+  });
+
   it("badges a component nobody can draw, and no class name beside one it can", async () => {
     // A ligand and a solvent are told apart by the pictures under them - a
     // depiction and a table of conditions - so "SmallMoleculeComponent" and

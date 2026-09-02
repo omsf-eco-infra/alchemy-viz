@@ -100,8 +100,11 @@ export function makeFakeViewer(): FakeViewer {
     dragZoom: (factor: number) => {
       distance = clampDistance(distance / factor);
     },
-    zoomTo: () => {
-      calls.push("zoomTo");
+    zoomTo: (selection?: object) => {
+      // A framing of the whole scene stays plain `zoomTo`, which is what every
+      // single-structure view records; a framing of part of it says which part,
+      // because that selection is the whole of what a complex view is deciding.
+      calls.push(selection === undefined ? "zoomTo" : `zoomTo(${JSON.stringify(selection)})`);
       distance = clampDistance(FAKE_OPENING_DISTANCE);
     },
     zoom: (factor: number) => {
@@ -373,6 +376,8 @@ export interface Mutation {
   path: string;
   value?: unknown;
   types?: string[];
+  /** Types the object the path lands *inside* must be one of. See `appliesTo`. */
+  pathType?: string[];
   expect: "valid" | "invalid";
   pointerContains?: string;
 }
@@ -382,8 +387,34 @@ export function mutations(): Mutation[] {
   return JSON.parse(readFileSync(path, "utf-8")).mutations as Mutation[];
 }
 
+/**
+ * Whether `mutation` is meant for `payload`.
+ *
+ * `types` selects on the payload's own type. `pathType` selects on the type of
+ * the object the path lands *inside*, which is what a row aimed at one entry of
+ * a registry needs: entries are sorted by `(type, gufe-key)`, so an index naming
+ * a small molecule in one fixture names a protein in the next, and "a small
+ * molecule carrying a pdb" applied to a protein asserts nothing - the field is
+ * native there, and the payload stays valid. `python/tests/conftest.py` selects
+ * the same way, deliberately: the two suites must run identical cases.
+ */
 export function appliesTo(mutation: Mutation, payload: Record<string, unknown>): boolean {
-  return !mutation.types || mutation.types.includes(payload.type as string);
+  if (mutation.types && !mutation.types.includes(payload.type as string)) return false;
+  if (!mutation.pathType) return true;
+
+  let node: unknown = payload;
+  for (const part of splitPointer(mutation.path).slice(0, -1)) {
+    if (Array.isArray(node)) {
+      const index = Number(part);
+      if (!Number.isInteger(index) || index < 0 || index >= node.length) return false;
+      node = node[index];
+      continue;
+    }
+    if (node == null || typeof node !== "object") return false;
+    node = (node as Record<string, unknown>)[part];
+  }
+  if (node == null || typeof node !== "object" || Array.isArray(node)) return false;
+  return mutation.pathType.includes((node as Record<string, unknown>).type as string);
 }
 
 /** Thrown when a mutation's path is absent - a silent no-op would pass as a test. */

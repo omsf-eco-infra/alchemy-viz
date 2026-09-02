@@ -16,8 +16,16 @@
  * ## What is stored, and what is not
  *
  * Preferences: how you want to look at a thing. Not *which* thing - a selected
- * edge or component belongs to the payload on screen, and restoring it onto a
+ * node or edge belongs to the payload on screen, and restoring it onto a
  * different network would restore nonsense.
+ *
+ * A role is a preference even though it looks like a selection. Which component
+ * of a chemical system is open is stored as its label, because "protein" names
+ * a different molecule in every system and the same one in all of them: a
+ * reader who opens the protein of one system and clicks to the next is asking
+ * for that system's protein. A stored label a payload has nothing under falls
+ * back to that payload's own default, which is what keeps this on the
+ * preference side of the line.
  *
  * ## Reading a stored value is never trusted
  *

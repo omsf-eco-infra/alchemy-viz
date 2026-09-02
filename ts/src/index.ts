@@ -13,6 +13,7 @@ import "./views/ligand-network.js";
 import "./views/alchemical-network.js";
 import "./views/atom-mapping.js";
 import "./views/chemical-system.js";
+import "./views/complex.js";
 import "./views/protocol.js";
 import "./views/solvent.js";
 import "./views/transformation.js";
@@ -38,6 +39,7 @@ export {
 } from "./views/atom-mapping.js";
 export { applyRT, kabsch, type Transform, type Vec3 } from "./shared/kabsch.js";
 export { GufeChemicalSystem, systemPayloadFor } from "./views/chemical-system.js";
+export { GufeComplex, complexPartsFor, hasComplex, type ComplexParts } from "./views/complex.js";
 export { GufeSolvent } from "./views/solvent.js";
 export { GufeTransformation, diffStatus, transformationPayloadFor, type DiffStatus } from "./views/transformation.js";
 export { GufeUnknownComponent } from "./views/unknown-component.js";
