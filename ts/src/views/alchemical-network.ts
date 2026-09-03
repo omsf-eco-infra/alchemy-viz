@@ -922,10 +922,6 @@ export class GufeAlchemicalNetwork extends GufeElement<AlchemicalNetworkViz> {
         remember: flag("alchemical-network.menuOpen", false),
       },
     );
-    // A flex column, so the panel inside it is stretched to the height of the
-    // row rather than to the height of its own contents: a list of two hundred
-    // systems has to scroll inside the menu, not run off the bottom of the view.
-    menu.panel.style.cssText += "display:flex;flex-direction:column;min-height:0;";
     split.appendChild(menu.panel);
 
     // `min-height` as well as `min-width`, because the split divides the height

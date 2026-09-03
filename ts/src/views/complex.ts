@@ -130,6 +130,11 @@ export class GufeComplex extends GufeElement<ChemicalSystemViz> {
       waters: false,
       heteroTitle: "Show hetero atoms / ions / lipids in the structure",
       menuLabel: "Representation, colouring, framing and display options",
+      // The structure's key, not this system's: every leg of a campaign is a
+      // different chemical system holding the same protein, and the camera
+      // belongs to the protein. So clicking along the legs keeps the site in
+      // front of the reader instead of re-framing on each one.
+      cameraKey: parts.structures[0]?.["gufe-key"] ?? null,
       restyle,
       // The framing belongs beside the reset, which is the other control that
       // moves the camera rather than what is in front of it.
@@ -176,6 +181,13 @@ export class GufeComplex extends GufeElement<ChemicalSystemViz> {
         viewer.zoomTo();
       }
       viewer.render();
+      remeasure();
+    }
+
+    /** Rebuild the wheel guard around wherever the camera is now. */
+    function remeasure(): void {
+      const viewer = scene.viewer();
+      if (!viewer) return;
       scene.interaction()?.cleanup();
       scene.setInteraction(viewerInteraction(scene.pane.container, viewer));
     }
@@ -209,7 +221,11 @@ export class GufeComplex extends GufeElement<ChemicalSystemViz> {
         for (const structure of parts.structures) viewer.addModel(structure.pdb, "pdb");
         for (const ligand of parts.ligands) viewer.addModel(ensureSDFTerminator(ligand.sdf), "sdf");
         restyle();
-        reframe();
+        // Where this protein was last being looked at, if anywhere, and the
+        // opening framing otherwise. `Site` and `Whole` still reframe, so a
+        // restored camera is a starting point rather than somewhere to be stuck.
+        if (scene.restoreCamera()) remeasure();
+        else reframe();
         viewer.spin(scene.opts.spin ? "y" : false);
         viewer.render();
       })

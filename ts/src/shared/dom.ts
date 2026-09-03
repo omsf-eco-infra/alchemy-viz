@@ -800,7 +800,21 @@ export function chromeMenu(
   let open = options.remember ? options.remember.get() : (options.open ?? CHROME_OPEN_BY_DEFAULT);
   let built = false;
 
-  const panel = el("div", "flex-shrink:0;");
+  /**
+   * The wrapper the caller places, and a flex column whether it is open or not.
+   *
+   * A column because what goes in it is one panel that has to be given the
+   * wrapper's height rather than take its own: a menu holding a list of two
+   * hundred systems is taller than any view, and a wrapper that let it be that
+   * tall would put the buttons under the list past the bottom of the page with
+   * no way to reach them. With the height handed down, `MENU_PANEL` scrolls and
+   * `MENU_LIST` inside it is the part that gives.
+   *
+   * It matters that this is here rather than added by each caller: `apply`
+   * writes `display` on open, so a `display:flex` set from outside is erased by
+   * the first toggle and the panel silently goes back to running off the bottom.
+   */
+  const panel = el("div", "flex-shrink:0;display:flex;flex-direction:column;min-height:0;");
   const button = el("button", `${BUTTON.base}display:inline-flex;align-items:center;gap:${SPACE.md};padding:${SPACE.sm} ${SPACE.lg};`);
   button.appendChild(MENU_ICON());
   button.setAttribute("aria-label", options.label || "Toggle menu");
@@ -817,7 +831,7 @@ export function chromeMenu(
       // delete when it goes. See `framejs.ts`.
       framejsMenuItem(panel);
     }
-    panel.style.display = open ? "" : "none";
+    panel.style.display = open ? "flex" : "none";
     button.style.background = open ? BUTTON.bgActive : BUTTON.bg;
     button.setAttribute("aria-expanded", String(open));
   };

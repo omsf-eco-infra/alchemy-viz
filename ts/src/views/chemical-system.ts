@@ -15,12 +15,30 @@
  * nobody can draw never stops the rest of the system from drawing.
  */
 
-import { centredMessage, el, floatingWarning, headerStrip, HIDE_NAME_ATTRIBUTE, statChip, typeBadge } from "../shared/dom.js";
-import { defineElement, GufeElement, type ViewHandle } from "../shared/element.js";
+import {
+  centredMessage,
+  el,
+  floatingWarning,
+  headerStrip,
+  HIDE_NAME_ATTRIBUTE,
+  onWidth,
+  statChip,
+  typeBadge,
+} from "../shared/dom.js";
+import {
+  defineElement,
+  GufeElement,
+  type ViewHandle,
+} from "../shared/element.js";
 import { text } from "../shared/settings.js";
 import { FONT } from "../shared/style.js";
 import { T } from "../shared/theme.js";
-import { buildRegistry, entriesFor, lookup, type RegistryIndex } from "../schema/registry.js";
+import {
+  buildRegistry,
+  entriesFor,
+  lookup,
+  type RegistryIndex,
+} from "../schema/registry.js";
 import { complexPartsFor, hasComplex } from "./complex.js";
 import type { ChemicalSystemViz, ComponentViz } from "../schema/types.js";
 
@@ -38,8 +56,14 @@ import type { ChemicalSystemViz, ComponentViz } from "../schema/types.js";
  * it could not find. Refusing here would turn a pane that reports the gap into
  * a pane that shows nothing.
  */
-export function systemPayloadFor(system: ChemicalSystemViz, registry: RegistryIndex): ChemicalSystemViz {
-  return { ...system, registry: entriesFor(registry, Object.values(system.components ?? {})) };
+export function systemPayloadFor(
+  system: ChemicalSystemViz,
+  registry: RegistryIndex,
+): ChemicalSystemViz {
+  return {
+    ...system,
+    registry: entriesFor(registry, Object.values(system.components ?? {})),
+  };
 }
 
 /**
@@ -59,10 +83,29 @@ export function systemPayloadFor(system: ChemicalSystemViz, registry: RegistryIn
  */
 const OPEN_LABEL = "chemical-system.component";
 
+/**
+ * The width below which the strip stops being a column beside the drawing and
+ * becomes a band of buttons above it.
+ *
+ * This view is mounted in places that are nothing like a page: the detail pane
+ * of an alchemical network is a few hundred pixels wide, and a fixed column in
+ * one of those leaves the picture a slit. Below this the strip goes above,
+ * where it costs height it can share rather than width there is none of.
+ */
+const STACK_BELOW = 460;
+
+/** How wide the strip is where there is room for it beside the drawing. */
+const STRIP_WIDTH = 200;
+
+/** How tall it may become once it is a band, before it scrolls instead. */
+const STRIP_MAX_HEIGHT = "35%";
+
 /** What to call a component in the list: its own name, or what little is left. */
 function componentLabel(component: ComponentViz): string {
   if (component.name) return component.name;
-  return component.type === "UnknownComponentViz" ? component.gufe_type : "(unnamed)";
+  return component.type === "UnknownComponentViz"
+    ? component.gufe_type
+    : "(unnamed)";
 }
 
 /**
@@ -76,7 +119,9 @@ function componentLabel(component: ComponentViz): string {
  * payload says about it, so that one keeps its badge.
  */
 function componentBadge(component: ComponentViz): HTMLSpanElement | null {
-  return component.type === "UnknownComponentViz" ? typeBadge(component.gufe_type) : null;
+  return component.type === "UnknownComponentViz"
+    ? typeBadge(component.gufe_type)
+    : null;
 }
 
 export class GufeChemicalSystem extends GufeElement<ChemicalSystemViz> {
@@ -84,7 +129,10 @@ export class GufeChemicalSystem extends GufeElement<ChemicalSystemViz> {
     return "Waiting for a ChemicalSystem payload...";
   }
 
-  protected renderView(host: HTMLDivElement, payload: ChemicalSystemViz): ViewHandle {
+  protected renderView(
+    host: HTMLDivElement,
+    payload: ChemicalSystemViz,
+  ): ViewHandle {
     // The labels map to gufe keys; the components themselves are in the
     // registry. A key that names no entry is a schema-valid payload this has to
     // survive - JSON Schema cannot express "this key resolves" - so it is
@@ -120,7 +168,10 @@ export class GufeChemicalSystem extends GufeElement<ChemicalSystemViz> {
     // strip rather than a share of the width, and the reader gets the whole
     // list at a glance instead of a row that scrolls sideways once a system
     // carries more than a few components.
-    const split = el("div", "flex:1;min-height:0;position:relative;display:flex;flex-direction:row;");
+    const split = el(
+      "div",
+      "flex:1;min-height:0;position:relative;display:flex;flex-direction:row;",
+    );
     host.appendChild(split);
     if (unresolved.length) {
       floatingWarning(
@@ -132,20 +183,29 @@ export class GufeChemicalSystem extends GufeElement<ChemicalSystemViz> {
 
     const list = el(
       "div",
-      "flex:0 0 200px;min-width:0;overflow-y:auto;display:flex;flex-direction:column;gap:6px;padding:10px;" +
-        `background:${T.panelBg};border-right:1px solid ${T.splitBorder};`,
+      "min-width:0;overflow-y:auto;display:flex;gap:6px;padding:10px;" +
+        `background:${T.panelBg};`,
     );
     split.appendChild(list);
 
-    const detail = el("div", "flex:1;min-width:0;min-height:0;display:flex;flex-direction:column;");
+    const detail = el(
+      "div",
+      "flex:1;min-width:0;min-height:0;display:flex;flex-direction:column;",
+    );
     split.appendChild(detail);
 
     // The nested dispatcher. Created once and re-pointed at a different
     // component on each selection, so switching is an update rather than a
     // rebuild - the same create/update/destroy contract the top level uses.
-    const view = el("div", "flex:1;min-height:0;display:flex;") as HTMLDivElement;
+    const view = el(
+      "div",
+      "flex:1;min-height:0;display:flex;",
+    ) as HTMLDivElement;
     detail.appendChild(view);
-    const child = document.createElement("gufe-view") as HTMLElement & { payload: unknown; resize?(): void };
+    const child = document.createElement("gufe-view") as HTMLElement & {
+      payload: unknown;
+      resize?(): void;
+    };
     child.style.cssText = "flex:1;min-width:0;min-height:0;";
     // The strip above already says which component this is and what it is
     // called, so whatever is drawn below must not write the name over its own
@@ -189,7 +249,10 @@ export class GufeChemicalSystem extends GufeElement<ChemicalSystemViz> {
     // because its own view is a different picture rather than a smaller one: a
     // 2D depiction, a SMILES and a formal charge, none of which is in the scene.
     const absorbed = (component: ComponentViz): boolean =>
-      complexDrawn && parts.structures.some((structure) => (structure as ComponentViz) === component);
+      complexDrawn &&
+      parts.structures.some(
+        (structure) => (structure as ComponentViz) === component,
+      );
 
     const panes: Pane[] = entries
       .filter(([, component]) => !absorbed(component))
@@ -276,10 +339,18 @@ export class GufeChemicalSystem extends GufeElement<ChemicalSystemViz> {
         "button",
         "display:flex;flex-direction:column;align-items:flex-start;gap:4px;padding:8px 10px;text-align:left;" +
           `border:1px solid ${T.cardBorder};border-radius:8px;background:${T.cardBg};cursor:pointer;` +
-          `font-family:inherit;font-size:${FONT.body};flex-shrink:0;width:100%;box-sizing:border-box;`,
+          `font-family:inherit;font-size:${FONT.body};flex-shrink:0;max-width:100%;box-sizing:border-box;`,
       );
-      button.appendChild(el("span", `font-weight:700;color:${T.textPrimary};`, pane.title));
-      button.appendChild(el("span", `font-size:${FONT.small};color:${T.textMuted};`, pane.subtitle));
+      button.appendChild(
+        el("span", `font-weight:700;color:${T.textPrimary};`, pane.title),
+      );
+      button.appendChild(
+        el(
+          "span",
+          `font-size:${FONT.small};color:${T.textMuted};`,
+          pane.subtitle,
+        ),
+      );
       if (pane.badge) button.appendChild(pane.badge);
       button.onclick = () => open(index);
       buttons.push(button);
@@ -290,12 +361,36 @@ export class GufeChemicalSystem extends GufeElement<ChemicalSystemViz> {
     const remembered = panes.findIndex((pane) => pane.key === openLabel.get());
     select(remembered < 0 ? 0 : remembered);
 
+    // A column beside the drawing while there is room for one, a band of
+    // wrapping buttons above it when there is not. The strip is what gives,
+    // because it is the half that still reads at any width: a picture in a slit
+    // is not a smaller picture, it is no picture.
+    let stacked: boolean | null = null;
+    const stopWatching = onWidth(split, (width) => {
+      const narrow = width > 0 && width < STACK_BELOW;
+      if (narrow === stacked) return;
+      stacked = narrow;
+      split.style.flexDirection = narrow ? "column" : "row";
+      list.style.flex = narrow ? "0 0 auto" : `0 0 ${STRIP_WIDTH}px`;
+      list.style.flexDirection = narrow ? "row" : "column";
+      list.style.flexWrap = narrow ? "wrap" : "nowrap";
+      list.style.maxHeight = narrow ? STRIP_MAX_HEIGHT : "none";
+      list.style.borderRight = narrow ? "none" : `1px solid ${T.splitBorder}`;
+      list.style.borderBottom = narrow ? `1px solid ${T.splitBorder}` : "none";
+      // What is mounted was drawn to the old shape, and a 3D viewer sizes its
+      // canvas once.
+      mounted?.resize?.();
+    });
+
     return {
       onResize: () => mounted?.resize?.(),
       // Removing whatever is mounted fires its own `disconnectedCallback`,
       // which is where it releases its viewers. Only one pane is ever in the
       // document, and the panes that are not are already torn down.
-      cleanup: () => mounted?.remove(),
+      cleanup: () => {
+        stopWatching();
+        mounted?.remove();
+      },
     };
   }
 }

@@ -22,6 +22,8 @@ import {
   el,
   MENU_OPEN_SUFFIX,
   nameWanted,
+  onWidth,
+  orientMenuPanel,
   toggleButton,
   viewerHost,
   type ChromeMenu,
@@ -57,6 +59,39 @@ export const PROTEIN_COLOR_SCHEMES = [
   { id: "element", label: "Element" },
 ] as const;
 
+/**
+ * The width below which the controls stop being a column beside the picture and
+ * become a band above it.
+ *
+ * The panel has a floor of its own - see `MENU_PANEL_WIDTH` - and in a pane
+ * narrower than that floor plus a picture, a panel opened beside the structure
+ * leaves nothing to open it against. Stacked, the two share the height instead.
+ */
+const STACK_BELOW = 460;
+
+/**
+ * Where each structure was last being looked at, for the length of a sitting.
+ *
+ * Someone reading a campaign clicks along its legs, and every leg is the same
+ * protein with a different ligand in it. Framing each one from scratch means
+ * finding the site again on every click, so the camera is kept per structure -
+ * keyed by the PDB's gufe key, which is what makes "the same protein" a fact
+ * rather than a guess - and the next scene drawing that structure opens where
+ * the last one was left. A different protein is framed fresh.
+ *
+ * Deliberately not in `settings.ts`: this is where a reader has got to rather
+ * than a preference about how they read, and it lasts the page rather than the
+ * installation. A camera restored from last week would open a structure at an
+ * angle nobody remembers choosing, with nothing on screen to say why. `Reset`
+ * is still the way back to the view the scene would have opened on.
+ */
+const cameras = new Map<string, number[]>();
+
+/** Forget every stored camera. For tests, which must not bleed into each other. */
+export function forgetCameras(): void {
+  cameras.clear();
+}
+
 /** One labelled block of the menu: a caption over what it controls. */
 export interface MenuSection {
   label: string;
@@ -85,6 +120,14 @@ export interface ProteinSceneSpec {
   heteroTitle: string;
   /** Accessible name for the menu button. */
   menuLabel: string;
+  /**
+   * What the camera is remembered under, or null to always frame fresh.
+   *
+   * The gufe key of the structure being drawn - not of the payload, which for a
+   * complex is a different chemical system on every leg of a campaign while the
+   * protein in it is one object drawn over and over.
+   */
+  cameraKey?: string | null;
   /** Restyle the scene: the models each view holds are its own business. */
   restyle(): void;
   /**
@@ -123,6 +166,15 @@ export interface ProteinScene {
   viewer(): ThreeDmolViewer | null;
   /** Hand the viewer over once it is built; the scene resizes and clears it. */
   setViewer(viewer: ThreeDmolViewer | null): void;
+  /**
+   * Put the camera back where this structure was last left, if it has been.
+   *
+   * False when there is nothing stored for it, which is the view's cue to frame
+   * the scene the way it opens on. Call it after the models are loaded and
+   * before the wheel guard is built, because the guard measures the framing it
+   * finds.
+   */
+  restoreCamera(): boolean;
   interaction(): (BoundedZoom & Interaction) | null;
   /** Likewise the wheel guard, which a reframing view replaces as it goes. */
   setInteraction(interaction: (BoundedZoom & Interaction) | null): void;
@@ -201,18 +253,13 @@ export function proteinScene(spec: ProteinSceneSpec): ProteinScene {
   statsSection.style.display = "none";
 
   const buildControls = (): HTMLDivElement => {
-    // `height:100%` rather than the `flex:1` in `MENU_PANEL`: the wrapper this
-    // goes into is a flex item of the row, so it is the height of the viewer
-    // beside it, but it is a plain block - `chromeMenu` clears its display
-    // property to show it - so a flex growth factor in here has nothing to grow
-    // against. This is what carries the panel's background and its rule down
-    // the view, and what makes the controls scroll rather than run off the
-    // bottom of a short one.
-    //
     // The extra top padding is for the floating chrome: the button stays where
     // it was when the panel opened under it, so the panel's first section has
-    // to start below it rather than behind it.
-    const panel = el("div", `${MENU_PANEL}height:100%;padding-top:${PANE_CHROME_CLEARANCE};`);
+    // to start below it rather than behind it. The height comes from
+    // `MENU_PANEL`'s own `flex:1` against the column `chromeMenu` puts this in,
+    // which is what carries the background and the rule down the view and makes
+    // the controls scroll rather than run off the bottom of a short one.
+    const panel = el("div", `${MENU_PANEL}padding-top:${PANE_CHROME_CLEARANCE};`);
 
     const reps = buttonGroup(
       PROTEIN_REPS,
@@ -298,6 +345,23 @@ export function proteinScene(spec: ProteinSceneSpec): ProteinScene {
   const pane = viewerHost();
   split.appendChild(pane.wrap);
 
+  // A column beside the picture while there is room for one, a band above it
+  // when there is not. `orientMenuPanel` is what tells the panel which it is:
+  // its width floor is what would otherwise squeeze the viewer to a slit in a
+  // detail pane a few hundred pixels wide.
+  let stacked: boolean | null = null;
+  const stopWatching = onWidth(split, (width) => {
+    const narrow = width > 0 && width < STACK_BELOW;
+    if (narrow === stacked) return;
+    stacked = narrow;
+    split.style.flexDirection = narrow ? "column" : "row";
+    orientMenuPanel(menu.panel, narrow);
+    // 3Dmol sizes its canvas once, so a pane that changed shape is a picture
+    // drawn at the old one.
+    viewer?.resize();
+    viewer?.render();
+  });
+
   const statusEl = el(
     "div",
     "position:absolute;top:12px;left:50%;transform:translateX(-50%);padding:6px 14px;border-radius:6px;" +
@@ -318,6 +382,21 @@ export function proteinScene(spec: ProteinSceneSpec): ProteinScene {
     statusEl.style.border = `1px solid ${isError ? T.warnBorder : T.toolbarBorder}`;
   };
 
+  /**
+   * Store where the camera is, for the next scene drawing this structure.
+   *
+   * Defensive about what it reads back: a viewer torn down under us, or a build
+   * of 3Dmol without `getView`, is a reason to keep no camera rather than to
+   * store a broken one and reapply it to every scene after.
+   */
+  const rememberCamera = (): void => {
+    if (!spec.cameraKey || !viewer) return;
+    const view = viewer.getView?.();
+    if (Array.isArray(view) && view.length >= 4 && view.every((n) => Number.isFinite(n))) {
+      cameras.set(spec.cameraKey, view.slice());
+    }
+  };
+
   return {
     opts,
     pane,
@@ -326,6 +405,13 @@ export function proteinScene(spec: ProteinSceneSpec): ProteinScene {
     setStats: (parts) => {
       statsEl.replaceChildren(...parts.map((part) => el("div", "overflow-wrap:anywhere;", part)));
       statsSection.style.display = parts.length ? "" : "none";
+    },
+    restoreCamera: () => {
+      const view = spec.cameraKey ? cameras.get(spec.cameraKey) : undefined;
+      if (!view || !viewer) return false;
+      viewer.setView(view.slice());
+      viewer.render();
+      return true;
     },
     viewer: () => viewer,
     setViewer: (next) => {
@@ -342,6 +428,10 @@ export function proteinScene(spec: ProteinSceneSpec): ProteinScene {
         viewer.render();
       },
       cleanup() {
+        stopWatching();
+        // Before anything is torn down: this is the whole point of the memory,
+        // and a cleared viewer has no camera left to read.
+        rememberCamera();
         interaction?.cleanup();
         interaction = null;
         if (!viewer) return;

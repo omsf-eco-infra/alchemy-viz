@@ -132,7 +132,12 @@ describe("chromeMenu", () => {
     const menu = chromeMenu(header, build, { open: true });
     expect(menu.isOpen()).toBe(true);
     expect(build).toHaveBeenCalledTimes(1);
-    expect(menu.panel.style.display).toBe("");
+    // Shown as a flex column, not merely un-hidden: the panel hands its height
+    // down to what a view built into it, so a list too long for the view
+    // scrolls inside the menu instead of running off the bottom of the page.
+    expect(menu.panel.style.display).toBe("flex");
+    expect(menu.panel.style.flexDirection).toBe("column");
+    expect(menu.panel.style.minHeight).toBe("0");
   });
 
 });

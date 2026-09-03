@@ -58,6 +58,9 @@ export class GufeProtein extends GufeElement<PdbPayload> {
       waters: payload.type !== "ProteinComponentViz",
       heteroTitle: "Show hetero atoms / ligands / ions / lipids",
       menuLabel: "Representation, colouring and display options",
+      // This view draws one structure, so the payload's own key is the
+      // structure's key.
+      cameraKey: payload["gufe-key"],
       restyle,
     });
 
@@ -82,10 +85,12 @@ export class GufeProtein extends GufeElement<PdbPayload> {
         // applyProteinStyles clears the "Loading..." status (or replaces it with
         // the surface-computing message), so there is nothing to hide here.
         applyProteinStyles(viewer, scene.opts, stats, scene.showStatus);
-        viewer.zoomTo();
+        // Where this structure was last being looked at, if anywhere: a reader
+        // moving between views of one protein keeps the angle they found.
+        if (!scene.restoreCamera()) viewer.zoomTo();
         viewer.spin(scene.opts.spin ? "y" : false);
         viewer.render();
-        // After zoomTo, so the bound is measured from the opening framing.
+        // After the framing, so the bound is measured from the opening view.
         scene.setInteraction(viewerInteraction(scene.pane.container, viewer));
       })
       .catch((e: unknown) => {

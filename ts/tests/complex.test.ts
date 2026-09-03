@@ -283,3 +283,59 @@ describe("<gufe-chemical-system> with a bound complex", () => {
     expect(node.querySelector("gufe-complex")).toBeNull();
   });
 });
+
+describe("keeping the camera between views of one structure", () => {
+  let engines: SeededEnginesResult;
+  beforeEach(() => {
+    engines = seedFakeEngines();
+  });
+  afterEach(() => {
+    clearFakeEngines();
+    document.body.replaceChildren();
+  });
+
+  /** What a viewer did about its camera, in order. */
+  const framings = (index: number): string[] =>
+    engines.viewers[index].calls.filter((c) => c === "setView" || c.startsWith("zoomTo") || c.startsWith("zoom("));
+
+  it("opens the next leg of a campaign where the last one was left", async () => {
+    // Every leg of a campaign is a different chemical system holding the same
+    // protein. Someone clicking along them is looking at one site from one
+    // angle, and re-framing on each click makes them find it again each time.
+    const first = mount("gufe-complex", complexPayload());
+    await flush();
+    expect(framings(0)).toEqual(['zoomTo({"model":[1]})', "zoom(0.4)"]);
+    first.remove();
+
+    mount("gufe-complex", complexPayload());
+    await flush();
+    expect(framings(1)).toEqual(["setView"]);
+  });
+
+  it("frames a structure it has not drawn before", async () => {
+    const protein = mount("gufe-protein", readExample("protein_fragment.json"));
+    await flush();
+    protein.remove();
+
+    // A different PDB, so a different gufe key, so nothing to restore: the
+    // memory is per structure rather than per view.
+    mount("gufe-protein", readExample("protein_membrane.json"));
+    await flush();
+    expect(framings(1)).toEqual(["zoomTo"]);
+  });
+
+  it("still reframes when asked, so a restored camera is not a trap", async () => {
+    const first = mount("gufe-complex", complexPayload());
+    await flush();
+    first.remove();
+
+    const node = mount("gufe-complex", complexPayload());
+    await flush();
+    expect(framings(1)).toEqual(["setView"]);
+
+    openMenu(node);
+    button(node, "Whole").click();
+    await flush();
+    expect(framings(1)).toEqual(["setView", "zoomTo"]);
+  });
+});
