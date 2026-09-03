@@ -25,7 +25,7 @@
  * there; this way the conformer is ready whichever mode the view opens on.
  */
 
-import { buttonGroup, toggleButton, centredMessage, EM_DASH, el, errText, nameWanted, viewerHost } from "../shared/dom.js";
+import { switcher, toggleButton, centredMessage, EM_DASH, el, errText, nameWanted, viewerHost } from "../shared/dom.js";
 import { defineElement, GufeElement, type ViewHandle } from "../shared/element.js";
 import { choice, flag } from "../shared/settings.js";
 import { load3Dmol, loadRDKit, ThreeDmol, type ThreeDmolViewer } from "../shared/engines.js";
@@ -172,8 +172,10 @@ export class GufeSmallMolecule extends GufeElement<SmallMoleculeComponentViz> {
       applySpin();
     };
 
+    // The bar floats over the picture, so nothing in the layout stops it running
+    // off a narrow pane: below the width its buttons need, the modes become a
+    // dropdown instead. See `switcher`.
     const controls = el("div", OVERLAY_CONTROLS);
-    const group = buttonGroup(MODES, mode, (id) => show(id as Mode), modeSetting);
     const spinBtn = toggleButton(
       "Spin",
       spinning,
@@ -183,10 +185,24 @@ export class GufeSmallMolecule extends GufeElement<SmallMoleculeComponentViz> {
       },
       { title: "Toggle continuous rotation", remember: spinSetting },
     );
-    // Between the styles it turns and Info, which is where the reader asked for
-    // it. The group tracks its own buttons, so a guest among them is harmless.
-    group.insertBefore(spinBtn, group.lastElementChild);
-    controls.appendChild(group);
+    /**
+     * Spin rides between the styles it turns and Info, which is where the reader
+     * asked for it, and the group tracks its own buttons so a guest among them
+     * is harmless. Collapsed there is no row to ride in, so it stands beside the
+     * dropdown: it is a control of the picture rather than a way of looking at
+     * the molecule, and it belongs on the bar in either form.
+     */
+    const placeSpin = (compact: boolean): void => {
+      if (compact) controls.insertBefore(spinBtn, controls.firstChild);
+      else modes.buttons.insertBefore(spinBtn, modes.buttons.lastElementChild);
+    };
+    const modes = switcher(MODES, mode, (id) => show(id as Mode), {
+      remember: modeSetting,
+      onLayout: placeSpin,
+      fit: { pane: stage, bar: controls },
+    });
+    controls.appendChild(modes);
+    placeSpin(false);
     stage.appendChild(controls);
 
     show(mode);
@@ -196,7 +212,7 @@ export class GufeSmallMolecule extends GufeElement<SmallMoleculeComponentViz> {
     if (!sdf || !sdf.trim()) {
       depictBox.appendChild(centredMessage("No molecule provided"));
       host3D.container.appendChild(centredMessage("No molecule provided"));
-      return {};
+      return { cleanup: () => modes.cleanup() };
     }
 
     // --- 2D ---
@@ -240,6 +256,7 @@ export class GufeSmallMolecule extends GufeElement<SmallMoleculeComponentViz> {
         }
       },
       cleanup() {
+        modes.cleanup();
         interaction?.cleanup();
         interaction = null;
         if (!viewer) return;

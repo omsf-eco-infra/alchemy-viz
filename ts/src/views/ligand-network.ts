@@ -43,6 +43,7 @@ import { withoutLayout } from "../shared/layout.js";
 import { loadD3, loadRDKit, type RDKitModule } from "../shared/engines.js";
 import { DEPICT_STYLE, rgbTriple } from "../shared/depict-style.js";
 import { depictSVG } from "../shared/sdf.js";
+import { mountDepiction } from "../shared/depict-node.js";
 import { createMatcher, smartsBox, type MatchOutcome } from "../shared/smarts.js";
 import { FONT, MENU_LIST, MENU_PANEL, TOOLBAR } from "../shared/style.js";
 import { T } from "../shared/theme.js";
@@ -510,22 +511,6 @@ const label = entryLabel;
 
 const truncate = (text: string, max: number): string => (text.length > max ? `${text.slice(0, max - 1)}...` : text);
 
-/**
- * An element's fill, from either place SVG lets it be written.
- *
- * RDKit writes the one that matters here - the backing rect's - into `style`,
- * and its own documentation writes it as the presentation attribute. Reading
- * only the attribute is what left a white square drawn over the node's plate.
- */
-const fillOf = (element: Element): string => {
-  const attribute = element.getAttribute("fill");
-  const declared = attribute ?? /(?:^|;)\s*fill\s*:\s*([^;]+)/i.exec(element.getAttribute("style") ?? "")?.[1] ?? "";
-  return declared.toLowerCase().replace(/\s+/g, "");
-};
-
-const WHITE = new Set(["#fff", "#ffffff", "white", "rgb(255,255,255)"]);
-const isWhite = (element: Element): boolean => WHITE.has(fillOf(element));
-
 interface DetailParts {
   nodes: NetNode[];
   circles: SVGCircleElement[];
@@ -590,38 +575,15 @@ function levelOfDetail(parts: DetailParts): {
       failed.add(index);
       return;
     }
-    const parsed = new DOMParser().parseFromString(drawn, "image/svg+xml").documentElement;
-    if (!parsed || parsed.nodeName.toLowerCase() === "parsererror") {
+    // The white RDKit draws behind a structure is dropped on the way in, and
+    // `PLATE`'s disc is what this view puts there instead: round, and exactly
+    // the size of the node rather than of the square the depiction was drawn in.
+    if (!mountDepiction(parts.depictionGroups[index], drawn, DEPICT_SIZE, (NODE_RADIUS - DEPICT_PADDING) * 2)) {
       failed.add(index);
       return;
     }
-
-    const size = ((NODE_RADIUS - DEPICT_PADDING) * 2) / DEPICT_SIZE;
-    const target = parts.depictionGroups[index];
-    target.setAttribute(
-      "transform",
-      `translate(${(-size * DEPICT_SIZE) / 2},${(-size * DEPICT_SIZE) / 2}) scale(${size})`,
-    );
-    let appended = 0;
-    for (const child of Array.from(parsed.childNodes)) {
-      if (child.nodeType !== 1) continue;
-      const tag = child.nodeName.toLowerCase();
-      if (tag === "defs" || tag === "metadata" || tag === "title") continue;
-      // RDKit paints an opaque white backing rect, square and wider than the
-      // node it goes in. Dropping it leaves the white to `PLATE`'s disc, which
-      // is round and does not overhang the node it belongs to. The colour is in
-      // `style` on the builds this has met and in `fill` in RDKit's own
-      // documentation, so both are read: a rect that survives this is a white
-      // square with a circle behind it, which is the corner of the node
-      // sticking out and is exactly what the plate exists to avoid.
-      if (tag === "rect" && isWhite(child as Element)) continue;
-      target.appendChild(document.importNode(child, true));
-      appended++;
-    }
-    if (appended) {
-      injected.add(index);
-      drawnAgainst[index] = marking(index);
-    } else failed.add(index);
+    injected.add(index);
+    drawnAgainst[index] = marking(index);
   };
 
   /**

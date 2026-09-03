@@ -78,7 +78,7 @@
  * the transformation view both do.
  */
 
-import { buttonGroup, centredMessage, EM_DASH, el, errText, nameWanted, statChip } from "../shared/dom.js";
+import { centredMessage, EM_DASH, el, errText, nameWanted, statChip, switcher } from "../shared/dom.js";
 import { defineElement, GufeElement, type ViewHandle } from "../shared/element.js";
 import { choice } from "../shared/settings.js";
 import { load3Dmol, loadRDKit, ThreeDmol, type RDKitModule, type ThreeDmolViewer } from "../shared/engines.js";
@@ -514,22 +514,21 @@ export class GufeAtomMapping extends GufeElement<LigandAtomMappingViz> {
     // reload and carries from one mapping to the next.
     const modeSetting = choice<Mode>("atom-mapping.mode", "plain", MODES.map((m) => m.id));
     let mode: Mode = modeSetting.get();
-    const switcher = el(
-      "div",
-      OVERLAY_CONTROLS,
+    // Six ways of looking, and the labels are words rather than numbers, so this
+    // is a wide bar: on a pane too narrow for it the modes become a dropdown
+    // rather than running off the side. See `switcher`.
+    const controls = el("div", OVERLAY_CONTROLS);
+    const modes = switcher(
+      MODES,
+      mode,
+      (id) => {
+        mode = id as Mode;
+        render();
+      },
+      { remember: modeSetting, fit: { pane: wrapper, bar: controls } },
     );
-    switcher.appendChild(
-      buttonGroup(
-        MODES,
-        mode,
-        (id) => {
-          mode = id as Mode;
-          render();
-        },
-        modeSetting,
-      ),
-    );
-    wrapper.appendChild(switcher);
+    controls.appendChild(modes);
+    wrapper.appendChild(controls);
 
     // --- viewer boxes ---
     //
@@ -1086,6 +1085,7 @@ export class GufeAtomMapping extends GufeElement<LigandAtomMappingViz> {
       },
       cleanup() {
         alive = false;
+        modes.cleanup();
         clearBoxes();
       },
     };

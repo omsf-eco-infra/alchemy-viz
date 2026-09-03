@@ -63,7 +63,7 @@ const searchBox = (node: HTMLElement): HTMLInputElement =>
 
 /** The opacity each system's box is drawn at, which is what a filter changes. */
 const nodeOpacities = (node: HTMLElement): string[] =>
-  [...node.querySelectorAll<SVGRectElement>("svg.gufe-graph rect")].map(
+  [...node.querySelectorAll<SVGRectElement>("svg.gufe-graph rect.gufe-node-box")].map(
     (box) => box.parentElement?.getAttribute("opacity") ?? "1",
   );
 

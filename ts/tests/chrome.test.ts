@@ -11,7 +11,7 @@
  */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { CHROME_OPEN_BY_DEFAULT, chromeMenu, el, headerStrip, splitter } from "../src/shared/dom.js";
+import { buttonGroup, CHROME_OPEN_BY_DEFAULT, chromeMenu, el, headerStrip, splitter } from "../src/shared/dom.js";
 import { num } from "../src/shared/settings.js";
 
 describe("chromeMenu", () => {
@@ -286,5 +286,35 @@ describe("splitter", () => {
     handle.dispatchEvent(pointer("pointermove", 200, 300));
     expect(share(before)).toBeCloseTo(30, 5);
     expect(share(after)).toBeCloseTo(70, 5);
+  });
+});
+
+describe("a row of buttons", () => {
+  // jsdom has no layout engine, so these check the rules are set rather than
+  // the pixels they produce - the pixels are what the gallery is for.
+  it("wraps rather than running off the edge of what holds it", () => {
+    const group = buttonGroup(
+      [
+        { id: "a", label: "Cartoon" },
+        { id: "b", label: "Surface" },
+        { id: "c", label: "Stick" },
+        { id: "d", label: "Sphere" },
+      ],
+      "a",
+      () => {},
+    );
+    // The same four buttons sit in a wide toolbar in one view and in a menu
+    // column in another, so the group cannot assume the width it is given.
+    expect(group.style.flexWrap).toBe("wrap");
+    expect(group.style.minWidth).toBe("0");
+  });
+
+  it("keeps a button inside the panel it is in, however wide its label", () => {
+    const group = buttonGroup([{ id: "a", label: "A label wider than any menu column" }], "a", () => {});
+    const button = group.querySelector("button")!;
+    expect(button.style.maxWidth).toBe("100%");
+    // A padded, bordered button set to `width:100%` is 100% plus the padding
+    // and the border without this, which is twenty pixels past the edge.
+    expect(button.style.boxSizing).toBe("border-box");
   });
 });

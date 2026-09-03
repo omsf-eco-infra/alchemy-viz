@@ -1,15 +1,25 @@
 /**
  * `<gufe-alchemical-network>` - chemical systems joined by transformations.
  *
- * This is the ligand network one level up, and the canvas draws a different
- * thing for a reason: a node here is a whole chemical system rather than a
- * single molecule, so there is no one structure to depict. A node is a labelled
- * box, and what the canvas is for is composition and topology - which systems
- * exist, what they are made of, and what maps onto what.
+ * This is the ligand network one level up, and a node here is a whole chemical
+ * system rather than a single molecule: what the canvas is for is composition
+ * and topology - which systems exist, what they are made of, and what maps onto
+ * what. So a node is a labelled box, coloured by what its system is made of.
  *
- * The detail pane is where the structures are, and it draws none of them
- * itself. Every reference in the payload resolves to a complete payload object,
- * so a selected node is a `ChemicalSystemViz` and a selected edge is a
+ * Inside that box, zoomed in far enough, is the system's ligand. A campaign is
+ * one ligand series run twice, in solvent and in complex, and which ligand a
+ * system carries is the thing a chemist recognises a node by - the name is a
+ * convention and the composition is shared by half the graph. So the box keeps
+ * saying what the system is made of and gains a picture of the one component
+ * that tells it apart, on the same terms as the ligand network's: built lazily,
+ * only for the nodes on screen, and only past the zoom where it can be read.
+ * `ZOOM_LEVELS` is where that threshold is. A system with no small molecule in
+ * it - a solvent-only reference state, an apo protein - is drawn as it always
+ * was, because there is nothing to put in the box.
+ *
+ * The detail pane is where a whole system is drawn, and this view draws none of
+ * one itself. Every reference in the payload resolves to a complete payload
+ * object, so a selected node is a `ChemicalSystemViz` and a selected edge is a
  * `TransformationViz` - which are exactly what `<gufe-chemical-system>` and
  * `<gufe-transformation>` take. The pane mounts one `<gufe-view>` and re-points
  * it, so selecting a system gets that view's component list and, through its
@@ -53,7 +63,10 @@ import { exportBlock, MULTI_SELECT_HINT } from "../shared/selection.js";
 import { createMatcher, smartsBox, type MatchOutcome } from "../shared/smarts.js";
 import { errText } from "../shared/dom.js";
 import { svg, titled } from "../shared/svg.js";
-import { FONT, MENU_LIST, MENU_PANEL, PANE_LABEL, TOOLBAR } from "../shared/style.js";
+import { depictSVG } from "../shared/sdf.js";
+import { DEPICT_STYLE } from "../shared/depict-style.js";
+import { mountDepiction } from "../shared/depict-node.js";
+import { FONT, MENU_LIST, MENU_PANEL, TOOLBAR } from "../shared/style.js";
 import { T } from "../shared/theme.js";
 import { buildRegistry, entryLabel, lookup, lookupOfType, type RegistryIndex } from "../schema/registry.js";
 import { systemPayloadFor } from "./chemical-system.js";
@@ -128,7 +141,88 @@ interface NodeColors {
   stroke: string;
 }
 
-const NODE = { width: 148, height: 46, radius: 10 };
+/**
+ * The two boxes a system is drawn in.
+ *
+ * `height` is a system with nothing to depict: a name and what it is made of,
+ * and no room asked for beyond them. `depictedHeight` is one with a ligand, and
+ * the extra is the square the ligand is drawn in plus the two rows of text that
+ * move underneath it.
+ *
+ * A box grows into the taller shape when its ligand is drawn and shrinks back
+ * when it is not, which is why the layout reserves room for the taller one
+ * whether or not it is in force: a campaign of twenty systems frames itself
+ * well below the structure threshold, and boxes that stayed tall out there
+ * would be twenty empty rectangles taking three times the room their names need
+ * and shrinking the shape of the network to fit. Growing rather than reserving
+ * on screen is safe because `FORCE.collisionRadius` holds two systems far
+ * enough apart for the taller box, so nothing a zoom does can make two of them
+ * collide.
+ */
+const NODE = { width: 148, height: 46, depictedHeight: 148, radius: 10 };
+
+/**
+ * The white square a ligand is drawn on inside its box, and the room it leaves.
+ *
+ * White because RDKit draws for paper - black bonds, and element letters from a
+ * palette picked against white - so a structure straight onto the box's own
+ * composition colour is a structure nobody can read. The plate is square and
+ * inset rather than filling the box, which leaves the colour showing as a frame
+ * on all four sides: the picture says which ligand, and the frame around it
+ * goes on saying which leg. Square because a depiction is - a plate wider than
+ * the drawing it holds is a white band with a molecule in the middle of it.
+ */
+const PLATE = { pad: 6, size: 96, radius: 6, inset: 4 };
+
+/** The square RDKit is asked to draw in, in its own units. */
+const DEPICT_SIZE = 200;
+
+/** The name and the composition line: their sizes, and where they sit. */
+const CAPTION = { nameSize: 12, subSize: 10, gap: 13, bottom: 9, nameChars: 20, subChars: 24 };
+
+/**
+ * One zoom level: what a node draws at that distance.
+ *
+ * A row of data rather than a threshold compared in the drawing code, which is
+ * the shape the ligand network's levels take too. There are two of them here
+ * because there is one thing to decide: a box that is only ever a box has
+ * nothing to drop as the view pulls back.
+ */
+export interface NodeDetail {
+  /** Its name, so the level in force can be read off the DOM and talked about. */
+  id: "structures" | "boxes";
+  /** The lowest zoom this level covers. */
+  from: number;
+  /** The ligand's 2D structure inside the box. */
+  structure: boolean;
+}
+
+/**
+ * The levels, closest zoom first.
+ *
+ * The threshold is where the drawing stops being big enough to recognise a
+ * molecule in - about 30 pixels across, a little under what the ligand network
+ * crosses its own at. Lower on purpose: a campaign of twenty frames itself at
+ * about 0.17, so a threshold set where every label is legible is one nobody
+ * meets without zooming a long way in, and the outline of a ligand is worth
+ * seeing well before its element letters are. Below that the boxes are what the
+ * canvas is for - which systems exist and what runs between them - and a grid
+ * of unreadable structures is texture over exactly the shape somebody pulled
+ * back to see. It is also what keeps the cost down: a structure is an RDKit
+ * call and an SVG subtree, and zoomed out is where the most nodes are on screen
+ * at once.
+ */
+export const ZOOM_LEVELS: readonly NodeDetail[] = [
+  { id: "structures", from: 0.35, structure: true },
+  { id: "boxes", from: 0, structure: false },
+];
+
+/** The level a zoom falls in. */
+export const levelAt = (scale: number): NodeDetail =>
+  ZOOM_LEVELS.find((level) => scale >= level.from) ?? ZOOM_LEVELS[ZOOM_LEVELS.length - 1];
+
+/** How far outside the viewport a structure is still built, so panning does not tear. */
+const CULL_MARGIN = 200;
 
 /**
  * How wide a transformation is drawn, and how wide it is to a pointer.
@@ -146,6 +240,13 @@ const NODE = { width: 148, height: 46, radius: 10 };
  * click without being drawn heavy enough to crowd the boxes it runs between.
  */
 const EDGE = { width: 2, selectedWidth: 3.5, hit: 20 };
+
+/**
+ * `collisionRadius` holds two centres 220 apart, which clears the corner of a
+ * depicted box - half its diagonal is a little over 104 - so no zoom can bring
+ * two boxes into each other. That is the only reason it is this number, and it
+ * is why growing `NODE` is a change to this table as well.
+ */
 const FORCE = {
   linkDistance: 220,
   linkStrength: 0.4,
@@ -166,8 +267,11 @@ const FIT_MARGIN = 24;
  *
  * What the camera frames is boxes rather than points: an outermost system has
  * to be inside the canvas along with its label, not centred on the edge of it.
+ * The taller of the two boxes whether or not any is drawn that way, because a
+ * fit that framed short boxes and then grew one at the edge of the canvas into
+ * its structure would cut that structure in half.
  */
-const NODE_EXTENT = { x: NODE.width / 2, y: NODE.height / 2 };
+const NODE_EXTENT = { x: NODE.width / 2, y: NODE.depictedHeight / 2 };
 
 /**
  * How far what a filter left out is faded, rather than removed.
@@ -193,7 +297,7 @@ function truncate(text: string, limit: number): string {
 }
 
 /**
- * What a chemical system is made of, as a string two systems can be compared by.
+ * What a chemical system is made of, as the set of its component types, sorted.
  *
  * The labels are deliberately not part of it. A campaign calls the same protein
  * "protein" in one system and something else in the next, and what tells a
@@ -201,7 +305,7 @@ function truncate(text: string, limit: number): string {
  * this is the set of component *types*, sorted, which is stable against both
  * the labels and the order the components were written in.
  */
-function compositionOf(system: ChemicalSystemViz, registry: RegistryIndex): string {
+function componentTypes(system: ChemicalSystemViz, registry: RegistryIndex): string[] {
   const types = new Set<string>();
   for (const key of Object.values(system.components ?? {})) {
     const component = lookup(registry, key);
@@ -215,8 +319,12 @@ function compositionOf(system: ChemicalSystemViz, registry: RegistryIndex): stri
         : component.type.replace(/(?:Component)?Viz$/, ""),
     );
   }
-  return [...types].sort().join(" + ");
+  return [...types].sort();
 }
+
+/** The same thing as one string, which is what two systems are compared by. */
+const compositionOf = (system: ChemicalSystemViz, registry: RegistryIndex): string =>
+  componentTypes(system, registry).join(" + ");
 
 /** What the systems are made of, and what that makes them look like. */
 interface CompositionGroups {
@@ -326,6 +434,46 @@ function ligandIndex(nodes: readonly GraphNode[], registry: RegistryIndex): Liga
     return mine;
   });
   return { sources, perNode };
+}
+
+/**
+ * What a node draws: how it is coloured, what it says, and the ligand in it.
+ *
+ * One object per node rather than three accessors, because the three answers
+ * are read together every time and two of them come from the same pass over the
+ * system's components.
+ */
+interface NodeFace {
+  colors: NodeColors;
+  /** The line under the name: what the system is made of. */
+  composition: string;
+  /** The same line for a box that is showing its ligand. See `subtitleFor`. */
+  besides: string;
+  /** The ligand to draw in the box, as SDF, or null where there is none to draw. */
+  sdf: string | null;
+}
+
+/**
+ * The line under the name of a node that is showing its ligand.
+ *
+ * The whole composition, minus the type the picture above it is already
+ * showing: a complex leg reads "Protein + Solvent" over a drawing of its
+ * ligand, which says "this ligand, in the protein" without either half being
+ * said twice.
+ *
+ * Only while the picture is there, which is why this is a second line rather
+ * than the only one: zoomed out there is nothing to account for the missing
+ * type, and a solvent leg reading "Solvent" would be indistinguishable from a
+ * system that really is nothing but solvent. Only where the system has exactly
+ * one small molecule, too - with a cofactor beside the ligand the picture
+ * accounts for one of the two and dropping the type would hide the other - and
+ * only where something is left, so a system that is nothing but a ligand still
+ * says what it is.
+ */
+function subtitleFor(types: readonly string[], depicted: boolean, ligands: number): string {
+  if (!depicted || ligands !== 1) return types.join(" + ");
+  const rest = types.filter((type) => type !== "SmallMolecule");
+  return (rest.length ? rest : types).join(" + ");
 }
 
 interface MenuParts {
@@ -698,6 +846,28 @@ export class GufeAlchemicalNetwork extends GufeElement<AlchemicalNetworkViz> {
 
     const ligands = ligandIndex(nodes, registry);
     const matcher = createMatcher(rdkit, ligands.sources);
+
+    /**
+     * What each node draws, worked out once here rather than per paint.
+     *
+     * A redraw - a resize, a dragged divider - repaints the whole canvas, and
+     * none of this changes when it does: which ligand a system carries and what
+     * it is made of are properties of the payload.
+     */
+    const faces: NodeFace[] = nodes.map((node, index) => {
+      // The first small molecule with a structure in it. A system with two is a
+      // ligand and a cofactor, and which of them the network is about is the
+      // one the payload lists first; the subtitle goes on naming both.
+      const sdf = ligands.perNode[index].map((source) => ligands.sources[source]).find((source) => source) ?? null;
+      const types = componentTypes(node, registry);
+      return {
+        colors: groups.colorOf(index),
+        composition: types.join(" + "),
+        besides: subtitleFor(types, sdf !== null, ligands.perNode[index].length),
+        sdf,
+      };
+    });
+
     /** The systems the pattern left, or null when there is no pattern in force. */
     let matched: ReadonlySet<number> | null = null;
     let refreshList = () => {};
@@ -852,7 +1022,7 @@ export class GufeAlchemicalNetwork extends GufeElement<AlchemicalNetworkViz> {
         // screen stays there while the layout for the next one is worked out.
         stopScene();
         canvas.querySelectorAll("svg").forEach((stale) => stale.remove());
-        const scene = this.#paint(canvas, nodes, edges, width, height, groups.colorOf, select);
+        const scene = this.#paint(canvas, nodes, edges, width, height, faces, rdkit, select);
         stopScene = scene.cleanup;
         resetView = scene.reset;
         focusNode = (index) => scene.focusOn(index);
@@ -978,7 +1148,6 @@ export class GufeAlchemicalNetwork extends GufeElement<AlchemicalNetworkViz> {
     message(text: string): void;
     cleanup(): void;
   } {
-    host.appendChild(el("div", PANE_LABEL, "Selected"));
     const body = el("div", "flex:1;min-height:0;display:flex;flex-direction:column;");
     host.appendChild(body);
 
@@ -1020,7 +1189,8 @@ export class GufeAlchemicalNetwork extends GufeElement<AlchemicalNetworkViz> {
     edges: GraphEdge[],
     width: number,
     height: number,
-    colorOf: (index: number) => NodeColors,
+    faces: readonly NodeFace[],
+    rdkit: () => Promise<RDKitModule | null>,
     onSelect: (kind: "node" | "edge", index: number) => void,
   ): {
     setSelected(selection: { kind: "node" | "edge"; index: number } | null): void;
@@ -1046,10 +1216,21 @@ export class GufeAlchemicalNetwork extends GufeElement<AlchemicalNetworkViz> {
     const nodeLayer = svg("g");
     scene.append(lineLayer, nodeLayer);
 
+    /**
+     * What a move of the camera redraws, set once the nodes exist.
+     *
+     * The camera is built before them because the drag handlers below need it,
+     * and a zoom cannot redraw nodes that have not been made yet; between here
+     * and there a move does nothing, which is what a graph with nothing on it
+     * should do.
+     */
+    let onZoom: (scale: number, tx: number, ty: number) => void = () => {};
+
     const camera = sceneCamera(root, scene, {
       bounds: () => extentOf(nodes, NODE_EXTENT.x, NODE_EXTENT.y),
       margin: FIT_MARGIN,
       hint: "Click the graph or hold Ctrl to zoom",
+      onTransform: (scale, tx, ty) => onZoom(scale, tx, ty),
     });
 
     // A pan begins wherever the pointer went down, which on a graph this dense
@@ -1120,51 +1301,96 @@ export class GufeAlchemicalNetwork extends GufeElement<AlchemicalNetworkViz> {
     const nodeGroups: SVGGElement[] = [];
     const labels: SVGTextElement[] = [];
     const subs: SVGTextElement[] = [];
+    /** The white square under a ligand, and the group it is drawn into. Null where there is no ligand. */
+    const plates: (SVGRectElement | null)[] = [];
+    const depictions: (SVGGElement | null)[] = [];
+
     nodes.forEach((node, index) => {
-      const colors = colorOf(index);
-      const group = svg("g", { style: "cursor:pointer;" });
+      const face = faces[index];
+      // Built in the tall shape and shrunk by the first `show`, so everything
+      // inside a depicted box - the plate, the group the structure mounts into -
+      // is positioned once, against the only box height it is ever drawn in.
+      const boxHeight = face.sdf ? NODE.depictedHeight : NODE.height;
+      // Placed by one transform on the group rather than by coordinates on each
+      // child: a node is five elements now, and a drag that had to rewrite all
+      // of them per pointer move is a drag that lags behind the hand.
+      const group = svg("g", {
+        class: "gufe-node",
+        style: "cursor:pointer;",
+        transform: `translate(${node.x},${node.y})`,
+      });
       nodeGroups.push(group);
       const box = svg("rect", {
-        x: node.x - NODE.width / 2,
-        y: node.y - NODE.height / 2,
+        class: "gufe-node-box",
+        x: -NODE.width / 2,
+        y: -boxHeight / 2,
         width: NODE.width,
-        height: NODE.height,
+        height: boxHeight,
         rx: NODE.radius,
-        fill: colors.fill,
-        stroke: colors.stroke,
+        fill: face.colors.fill,
+        stroke: face.colors.stroke,
         "stroke-width": 2,
       });
       group.appendChild(box);
       boxes.push(box);
-      restingStroke.push(colors.stroke);
+      restingStroke.push(face.colors.stroke);
+
+      if (face.sdf) {
+        const plate = svg("rect", {
+          class: "gufe-node-plate",
+          x: -PLATE.size / 2,
+          y: -boxHeight / 2 + PLATE.pad,
+          width: PLATE.size,
+          height: PLATE.size,
+          rx: PLATE.radius,
+          fill: T.netDepictBg,
+          display: "none",
+          "pointer-events": "none",
+        }) as SVGRectElement;
+        group.appendChild(plate);
+        plates.push(plate);
+
+        // Two groups: this one puts the middle of the plate at the origin, and
+        // the one inside it is what the depiction is mounted into - which
+        // overwrites its own transform to scale the drawing down to size.
+        const holder = svg("g", { transform: `translate(0,${-boxHeight / 2 + PLATE.pad + PLATE.size / 2})` });
+        const depiction = svg("g", { class: "gufe-node-depiction", display: "none", "pointer-events": "none" });
+        holder.appendChild(depiction);
+        group.appendChild(holder);
+        depictions.push(depiction);
+      } else {
+        plates.push(null);
+        depictions.push(null);
+      }
 
       const label = svg("text", {
-        x: node.x,
-        y: node.y - 2,
+        class: "gufe-node-label",
+        x: 0,
+        y: -2,
         "text-anchor": "middle",
         fill: T.netNodeLabel,
-        "font-size": 12,
+        "font-size": CAPTION.nameSize,
         "font-weight": 700,
         "font-family": "ui-sans-serif,system-ui,sans-serif",
       });
-      label.textContent = truncate(nodeLabel(node), 20);
+      label.textContent = truncate(nodeLabel(node), CAPTION.nameChars);
       group.appendChild(label);
       labels.push(label);
 
-      const count = Object.keys(node.components ?? {}).length;
       const sub = svg("text", {
-        x: node.x,
-        y: node.y + 14,
+        class: "gufe-node-composition",
+        x: 0,
+        y: 14,
         "text-anchor": "middle",
         fill: T.netInitials,
-        "font-size": 10,
+        "font-size": CAPTION.subSize,
         "font-family": "ui-sans-serif,system-ui,sans-serif",
       });
-      sub.textContent = `${count} component${count === 1 ? "" : "s"}`;
+      sub.textContent = truncate(face.composition, CAPTION.subChars);
       group.appendChild(sub);
       subs.push(sub);
 
-      titled(group, nodeLabel(node));
+      titled(group, `${nodeLabel(node)} - ${face.composition}`);
       nodeLayer.appendChild(group);
     });
 
@@ -1177,12 +1403,7 @@ export class GufeAlchemicalNetwork extends GufeElement<AlchemicalNetworkViz> {
      */
     const place = (index: number): void => {
       const node = nodes[index];
-      boxes[index].setAttribute("x", String(node.x - NODE.width / 2));
-      boxes[index].setAttribute("y", String(node.y - NODE.height / 2));
-      labels[index].setAttribute("x", String(node.x));
-      labels[index].setAttribute("y", String(node.y - 2));
-      subs[index].setAttribute("x", String(node.x));
-      subs[index].setAttribute("y", String(node.y + 14));
+      nodeGroups[index].setAttribute("transform", `translate(${node.x},${node.y})`);
       for (const e of incident[index]) {
         for (const line of [lines[e], hits[e]]) {
           // Both ends, and not one or the other: an edge from a system to
@@ -1198,6 +1419,95 @@ export class GufeAlchemicalNetwork extends GufeElement<AlchemicalNetworkViz> {
         }
       }
     };
+
+    // --- the ligands, drawn as the zoom asks for them ----------------------
+
+    /** Nodes whose ligand is drawn, and nodes whose ligand RDKit could not draw. */
+    const drawn = new Set<number>();
+    const failed = new Set<number>();
+
+    const inject = (RDKit: RDKitModule, index: number): void => {
+      if (drawn.has(index) || failed.has(index)) return;
+      const target = depictions[index];
+      const sdf = faces[index].sdf;
+      if (!target || !sdf) return;
+      const markup = depictSVG(RDKit, sdf, DEPICT_SIZE, DEPICT_STYLE.layout);
+      // Marked failed rather than left to be tried again: a molecule RDKit
+      // cannot draw now will not draw on the next pan either, and a node that
+      // keeps asking pays for the attempt every time the view moves.
+      if (!markup || !mountDepiction(target, markup, DEPICT_SIZE, PLATE.size - PLATE.inset * 2)) {
+        failed.add(index);
+        return;
+      }
+      drawn.add(index);
+    };
+
+    /**
+     * Draw one node at a level.
+     *
+     * A node that has no ligand, or whose ligand has not been drawn yet, shows
+     * what it showed before: its name and its composition in the middle of the
+     * box. A node with one shows it, and the two lines of text move down to sit
+     * under the picture rather than across it.
+     */
+    const show = (index: number, structures: boolean): void => {
+      const showing = structures && drawn.has(index);
+      plates[index]?.setAttribute("display", showing ? "inline" : "none");
+      depictions[index]?.setAttribute("display", showing ? "inline" : "none");
+      const boxHeight = showing ? NODE.depictedHeight : NODE.height;
+      boxes[index].setAttribute("y", String(-boxHeight / 2));
+      boxes[index].setAttribute("height", String(boxHeight));
+      const bottom = boxHeight / 2 - CAPTION.bottom;
+      labels[index].setAttribute("y", String(showing ? bottom - CAPTION.gap : -2));
+      subs[index].setAttribute("y", String(showing ? bottom : 14));
+      const face = faces[index];
+      subs[index].textContent = truncate(showing ? face.besides : face.composition, CAPTION.subChars);
+    };
+
+    /**
+     * The level the last move put in force.
+     *
+     * Read again when RDKit answers, because it answers a frame or two late and
+     * the view may have pulled back out in the meantime: what a structure is
+     * drawn against is where the canvas is now, not where it was when the
+     * structure was asked for.
+     */
+    let current: NodeDetail | null = null;
+
+    const applyLevel = (scale: number, tx: number, ty: number): void => {
+      const level = levelAt(scale);
+      current = level;
+      // On the canvas rather than only in this closure: which level is in force
+      // is the first thing anyone asks when the picture looks wrong, and this
+      // way it is visible in devtools and assertable in a test.
+      root.setAttribute("data-detail", level.id);
+      for (let i = 0; i < nodes.length; i++) show(i, level.structure);
+      if (!level.structure) return;
+
+      // Only the nodes on screen, plus a margin so panning does not tear. This
+      // and the once-each rule above are what a two-hundred-system campaign
+      // costs instead of two hundred RDKit calls before the first frame.
+      const wanted: number[] = [];
+      nodes.forEach((node, index) => {
+        if (!faces[index].sdf || drawn.has(index) || failed.has(index)) return;
+        const x = node.x * scale + tx;
+        const y = node.y * scale + ty;
+        if (x < -CULL_MARGIN || y < -CULL_MARGIN || x > width + CULL_MARGIN || y > height + CULL_MARGIN) return;
+        wanted.push(index);
+      });
+      if (!wanted.length) return;
+
+      rdkit()
+        .then((RDKit) => {
+          if (!RDKit || current !== level) return;
+          for (const index of wanted) {
+            inject(RDKit, index);
+            show(index, true);
+          }
+        })
+        .catch(() => undefined);
+    };
+    onZoom = applyLevel;
 
     /**
      * Dragging a system, and telling a drag from a click.

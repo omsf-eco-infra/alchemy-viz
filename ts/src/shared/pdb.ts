@@ -123,12 +123,20 @@ export function parsePdbStats(pdbText: string): PdbStats {
   };
 }
 
-export function proteinStatsText(stats: PdbStats): string {
-  return (
-    `${fmt(stats.chains)} chains · ${fmt(stats.residues)} residues · ` +
-    `${fmt(stats.atoms)} atoms · ${fmt(stats.hetatms)} HETATM` +
-    (stats.waters > 0 ? ` (${fmt(stats.waters)} water)` : "")
-  );
+/**
+ * What is in the structure, one phrase per fact.
+ *
+ * A list rather than a sentence because of where it is read: the counts live in
+ * the controls panel, which is a column narrow enough that a single line of
+ * them wraps between a number and its noun.
+ */
+export function proteinStatsParts(stats: PdbStats): string[] {
+  return [
+    `${fmt(stats.chains)} chains`,
+    `${fmt(stats.residues)} residues`,
+    `${fmt(stats.atoms)} atoms`,
+    `${fmt(stats.hetatms)} HETATM` + (stats.waters > 0 ? ` (${fmt(stats.waters)} water)` : ""),
+  ];
 }
 
 /** Colour arguments for a scheme, valid for any representation. */

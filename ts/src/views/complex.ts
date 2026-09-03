@@ -30,7 +30,7 @@ import {
   applyLigandStyles,
   applyProteinStyles,
   parsePdbStats,
-  proteinStatsText,
+  proteinStatsParts,
   type PdbStats,
 } from "../shared/pdb.js";
 import { proteinScene } from "../shared/protein-scene.js";
@@ -188,13 +188,13 @@ export class GufeComplex extends GufeElement<ChemicalSystemViz> {
       return {};
     }
 
-    scene.setStats(complexStatsText(parts, () => stats));
+    scene.setStats(complexStatsParts(parts, () => stats));
     try {
       // The first structure's statistics, which is all of them in every payload
       // gufe produces: a system with two proteins in it has no natural single
       // readout, and the colour-by-residue gradient needs one structure's range.
       stats = parsePdbStats(parts.structures[0].pdb);
-      scene.setStats(complexStatsText(parts, () => stats));
+      scene.setStats(complexStatsParts(parts, () => stats));
     } catch (e) {
       scene.showStatus(`PDB parse error: ${errText(e)}`, "error");
     }
@@ -229,14 +229,14 @@ export class GufeComplex extends GufeElement<ChemicalSystemViz> {
  * count in front of it - that being the number a reader of a complex is
  * actually checking.
  */
-function complexStatsText(parts: ComplexParts, stats: () => PdbStats | null): string {
+function complexStatsParts(parts: ComplexParts, stats: () => PdbStats | null): string[] {
   const atoms = parts.ligands.reduce((total, ligand) => {
     const counts = parseCounts(ligand.sdf);
     return counts ? total + counts.atoms : total;
   }, 0);
   const ligand = `${parts.ligands.length === 1 ? "ligand" : `${parts.ligands.length} ligands`} ${atoms} atoms`;
   const structure = stats();
-  return structure ? `${ligand} | ${proteinStatsText(structure)}` : ligand;
+  return structure ? [ligand, ...proteinStatsParts(structure)] : [ligand];
 }
 
 defineElement("gufe-complex", GufeComplex);

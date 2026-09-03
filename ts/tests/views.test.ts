@@ -181,15 +181,31 @@ describe("<gufe-protein>", () => {
     document.body.replaceChildren();
   });
 
-  it("reports chain / residue / atom counts from the PDB", async () => {
+  it("reports chain / residue / atom counts from the PDB, in the controls panel", async () => {
     const payload = readExample("protein_fragment.json");
     const node = mount("gufe-protein", payload);
     await flush();
 
     const stats = parsePdbStats((payload as { pdb: string }).pdb);
     expect(stats.atoms).toBeGreaterThan(0);
-    expect(node.textContent).toContain(`${stats.chains} chains`);
+    // The name is over the picture, because it says what is being looked at.
+    // The counts are not: they are read when a structure is opened and then
+    // stand in the corner of every frame after, so they are a click away.
     expect(node.textContent).toContain(payload.name as string);
+    expect(node.textContent).not.toContain(`${stats.chains} chains`);
+
+    Array.from(node.querySelectorAll("button"))
+      .find((b) => b.getAttribute("aria-expanded") === "false")!
+      .click();
+    expect(node.textContent).toContain(`${stats.chains} chains`);
+    expect(node.textContent).toContain(`${stats.atoms} atoms`);
+
+    // Under the controls, not over them: the controls are what the panel is
+    // opened for, and a block of counts above them pushes every one down.
+    const captions = Array.from(node.querySelectorAll("span"), (s) => s.textContent).filter(
+      (text) => text && ["Style", "Color", "Show", "Camera", "Contents"].includes(text),
+    );
+    expect(captions).toEqual(["Style", "Color", "Show", "Camera", "Contents"]);
   });
 
   it("offers every representation and colour scheme", async () => {
@@ -1625,7 +1641,7 @@ describe("<gufe-alchemical-network>", () => {
     const node = mount("gufe-alchemical-network", payload);
     await flush();
 
-    expect(node.querySelectorAll("rect").length).toBe(payload.nodes.length);
+    expect(node.querySelectorAll("rect.gufe-node-box").length).toBe(payload.nodes.length);
     const text = node.textContent ?? "";
     expect(text).toContain(String(payload.nodes.length));
     expect(text).toContain("transformations");
@@ -1696,11 +1712,18 @@ describe("<gufe-alchemical-network>", () => {
     const node = mount("gufe-alchemical-network", readExample("alchemical_network.json"));
     await flush();
 
-    const box = node.querySelectorAll<SVGRectElement>("rect")[0];
-    const group = box.parentElement as unknown as SVGGElement & { setPointerCapture(id: number): void };
+    const group = node.querySelectorAll<SVGGElement>("g.gufe-node")[0] as SVGGElement & {
+      setPointerCapture(id: number): void;
+    };
     group.setPointerCapture = () => {};
     const at = (element: Element, name: string): number => Number(element.getAttribute(name));
-    const centre = { x: at(box, "x") + at(box, "width") / 2, y: at(box, "y") + at(box, "height") / 2 };
+    // A node is placed by one transform on its group rather than by coordinates
+    // on each of the five things inside it, so where it is is read off that.
+    const centreOf = (element: Element): { x: number; y: number } => {
+      const [, x, y] = /translate\(([-\d.]+),([-\d.]+)\)/.exec(element.getAttribute("transform") ?? "")!;
+      return { x: Number(x), y: Number(y) };
+    };
+    const centre = centreOf(group);
 
     // Which line ends were on this system before it moved. Both lines of each
     // edge: the visible one and the invisible one that is actually clicked.
@@ -1727,8 +1750,7 @@ describe("<gufe-alchemical-network>", () => {
     // jsdom lays nothing out, so the camera frames this graph at 1:1 and the
     // pointer's own delta is the node's.
     const moved = { x: centre.x + 160, y: centre.y + 140 };
-    expect(at(box, "x") + at(box, "width") / 2).toBe(moved.x);
-    expect(at(box, "y") + at(box, "height") / 2).toBe(moved.y);
+    expect(centreOf(group)).toEqual(moved);
     for (const { line, end } of ends) {
       expect(at(line, `x${end}`)).toBe(moved.x);
       expect(at(line, `y${end}`)).toBe(moved.y);
@@ -1744,8 +1766,9 @@ describe("<gufe-alchemical-network>", () => {
     const before = openOn();
     expect(before).toBeTruthy();
 
-    const box = node.querySelectorAll<SVGRectElement>("rect")[1];
-    const group = box.parentElement as unknown as SVGGElement & { setPointerCapture(id: number): void };
+    const group = node.querySelectorAll<SVGGElement>("g.gufe-node")[1] as SVGGElement & {
+      setPointerCapture(id: number): void;
+    };
     group.setPointerCapture = () => {};
     const pointer = (type: string, clientX: number, clientY: number): MouseEvent => {
       const event = new MouseEvent(type, { bubbles: true, clientX, clientY });
@@ -1772,7 +1795,7 @@ describe("<gufe-alchemical-network>", () => {
     await flush();
     // A system is drawn as a rounded box with its name in it; the last one is
     // as good as any, and not the one the pane opens on.
-    const system = [...node.querySelectorAll<SVGRectElement>("rect")].at(-1)!;
+    const system = [...node.querySelectorAll<SVGRectElement>("rect.gufe-node-box")].at(-1)!;
     system.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     await flush();
 
@@ -1846,7 +1869,8 @@ describe("<gufe-alchemical-network>", () => {
 
     // Fills rather than strokes: a stroke also says which node is selected, and
     // what is being asserted here is what the node is made of.
-    const fills = [...node.querySelectorAll("svg.gufe-graph rect")].map((box) => box.getAttribute("fill"));
+    const boxes = [...node.querySelectorAll("svg.gufe-graph rect.gufe-node-box")];
+    const fills = boxes.map((box) => box.getAttribute("fill"));
     expect(new Set(fills).size).toBe(2);
     expect(fills.every((fill) => T.netGroupFill.includes(fill!))).toBe(true);
     const text = node.textContent ?? "";
@@ -1860,9 +1884,94 @@ describe("<gufe-alchemical-network>", () => {
 
     // Every system here is made of the same things, so a colour per composition
     // would be one colour and a legend saying so is noise.
-    const fills = [...node.querySelectorAll("svg.gufe-graph rect")].map((box) => box.getAttribute("fill"));
+    const boxes = [...node.querySelectorAll("svg.gufe-graph rect.gufe-node-box")];
+    const fills = boxes.map((box) => box.getAttribute("fill"));
     expect(new Set(fills)).toEqual(new Set([T.cardBg]));
     expect(node.textContent).not.toContain("systems made of");
+  });
+
+  /** One wheel gesture on the graph. Negative zooms in, positive out. */
+  const wheeledGraph = (node: HTMLElement, deltaY: number): SVGSVGElement => {
+    const root = node.querySelector<SVGSVGElement>("svg.gufe-graph")!;
+    root.dispatchEvent(new MouseEvent("pointerdown", { bubbles: true }));
+    root.dispatchEvent(new WheelEvent("wheel", { deltaY, bubbles: true, cancelable: true }));
+    return root;
+  };
+
+  /** The height of each system's box, which is what a structure changes. */
+  const boxHeights = (node: HTMLElement): number[] =>
+    [...node.querySelectorAll("rect.gufe-node-box")].map((box) => Number(box.getAttribute("height")));
+
+  it("draws the ligand inside a system that carries one, and grows the box to hold it", async () => {
+    // The ligand is what a chemist recognises a system by: the name is a naming
+    // convention and the composition is shared by half the graph, so a node
+    // that only names itself is a node nobody can find without clicking it.
+    const node = mount("gufe-alchemical-network", readExample("alchemical_network.json"));
+    await flush();
+
+    expect(node.querySelector("svg.gufe-graph")!.getAttribute("data-detail")).toBe("structures");
+    const depictions = [...node.querySelectorAll("g.gufe-node-depiction")];
+    expect(depictions).toHaveLength(node.querySelectorAll("g.gufe-node").length);
+    expect(depictions.every((g) => g.getAttribute("display") === "inline")).toBe(true);
+    expect(depictions.every((g) => g.childElementCount > 0), "a structure was never drawn").toBe(true);
+    // On its own white plate: RDKit draws for paper, so a structure straight
+    // onto the box's composition colour is one nobody can read.
+    const plates = [...node.querySelectorAll("rect.gufe-node-plate")];
+    expect(plates.every((p) => p.getAttribute("display") === "inline")).toBe(true);
+    expect(boxHeights(node).every((height) => height > 100)).toBe(true);
+  });
+
+  it("shrinks the boxes back to their names when the reader pulls out", async () => {
+    // A campaign of twenty frames itself well below the threshold, and boxes
+    // that stayed tall out there would be twenty empty rectangles taking three
+    // times the room their names need.
+    const node = mount("gufe-alchemical-network", readExample("alchemical_network.json"));
+    await flush();
+    const root = wheeledGraph(node, 600);
+    await flush();
+
+    expect(root.getAttribute("data-detail")).toBe("boxes");
+    const depictions = [...node.querySelectorAll("g.gufe-node-depiction")];
+    expect(depictions.every((g) => g.getAttribute("display") === "none")).toBe(true);
+    expect([...node.querySelectorAll("rect.gufe-node-plate")].every((p) => p.getAttribute("display") === "none")).toBe(
+      true,
+    );
+    expect(new Set(boxHeights(node))).toEqual(new Set([46]));
+  });
+
+  it("keeps the plain box where a system has no ligand to draw", async () => {
+    // A reference state with nothing but solvent in it, which is a payload the
+    // schema allows and a node with nothing to put in the box.
+    const payload = structuredClone(readExample("alchemical_network.json")) as {
+      registry: { type: string; components?: Record<string, string> }[];
+    };
+    const system = payload.registry.find((entry) => entry.type === "ChemicalSystemViz")!;
+    delete system.components!.ligand;
+
+    const node = mount("gufe-alchemical-network", payload);
+    await flush();
+
+    const groups = [...node.querySelectorAll("g.gufe-node")];
+    const bare = groups.filter((g) => !g.querySelector("g.gufe-node-depiction"));
+    expect(bare, "the system with no small molecule was still given a depiction").toHaveLength(1);
+    expect(Number(bare[0].querySelector("rect.gufe-node-box")!.getAttribute("height"))).toBe(46);
+    expect(groups.length - bare.length).toBeGreaterThan(0);
+  });
+
+  it("says what a system is made of, and stops naming the ligand once it is showing one", async () => {
+    // Both halves matter. Zoomed in, "Solvent" over a drawing of the ligand
+    // says "this ligand, in water" without saying either half twice; zoomed
+    // out there is no drawing to account for the missing word, and a solvent
+    // leg reading "Solvent" would read as a system that is only solvent.
+    const node = mount("gufe-alchemical-network", readExample("alchemical_network.json"));
+    await flush();
+    const lines = (): (string | null)[] =>
+      [...node.querySelectorAll("text.gufe-node-composition")].map((line) => line.textContent);
+
+    expect(lines().every((line) => line === "Solvent")).toBe(true);
+    wheeledGraph(node, 600);
+    await flush();
+    expect(lines().every((line) => line === "SmallMolecule + Solvent")).toBe(true);
   });
 
   it("drops a transformation naming a system it does not contain, and says so", async () => {

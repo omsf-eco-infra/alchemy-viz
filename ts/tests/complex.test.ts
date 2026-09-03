@@ -166,9 +166,13 @@ describe("<gufe-complex>", () => {
     expect(framings().slice(3)).toEqual(['zoomTo({"model":[1]})', "zoom(0.4)"]);
   });
 
-  it("says how big both halves of the scene are", async () => {
+  it("says how big both halves of the scene are, in the controls panel", async () => {
     const node = mount("gufe-complex", complexPayload());
     await flush();
+    // Not over the picture: the counts are read once and the frame is looked at
+    // for the rest of the sitting, so they sit with the controls.
+    expect(node.textContent ?? "").not.toContain("residues");
+    openMenu(node);
     const text = node.textContent ?? "";
     expect(text).toContain("ligand");
     expect(text).toContain("atoms");

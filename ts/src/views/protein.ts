@@ -19,7 +19,7 @@ import { errText } from "../shared/dom.js";
 import { defineElement, GufeElement, type ViewHandle } from "../shared/element.js";
 import { load3Dmol, ThreeDmol } from "../shared/engines.js";
 import { viewerInteraction } from "../shared/interact.js";
-import { applyProteinStyles, parsePdbStats, proteinStatsText, type PdbStats } from "../shared/pdb.js";
+import { applyProteinStyles, parsePdbStats, proteinStatsParts, type PdbStats } from "../shared/pdb.js";
 import { proteinScene } from "../shared/protein-scene.js";
 import { SURFACE } from "../shared/style.js";
 import type {
@@ -68,7 +68,7 @@ export class GufeProtein extends GufeElement<PdbPayload> {
 
     try {
       stats = parsePdbStats(pdb);
-      scene.setStats(proteinStatsText(stats));
+      scene.setStats(proteinStatsParts(stats));
     } catch (e) {
       scene.showStatus(`PDB parse error: ${errText(e)}`, "error");
     }

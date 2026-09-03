@@ -37,7 +37,6 @@ import {
   PANE_CHIP,
   PANE_CHROME_CLEARANCE,
   PANE_CHROME_OVERLAY,
-  PANE_STATS_OVERLAY,
   WEIGHT,
 } from "./style.js";
 import { T } from "./theme.js";
@@ -111,8 +110,16 @@ export interface ProteinScene {
   /** The menu, for a view that needs to ask whether it is open. */
   menu: ChromeMenu;
   showStatus: StatusFn;
-  /** The line at the right of the header. Each view words its own. */
-  setStats(text: string): void;
+  /**
+   * What is in the scene, one phrase per fact. Each view words its own.
+   *
+   * It goes in the controls panel. A count of chains and atoms is read once,
+   * when a structure is opened, and a readout pinned over the picture is then
+   * in the corner of every frame after that - so it sits with the controls,
+   * where a reader who wants it goes and looks, and the picture stays whole.
+   * Passing an empty list hides the block rather than leaving a bare caption.
+   */
+  setStats(parts: string[]): void;
   viewer(): ThreeDmolViewer | null;
   /** Hand the viewer over once it is built; the scene resizes and clears it. */
   setViewer(viewer: ThreeDmolViewer | null): void;
@@ -169,11 +176,11 @@ export function proteinScene(spec: ProteinSceneSpec): ProteinScene {
   const chrome = el("div", PANE_CHROME_OVERLAY);
   split.appendChild(chrome);
 
-  const statsEl = el("div", PANE_STATS_OVERLAY);
-  split.appendChild(statsEl);
-
   const section = ({ label, controls }: MenuSection): HTMLDivElement => {
-    const block = el("div", "display:flex;flex-direction:column;gap:6px;min-width:0;");
+    // `flex-shrink:0` so a panel with more in it than fits scrolls - `MENU_PANEL`
+    // is what does the scrolling - rather than squeezing every block a few
+    // pixels shorter until the captions sit on top of the buttons.
+    const block = el("div", "display:flex;flex-direction:column;gap:6px;min-width:0;flex-shrink:0;");
     block.appendChild(
       el(
         "span",
@@ -185,6 +192,13 @@ export function proteinScene(spec: ProteinSceneSpec): ProteinScene {
     for (const control of controls) block.appendChild(control);
     return block;
   };
+
+  // Built here rather than in `buildControls`, because a view sets its counts
+  // as soon as it has parsed a structure and the panel is not built until the
+  // menu is first opened, which may be never.
+  const statsEl = el("div", `display:flex;flex-direction:column;gap:2px;font-size:${FONT.small};color:${T.textMuted};`);
+  const statsSection = section({ label: "Contents", controls: [statsEl] });
+  statsSection.style.display = "none";
 
   const buildControls = (): HTMLDivElement => {
     // `height:100%` rather than the `flex:1` in `MENU_PANEL`: the wrapper this
@@ -209,9 +223,6 @@ export function proteinScene(spec: ProteinSceneSpec): ProteinScene {
       },
       repSetting,
     );
-    // Four buttons do not fit across a menu column at its floor width, and a
-    // row that overflows puts Sphere off the edge of the panel.
-    reps.style.cssText += "flex-wrap:wrap;";
     panel.appendChild(section({ label: "Style", controls: [reps] }));
 
     const colors = dropdown(
@@ -250,6 +261,11 @@ export function proteinScene(spec: ProteinSceneSpec): ProteinScene {
     const reset = resetControl(() => (spec.reset ? spec.reset() : interaction?.reset()));
     reset.style.cssText += "width:100%;box-sizing:border-box;";
     panel.appendChild(section({ label: "Camera", controls: [...(spec.camera?.() ?? []), reset] }));
+
+    // Last. The controls are what the panel is opened for and they belong under
+    // the hand that opened it; the counts are read once and then not again, so
+    // they go at the bottom rather than pushing every control down a block.
+    panel.appendChild(statsSection);
 
     return panel;
   };
@@ -307,8 +323,9 @@ export function proteinScene(spec: ProteinSceneSpec): ProteinScene {
     pane,
     menu,
     showStatus,
-    setStats: (text) => {
-      statsEl.textContent = text;
+    setStats: (parts) => {
+      statsEl.replaceChildren(...parts.map((part) => el("div", "overflow-wrap:anywhere;", part)));
+      statsSection.style.display = parts.length ? "" : "none";
     },
     viewer: () => viewer,
     setViewer: (next) => {

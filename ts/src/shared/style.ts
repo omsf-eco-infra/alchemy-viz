@@ -99,10 +99,15 @@ export const SURFACE = {
 
 /** A button, in its three states. `buttonGroup` and the menu toggle use these. */
 export const BUTTON = {
+  // `max-width` and `box-sizing` are what keep a button inside whatever holds
+  // it. A label wider than the menu column would otherwise run out over the
+  // picture, and `width:100%` on a padded, bordered button means 100% plus the
+  // padding and the border - twenty pixels past the edge of the panel.
   base:
     `background:${T.btnBg};color:${T.btnFg};border:1px solid ${T.btnBorder};` +
     `padding:${SPACE.sm} 9px;font-size:${FONT.small};font-weight:${WEIGHT.bold};` +
-    `border-radius:${RADIUS.sm};cursor:pointer;font-family:inherit;`,
+    `border-radius:${RADIUS.sm};cursor:pointer;font-family:inherit;` +
+    "max-width:100%;box-sizing:border-box;",
   bg: T.btnBg,
   bgHover: T.btnBgHover,
   bgActive: T.btnBgActive,
@@ -249,12 +254,6 @@ export const PANE_CHIP =
 export const PANE_CHROME_OVERLAY =
   `position:absolute;top:${SPACE.lg};left:${SPACE.lg};z-index:15;display:flex;align-items:center;` +
   `gap:${SPACE.md};min-width:0;max-width:calc(100% - ${SPACE.xxl} - ${SPACE.xxl});`;
-
-/** The same, for the readout at the other end of that line. */
-export const PANE_STATS_OVERLAY =
-  `position:absolute;top:${SPACE.lg};right:${SPACE.lg};z-index:15;pointer-events:none;max-width:60%;` +
-  PANE_CHIP +
-  `font-size:${FONT.small};`;
 
 /** How far the menu panel's own contents start below the floating chrome. */
 export const PANE_CHROME_CLEARANCE = "42px";
