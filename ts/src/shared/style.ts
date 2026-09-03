@@ -224,6 +224,41 @@ export const PANE_LABEL_OVERLAY =
   `text-overflow:ellipsis;padding:${SPACE.xs} ${SPACE.lg};border-radius:${RADIUS.md};` +
   `font-size:${FONT.heading};font-weight:${WEIGHT.bold};color:${T.labelFg};background:${T.labelBg};`;
 
+/**
+ * The pill a floating name or readout is drawn in.
+ *
+ * The same background the bars use, so the text stays readable over a dark
+ * viewer and a white depiction alike.
+ */
+export const PANE_CHIP =
+  `padding:${SPACE.xs} ${SPACE.lg};border-radius:${RADIUS.md};white-space:nowrap;overflow:hidden;` +
+  `text-overflow:ellipsis;color:${T.labelFg};background:${T.labelBg};`;
+
+/**
+ * The chrome of a 3D pane, floating over its top left: the menu button, and
+ * the name of what is drawn.
+ *
+ * A bar above the picture costs a row of height for the whole of a sitting,
+ * whether or not anyone is reading it, and a picture of a protein wants that
+ * height more than a button does. Over the picture the chrome costs nothing
+ * when it is not being used, and it is still the top left corner - the place a
+ * reader looks for it.
+ *
+ * The pane it sits in must be `position:relative`.
+ */
+export const PANE_CHROME_OVERLAY =
+  `position:absolute;top:${SPACE.lg};left:${SPACE.lg};z-index:15;display:flex;align-items:center;` +
+  `gap:${SPACE.md};min-width:0;max-width:calc(100% - ${SPACE.xxl} - ${SPACE.xxl});`;
+
+/** The same, for the readout at the other end of that line. */
+export const PANE_STATS_OVERLAY =
+  `position:absolute;top:${SPACE.lg};right:${SPACE.lg};z-index:15;pointer-events:none;max-width:60%;` +
+  PANE_CHIP +
+  `font-size:${FONT.small};`;
+
+/** How far the menu panel's own contents start below the floating chrome. */
+export const PANE_CHROME_CLEARANCE = "42px";
+
 /** A bordered box: the standard container for anything that is not a viewer. */
 export const CARD =
   `display:flex;flex-direction:column;gap:${SPACE.xs};padding:${SPACE.xxl} 18px;` +

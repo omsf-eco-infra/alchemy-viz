@@ -195,12 +195,32 @@ describe("<gufe-protein>", () => {
   it("offers every representation and colour scheme", async () => {
     const node = mount("gufe-protein", readExample("protein_fragment.json"));
     await flush();
+    // The controls are in the chrome menu, which builds them on its first open.
+    Array.from(node.querySelectorAll("button"))
+      .find((b) => b.getAttribute("aria-expanded") === "false")!
+      .click();
 
     const labels = [...node.querySelectorAll("button")].map((b) => b.textContent);
     expect(labels).toEqual(expect.arrayContaining(["Cartoon", "Surface", "Stick", "Sphere"]));
 
     const options = [...node.querySelectorAll("option")].map((o) => (o as HTMLOptionElement).value);
     expect(options).toEqual(["chain", "spectrum", "ss", "element"]);
+  });
+
+  it("spends no row of height on a bar, floating its chrome over the picture", async () => {
+    // A header costs the picture a row for the whole of a sitting whether or
+    // not anyone is reading it. The name and the readout are still there; they
+    // are over the viewer rather than above it, and so is the menu button.
+    const payload = readExample("protein_fragment.json");
+    const node = mount("gufe-protein", payload);
+    await flush();
+
+    expect(node.querySelector(".gufe-header")).toBeNull();
+    expect(node.textContent).toContain(payload.name as string);
+    expect(
+      Array.from(node.querySelectorAll("button")).some((b) => b.hasAttribute("aria-expanded")),
+      "no menu button",
+    ).toBe(true);
   });
 
   it("says so, rather than crashing, when the PDB is empty", async () => {
@@ -1645,6 +1665,101 @@ describe("<gufe-alchemical-network>", () => {
     // Cut loose with a registry of its own, so it resolves its own endpoints.
     expect(text).not.toContain("registry does not hold them");
     expect(embedded!.querySelector("gufe-atom-mapping")).toBeTruthy();
+  });
+
+  it("measures an edge and its click target in screen pixels, not in graph units", async () => {
+    // The camera frames a campaign at whatever scale fits and never zooms in
+    // past 1, so a scaled stroke is a hairline on exactly the graphs with the
+    // most edges to tell apart - and its click target shrinks with it. Both
+    // widths are therefore taken out of the scene's transform.
+    const node = mount("gufe-alchemical-network", readExample("alchemical_network.json"));
+    await flush();
+
+    const lines = [...node.querySelectorAll<SVGLineElement>("line")];
+    const visible = lines.filter((line) => line.getAttribute("stroke") !== "transparent");
+    const hits = lines.filter((line) => line.getAttribute("stroke") === "transparent");
+    expect(visible).toHaveLength(hits.length);
+    expect(visible.length).toBeGreaterThan(0);
+
+    for (const line of lines) expect(line.getAttribute("vector-effect")).toBe("non-scaling-stroke");
+    const widthOf = (line: SVGLineElement): number => Number(line.getAttribute("stroke-width"));
+    // Easy to hit without being drawn heavy enough to crowd the boxes it runs
+    // between, which is the whole reason for the second line.
+    expect(widthOf(hits[0])).toBeGreaterThan(widthOf(visible[0]) * 2);
+  });
+
+  it("drags a system aside and takes its transformations with it", async () => {
+    // A force layout packs systems as tightly as the forces allow, so the edge
+    // someone wants is often under two others. Pulling a system out of the way
+    // is how they get at it, and an edge that stayed behind would just be a
+    // line pointing at nothing.
+    const node = mount("gufe-alchemical-network", readExample("alchemical_network.json"));
+    await flush();
+
+    const box = node.querySelectorAll<SVGRectElement>("rect")[0];
+    const group = box.parentElement as unknown as SVGGElement & { setPointerCapture(id: number): void };
+    group.setPointerCapture = () => {};
+    const at = (element: Element, name: string): number => Number(element.getAttribute(name));
+    const centre = { x: at(box, "x") + at(box, "width") / 2, y: at(box, "y") + at(box, "height") / 2 };
+
+    // Which line ends were on this system before it moved. Both lines of each
+    // edge: the visible one and the invisible one that is actually clicked.
+    const lines = [...node.querySelectorAll<SVGLineElement>("line")];
+    const ends = lines.flatMap((line) =>
+      ([1, 2] as const)
+        .filter((end) => at(line, `x${end}`) === centre.x && at(line, `y${end}`) === centre.y)
+        .map((end) => ({ line, end })),
+    );
+    expect(ends.length).toBeGreaterThan(0);
+
+    // jsdom has no PointerEvent; the handlers read only what a MouseEvent has,
+    // plus the pointer id the capture is taken with.
+    const pointer = (type: string, clientX: number, clientY: number): MouseEvent => {
+      const event = new MouseEvent(type, { bubbles: true, clientX, clientY });
+      Object.defineProperty(event, "pointerId", { value: 1 });
+      return event;
+    };
+    group.dispatchEvent(pointer("pointerdown", 100, 100));
+    group.dispatchEvent(pointer("pointermove", 260, 240));
+    group.dispatchEvent(pointer("pointerup", 260, 240));
+    await flush();
+
+    // jsdom lays nothing out, so the camera frames this graph at 1:1 and the
+    // pointer's own delta is the node's.
+    const moved = { x: centre.x + 160, y: centre.y + 140 };
+    expect(at(box, "x") + at(box, "width") / 2).toBe(moved.x);
+    expect(at(box, "y") + at(box, "height") / 2).toBe(moved.y);
+    for (const { line, end } of ends) {
+      expect(at(line, `x${end}`)).toBe(moved.x);
+      expect(at(line, `y${end}`)).toBe(moved.y);
+    }
+  });
+
+  it("does not open a system that was only dragged out of the way", async () => {
+    const node = mount("gufe-alchemical-network", readExample("alchemical_network.json"));
+    await flush();
+    const openOn = (): string | undefined =>
+      (node.querySelector("gufe-chemical-system") as HTMLElement & { payload?: { "gufe-key"?: string } } | null)
+        ?.payload?.["gufe-key"];
+    const before = openOn();
+    expect(before).toBeTruthy();
+
+    const box = node.querySelectorAll<SVGRectElement>("rect")[1];
+    const group = box.parentElement as unknown as SVGGElement & { setPointerCapture(id: number): void };
+    group.setPointerCapture = () => {};
+    const pointer = (type: string, clientX: number, clientY: number): MouseEvent => {
+      const event = new MouseEvent(type, { bubbles: true, clientX, clientY });
+      Object.defineProperty(event, "pointerId", { value: 1 });
+      return event;
+    };
+    group.dispatchEvent(pointer("pointerdown", 100, 100));
+    group.dispatchEvent(pointer("pointermove", 260, 240));
+    group.dispatchEvent(pointer("pointerup", 260, 240));
+    group.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    await flush();
+
+    // Moving one is not a request to look at it.
+    expect(openOn()).toBe(before);
   });
 
   it("hands on a clicked system with none of the layout's bookkeeping", async () => {

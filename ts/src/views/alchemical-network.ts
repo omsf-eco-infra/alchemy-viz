@@ -101,6 +101,15 @@ interface D3ForceModule {
 interface GraphNode extends ChemicalSystemViz {
   x: number;
   y: number;
+  /**
+   * Pinned position, set by a drag and honoured by every layout after it.
+   *
+   * d3's own field name, because d3 is what reads it: a node with `fx` set is
+   * held there through the simulation rather than pushed around by the forces.
+   * `withoutLayout` strips it with the rest before a node is handed to a view.
+   */
+  fx?: number;
+  fy?: number;
 }
 
 /**
@@ -120,6 +129,23 @@ interface NodeColors {
 }
 
 const NODE = { width: 148, height: 46, radius: 10 };
+
+/**
+ * How wide a transformation is drawn, and how wide it is to a pointer.
+ *
+ * Both in screen pixels rather than in graph units - `vector-effect` below is
+ * what makes that true. The camera frames a whole campaign at once and never
+ * zooms in past 1, so a twenty-system graph is drawn at about a third and a
+ * two-hundred-system one at a few hundredths: scaled strokes there are a
+ * hairline nobody can see and a target nobody can hit, and the denser the
+ * network the thinner it gets, which is exactly backwards. A node's box is a
+ * shape and scales with the scene; an edge is a line and a target, and neither
+ * of those is measured in the graph's own units.
+ *
+ * `hit` is the invisible line under the visible one, so an edge can be easy to
+ * click without being drawn heavy enough to crowd the boxes it runs between.
+ */
+const EDGE = { width: 2, selectedWidth: 3.5, hit: 20 };
 const FORCE = {
   linkDistance: 220,
   linkStrength: 0.4,
@@ -155,6 +181,9 @@ const DIM = { node: 0.12, edge: 0.06 };
 
 /** How far in the canvas zooms to show one system the reader went looking for. */
 const FOCUS_SCALE = 1.4;
+
+/** How far a pointer may wander during a node drag and still count as a click, in pixels. */
+const CLICK_SLOP = 3;
 
 /** A node's label: its name, or a short form of its gufe key. */
 const nodeLabel = entryLabel;
@@ -509,10 +538,22 @@ function buildMenu(parts: MenuParts): HTMLDivElement {
   return panel;
 }
 
-/** Seed every node on a circle - deterministic, so reloads look the same. */
+/**
+ * Seed every node on a circle - deterministic, so reloads look the same.
+ *
+ * A node someone dragged is left where they put it. A resize redraws from
+ * scratch, and a reader who has just pulled two systems apart to get at the
+ * transformation between them should not have that undone by a window they
+ * happened to widen.
+ */
 function seedPositions(nodes: GraphNode[], width: number, height: number): void {
   const radius = Math.max(90, Math.min(width, height) * 0.36);
   nodes.forEach((node, i) => {
+    if (node.fx !== undefined && node.fy !== undefined) {
+      node.x = node.fx;
+      node.y = node.fy;
+      return;
+    }
     const angle = (2 * Math.PI * i) / Math.max(1, nodes.length) - Math.PI / 2;
     node.x = width / 2 + radius * Math.cos(angle);
     node.y = height / 2 + radius * Math.sin(angle);
@@ -1019,6 +1060,8 @@ export class GufeAlchemicalNetwork extends GufeElement<AlchemicalNetworkViz> {
     };
 
     const lines: SVGLineElement[] = [];
+    /** The invisible twin of each visible line, in the same order. */
+    const hits: SVGLineElement[] = [];
     edges.forEach((edge, index) => {
       const line = svg("line", {
         x1: edge.from.x,
@@ -1026,8 +1069,9 @@ export class GufeAlchemicalNetwork extends GufeElement<AlchemicalNetworkViz> {
         x2: edge.to.x,
         y2: edge.to.y,
         stroke: T.netEdgeLine,
-        "stroke-width": 2,
+        "stroke-width": EDGE.width,
         "stroke-linecap": "round",
+        "vector-effect": "non-scaling-stroke",
         style: "cursor:pointer;",
       });
       titled(line, edge.name || "transformation");
@@ -1036,18 +1080,36 @@ export class GufeAlchemicalNetwork extends GufeElement<AlchemicalNetworkViz> {
       lines.push(line);
 
       // A wider, invisible line under the visible one, so an edge is clickable
-      // without having to be thick.
+      // without having to be thick. Also a screen-pixel width: a target that
+      // shrank with the graph would be hardest to hit on the graphs that have
+      // the most edges to tell apart.
       const hit = svg("line", {
         x1: edge.from.x,
         y1: edge.from.y,
         x2: edge.to.x,
         y2: edge.to.y,
         stroke: "transparent",
-        "stroke-width": 16,
+        "stroke-width": EDGE.hit,
+        "stroke-linecap": "round",
+        "vector-effect": "non-scaling-stroke",
         style: "cursor:pointer;",
       });
       hit.addEventListener("click", () => click("edge", index));
       lineLayer.appendChild(hit);
+      hits.push(hit);
+    });
+
+    // Which edges each node is an end of, so a drag rewrites those and not all
+    // of them: a two-hundred-system campaign has 594, and touching every line
+    // on every pointer move is the difference between a drag that follows the
+    // hand and one that does not.
+    const incident: number[][] = nodes.map(() => []);
+    const indexOf = new Map(nodes.map((node, index) => [node, index]));
+    edges.forEach((edge, index) => {
+      const from = indexOf.get(edge.from);
+      const to = indexOf.get(edge.to);
+      if (from !== undefined) incident[from].push(index);
+      if (to !== undefined && to !== from) incident[to].push(index);
     });
 
     const boxes: SVGRectElement[] = [];
@@ -1056,6 +1118,8 @@ export class GufeAlchemicalNetwork extends GufeElement<AlchemicalNetworkViz> {
     // is drawn in.
     const restingStroke: string[] = [];
     const nodeGroups: SVGGElement[] = [];
+    const labels: SVGTextElement[] = [];
+    const subs: SVGTextElement[] = [];
     nodes.forEach((node, index) => {
       const colors = colorOf(index);
       const group = svg("g", { style: "cursor:pointer;" });
@@ -1085,6 +1149,7 @@ export class GufeAlchemicalNetwork extends GufeElement<AlchemicalNetworkViz> {
       });
       label.textContent = truncate(nodeLabel(node), 20);
       group.appendChild(label);
+      labels.push(label);
 
       const count = Object.keys(node.components ?? {}).length;
       const sub = svg("text", {
@@ -1097,10 +1162,95 @@ export class GufeAlchemicalNetwork extends GufeElement<AlchemicalNetworkViz> {
       });
       sub.textContent = `${count} component${count === 1 ? "" : "s"}`;
       group.appendChild(sub);
+      subs.push(sub);
 
       titled(group, nodeLabel(node));
-      group.addEventListener("click", () => click("node", index));
       nodeLayer.appendChild(group);
+    });
+
+    /**
+     * Redraw one node where it now is, and the edges hanging off it.
+     *
+     * Only that node: the layout is not re-run and nothing else has moved, so
+     * rewriting the whole scene per pointer move would be work spent to produce
+     * the same picture.
+     */
+    const place = (index: number): void => {
+      const node = nodes[index];
+      boxes[index].setAttribute("x", String(node.x - NODE.width / 2));
+      boxes[index].setAttribute("y", String(node.y - NODE.height / 2));
+      labels[index].setAttribute("x", String(node.x));
+      labels[index].setAttribute("y", String(node.y - 2));
+      subs[index].setAttribute("x", String(node.x));
+      subs[index].setAttribute("y", String(node.y + 14));
+      for (const e of incident[index]) {
+        for (const line of [lines[e], hits[e]]) {
+          // Both ends, and not one or the other: an edge from a system to
+          // itself is a payload the schema allows, and it has this node at both.
+          if (edges[e].from === node) {
+            line.setAttribute("x1", String(node.x));
+            line.setAttribute("y1", String(node.y));
+          }
+          if (edges[e].to === node) {
+            line.setAttribute("x2", String(node.x));
+            line.setAttribute("y2", String(node.y));
+          }
+        }
+      }
+    };
+
+    /**
+     * Dragging a system, and telling a drag from a click.
+     *
+     * A campaign graph is laid out by a force simulation, which packs systems
+     * as tightly as the forces allow: edges end up crossing and running
+     * alongside each other, and the one a reader wants is under two others.
+     * Pulling a system aside is how you get at it - so the same press has to be
+     * able to mean "select this" and "move this", and only the distance the
+     * pointer travelled says which.
+     *
+     * The click is decided here rather than by the camera's `wasPan`. A node
+     * swallows its own `pointerdown` so the background does not pan under it,
+     * and a camera that never saw the press cannot answer for it.
+     */
+    nodeGroups.forEach((group, index) => {
+      let dragging: { x: number; y: number } | null = null;
+      let moved = false;
+      group.addEventListener("pointerdown", (event: PointerEvent) => {
+        event.stopPropagation();
+        const { scale } = camera.transform();
+        dragging = { x: event.clientX - nodes[index].x * scale, y: event.clientY - nodes[index].y * scale };
+        moved = false;
+        group.setPointerCapture(event.pointerId);
+      });
+      group.addEventListener("pointermove", (event: PointerEvent) => {
+        if (!dragging) return;
+        // A second finger turns the press into a pinch, and a system that
+        // follows one of the two fingers through a zoom is not what either hand
+        // meant. The drag is abandoned rather than paused: the gesture owns the
+        // canvas from here, and the node keeps where it had got to.
+        if (camera.gesturing()) {
+          dragging = null;
+          moved = true;
+          return;
+        }
+        const { scale } = camera.transform();
+        const x = (event.clientX - dragging.x) / scale;
+        const y = (event.clientY - dragging.y) / scale;
+        if (Math.hypot(x - nodes[index].x, y - nodes[index].y) * scale > CLICK_SLOP) moved = true;
+        nodes[index].x = nodes[index].fx = x;
+        nodes[index].y = nodes[index].fy = y;
+        place(index);
+      });
+      const release = (): void => {
+        dragging = null;
+      };
+      group.addEventListener("pointerup", release);
+      group.addEventListener("pointercancel", release);
+      group.addEventListener("click", (event: MouseEvent) => {
+        event.stopPropagation();
+        if (!moved) onSelect("node", index);
+      });
     });
 
     // Framed rather than left at the identity transform: the force layout puts
@@ -1118,7 +1268,7 @@ export class GufeAlchemicalNetwork extends GufeElement<AlchemicalNetworkViz> {
         lines.forEach((line, i) => {
           const active = selection?.kind === "edge" && selection.index === i;
           line.setAttribute("stroke", active ? T.netHaloColor : T.netEdgeLine);
-          line.setAttribute("stroke-width", active ? "4" : "2");
+          line.setAttribute("stroke-width", String(active ? EDGE.selectedWidth : EDGE.width));
         });
       },
       /**

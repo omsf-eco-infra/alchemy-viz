@@ -115,11 +115,12 @@ export class GufeChemicalSystem extends GufeElement<ChemicalSystemViz> {
       return {};
     }
 
-    // The components across the top and the drawing under them, at every width.
-    // A column beside the drawing took a fixed 220px from it whatever else was
-    // on screen, and a molecule wants the width more than three labels do. It is
-    // also how the transformation view reads, and this is mounted inside one.
-    const split = el("div", "flex:1;min-height:0;position:relative;display:flex;flex-direction:column;");
+    // The components down the left and the drawing beside them. The panel is
+    // narrow and the labels stack, so what it costs the molecule is a fixed
+    // strip rather than a share of the width, and the reader gets the whole
+    // list at a glance instead of a row that scrolls sideways once a system
+    // carries more than a few components.
+    const split = el("div", "flex:1;min-height:0;position:relative;display:flex;flex-direction:row;");
     host.appendChild(split);
     if (unresolved.length) {
       floatingWarning(
@@ -131,8 +132,8 @@ export class GufeChemicalSystem extends GufeElement<ChemicalSystemViz> {
 
     const list = el(
       "div",
-      "flex:0 0 auto;min-width:0;overflow-x:auto;display:flex;flex-direction:row;gap:6px;padding:10px;" +
-        `background:${T.panelBg};border-bottom:1px solid ${T.splitBorder};`,
+      "flex:0 0 200px;min-width:0;overflow-y:auto;display:flex;flex-direction:column;gap:6px;padding:10px;" +
+        `background:${T.panelBg};border-right:1px solid ${T.splitBorder};`,
     );
     split.appendChild(list);
 
@@ -275,7 +276,7 @@ export class GufeChemicalSystem extends GufeElement<ChemicalSystemViz> {
         "button",
         "display:flex;flex-direction:column;align-items:flex-start;gap:4px;padding:8px 10px;text-align:left;" +
           `border:1px solid ${T.cardBorder};border-radius:8px;background:${T.cardBg};cursor:pointer;` +
-          `font-family:inherit;font-size:${FONT.body};flex-shrink:0;width:auto;`,
+          `font-family:inherit;font-size:${FONT.body};flex-shrink:0;width:100%;box-sizing:border-box;`,
       );
       button.appendChild(el("span", `font-weight:700;color:${T.textPrimary};`, pane.title));
       button.appendChild(el("span", `font-size:${FONT.small};color:${T.textMuted};`, pane.subtitle));

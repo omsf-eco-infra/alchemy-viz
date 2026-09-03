@@ -1,8 +1,10 @@
 /**
- * `<gufe-protein>` - a toolbar and a full-pane 3Dmol viewer.
+ * `<gufe-protein>` - one structure in a 3Dmol viewer.
  *
- * The PDB statistics and styling live in `shared/pdb.ts` rather than here,
- * because the chemical-system view will want them too.
+ * The statistics and the styling live in `shared/pdb.ts`, and the header, the
+ * controls menu and the viewer's lifecycle in `shared/protein-scene.ts`,
+ * because `<gufe-complex>` wants every one of them too. What is left in here is
+ * what this view alone does: load one PDB and frame it.
  *
  * All three PDB-carrying payload types render through here: a protein, a
  * protein with explicit solvent, and a protein in a membrane are the same
@@ -13,42 +15,18 @@
  * indistinguishable on screen.
  */
 
-import { buttonGroup, dropdown, toggleButton, el, errText, viewerHost } from "../shared/dom.js";
+import { errText } from "../shared/dom.js";
 import { defineElement, GufeElement, type ViewHandle } from "../shared/element.js";
-import { choice, flag, type Setting } from "../shared/settings.js";
-import { load3Dmol, ThreeDmol, type ThreeDmolViewer } from "../shared/engines.js";
-import { resetControl, viewerInteraction, type BoundedZoom, type Interaction } from "../shared/interact.js";
-import {
-  applyProteinStyles,
-  parsePdbStats,
-  proteinStatsText,
-  type PdbStats,
-  type ProteinColorScheme,
-  type ProteinOptions,
-  type ProteinRepresentation,
-  type StatusFn,
-} from "../shared/pdb.js";
-import { FONT, SURFACE, TOOLBAR } from "../shared/style.js";
-import { T } from "../shared/theme.js";
+import { load3Dmol, ThreeDmol } from "../shared/engines.js";
+import { viewerInteraction } from "../shared/interact.js";
+import { applyProteinStyles, parsePdbStats, proteinStatsText, type PdbStats } from "../shared/pdb.js";
+import { proteinScene } from "../shared/protein-scene.js";
+import { SURFACE } from "../shared/style.js";
 import type {
   ProteinComponentViz,
   ProteinMembraneComponentViz,
   SolvatedPDBComponentViz,
 } from "../schema/types.js";
-
-const PROTEIN_REPS = [
-  { id: "cartoon", label: "Cartoon", title: "Ribbon / cartoon backbone" },
-  { id: "surface", label: "Surface", title: "Molecular (VDW) surface" },
-  { id: "stick", label: "Stick", title: "All-atom sticks" },
-  { id: "sphere", label: "Sphere", title: "Space-filling spheres" },
-] as const;
-
-const PROTEIN_COLOR_SCHEMES = [
-  { id: "chain", label: "Chain" },
-  { id: "spectrum", label: "Spectrum" },
-  { id: "ss", label: "Secondary structure" },
-  { id: "element", label: "Element" },
-] as const;
 
 /** Every payload this view draws: one PDB string and a name, three types. */
 export type PdbPayload = ProteinComponentViz | SolvatedPDBComponentViz | ProteinMembraneComponentViz;
@@ -60,188 +38,61 @@ export class GufeProtein extends GufeElement<PdbPayload> {
 
   protected renderView(host: HTMLDivElement, payload: PdbPayload): ViewHandle {
     const pdb = payload.pdb;
-    const name = payload.name ?? "";
-    // A solvated or membrane system is defined by what surrounds the protein,
-    // so it opens with that shown; a bare protein does not, because a few
-    // thousand crystallographic waters would bury it.
-    const solvated = payload.type !== "ProteinComponentViz";
-
-    // Every control here is a preference about how to look at a protein, so all
-    // of them survive a reload. Waters are the exception that proves the rule:
-    // the default depends on the payload - a solvated system opens with them
-    // shown - so a stored choice only overrides that once someone has made one.
-    const repSetting = choice(
-      "protein.representation",
-      "cartoon",
-      PROTEIN_REPS.map((r) => r.id),
-    );
-    const colorSetting = choice(
-      "protein.color",
-      "chain",
-      PROTEIN_COLOR_SCHEMES.map((c) => c.id),
-    );
-    const watersSetting = flag("protein.waters", solvated);
-    const heteroSetting = flag("protein.hetero", true);
-    const spinSetting = flag("protein.spin", false);
-
-    const opts: ProteinOptions = {
-      rep: repSetting.get() as ProteinRepresentation,
-      color: colorSetting.get() as ProteinColorScheme,
-      waters: watersSetting.get(),
-      hetero: heteroSetting.get(),
-      spin: spinSetting.get(),
-    };
-    let viewer: ThreeDmolViewer | null = null;
-    let interaction: (BoundedZoom & Interaction) | null = null;
     let stats: PdbStats | null = null;
 
-    // --- toolbar ---
-    const toolbar = el(
-      "div",
-      TOOLBAR.top,
-    );
-    host.appendChild(toolbar);
-
-    toolbar.appendChild(
-      el("span", `font-weight:700;font-size:${FONT.heading};letter-spacing:.02em;color:${T.titleColor};`, name || "Protein"),
-    );
-
-    const groupLabel = (text: string) => el("span", `font-size:${FONT.small};color:${T.textMuted};`, text);
-
-    toolbar.appendChild(groupLabel("Style:"));
-    toolbar.appendChild(
-      buttonGroup(
-        PROTEIN_REPS,
-        opts.rep,
-        (id) => {
-          opts.rep = id as ProteinRepresentation;
-          restyle();
-        },
-        repSetting,
-      ),
-    );
-
-    toolbar.appendChild(groupLabel("Color:"));
-    toolbar.appendChild(
-      dropdown(
-        PROTEIN_COLOR_SCHEMES,
-        opts.color,
-        (id) => {
-          opts.color = id as ProteinColorScheme;
-          restyle();
-        },
-        colorSetting,
-      ),
-    );
-
-    const toggles = el("div", "display:flex;gap:4px;");
-    toolbar.appendChild(toggles);
-    const toggleSpecs: [keyof ProteinOptions, string, string, Setting<boolean>, () => void][] = [
-      ["waters", "Waters", "Show water molecules", watersSetting, () => restyle()],
-      ["hetero", "Hetero", "Show hetero atoms / ligands / ions / lipids", heteroSetting, () => restyle()],
-      ["spin", "Spin", "Rotate the view continuously", spinSetting, () => viewer?.spin(opts.spin ? "y" : false)],
-    ];
-    for (const [key, label, title, remember, onChange] of toggleSpecs) {
-      toggles.appendChild(
-        toggleButton(
-          label,
-          opts[key] as boolean,
-          (on) => {
-            (opts[key] as boolean) = on;
-            onChange();
-          },
-          { title, remember },
-        ),
-      );
-    }
-
-    toggles.appendChild(resetControl(() => interaction?.reset()));
-
-    const statsEl = el("span", `margin-left:auto;font-size:${FONT.small};white-space:nowrap;color:${T.textMuted2};`);
-    toolbar.appendChild(statsEl);
-
-    // --- viewer + status overlay ---
-    const pane = viewerHost();
-    host.appendChild(pane.wrap);
-
-    const statusEl = el(
-      "div",
-      "position:absolute;top:12px;left:50%;transform:translateX(-50%);padding:6px 14px;border-radius:6px;" +
-        `font-size:${FONT.body};z-index:20;display:none;pointer-events:none;`,
-    );
-    pane.wrap.appendChild(statusEl);
-
-    const showStatus: StatusFn = (msg, kind) => {
-      if (msg == null) {
-        statusEl.style.display = "none";
-        return;
-      }
-      statusEl.textContent = msg;
-      statusEl.style.display = "block";
-      const isError = kind === "error";
-      statusEl.style.background = isError ? T.warnBg : T.toolbarBg;
-      statusEl.style.color = isError ? T.warnFg : T.textMuted;
-      statusEl.style.border = `1px solid ${isError ? T.warnBorder : T.toolbarBorder}`;
-    };
-
+    // Declared before the scene, because a menu that was left open builds its
+    // controls during this call and they are wired to this.
     function restyle(): void {
-      if (viewer) applyProteinStyles(viewer, opts, stats, showStatus);
+      const viewer = scene.viewer();
+      if (viewer) applyProteinStyles(viewer, scene.opts, stats, scene.showStatus);
     }
+
+    const scene = proteinScene({
+      element: this,
+      host,
+      title: payload.name ?? "",
+      fallbackTitle: "Protein",
+      // A solvated or membrane system is defined by what surrounds the protein,
+      // so it opens with that shown; a bare protein does not, because a few
+      // thousand crystallographic waters would bury it.
+      waters: payload.type !== "ProteinComponentViz",
+      heteroTitle: "Show hetero atoms / ligands / ions / lipids",
+      menuLabel: "Representation, colouring and display options",
+      restyle,
+    });
 
     if (!pdb || !pdb.trim()) {
-      showStatus("No protein data - waiting for a PDB payload.");
+      scene.showStatus("No protein data - waiting for a PDB payload.");
       return {};
     }
 
     try {
       stats = parsePdbStats(pdb);
-      statsEl.textContent = proteinStatsText(stats);
+      scene.setStats(proteinStatsText(stats));
     } catch (e) {
-      showStatus(`⚠ PDB parse error: ${errText(e)}`, "error");
+      scene.showStatus(`PDB parse error: ${errText(e)}`, "error");
     }
 
-    showStatus("Loading 3D viewer...");
+    scene.showStatus("Loading 3D viewer...");
     load3Dmol()
       .then(() => {
-        viewer = ThreeDmol!.createViewer(pane.container, { backgroundColor: SURFACE.viewer });
+        const viewer = ThreeDmol!.createViewer(scene.pane.container, { backgroundColor: SURFACE.viewer });
+        scene.setViewer(viewer);
         viewer.addModel(pdb, "pdb");
         // applyProteinStyles clears the "Loading..." status (or replaces it with
         // the surface-computing message), so there is nothing to hide here.
-        applyProteinStyles(viewer, opts, stats, showStatus);
+        applyProteinStyles(viewer, scene.opts, stats, scene.showStatus);
         viewer.zoomTo();
-        viewer.spin(opts.spin ? "y" : false);
+        viewer.spin(scene.opts.spin ? "y" : false);
         viewer.render();
         // After zoomTo, so the bound is measured from the opening framing.
-        interaction = viewerInteraction(pane.container, viewer);
+        scene.setInteraction(viewerInteraction(scene.pane.container, viewer));
       })
       .catch((e: unknown) => {
-        showStatus(`⚠ Failed to render structure: ${errText(e)}`, "error");
+        scene.showStatus(`Failed to render structure: ${errText(e)}`, "error");
       });
 
-    return {
-      onResize() {
-        if (viewer) {
-          viewer.resize();
-          viewer.render();
-        }
-      },
-      cleanup() {
-        interaction?.cleanup();
-        interaction = null;
-        if (!viewer) return;
-        try {
-          viewer.spin(false);
-        } catch {
-          /* 3Dmol v1 quirk */
-        }
-        try {
-          viewer.clear();
-        } catch {
-          /* already gone */
-        }
-        viewer = null;
-      },
-    };
+    return scene.handle;
   }
 }
 

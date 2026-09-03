@@ -26,11 +26,24 @@ function mount<T extends HTMLElement>(tag: string, payload: unknown): T {
   return node;
 }
 
-/** The buttons of a toolbar, by the text on them. */
+/** The buttons of the controls menu, by the text on them. */
 function button(node: HTMLElement, label: string): HTMLButtonElement {
   const found = Array.from(node.querySelectorAll("button")).find((b) => b.textContent === label);
   if (!found) throw new Error(`no button labelled ${label}`);
   return found;
+}
+
+/**
+ * Open the view's controls menu, which is where its controls are.
+ *
+ * A menu builds its contents on the first open, so nothing in one is in the
+ * document until somebody has pressed the button. Found by `aria-expanded`,
+ * which is the menu button and nothing else.
+ */
+function openMenu(node: HTMLElement): void {
+  Array.from(node.querySelectorAll("button"))
+    .find((b) => b.getAttribute("aria-expanded") === "false")
+    ?.click();
 }
 
 const complexPayload = (): ChemicalSystemViz =>
@@ -143,6 +156,7 @@ describe("<gufe-complex>", () => {
     // it: the site is the picture, and the ligand alone is the wrong question.
     expect(framings()).toEqual(['zoomTo({"model":[1]})', "zoom(0.4)"]);
 
+    openMenu(node);
     button(node, "Whole").click();
     await flush();
     expect(framings().slice(2)).toEqual(["zoomTo"]);
@@ -161,6 +175,26 @@ describe("<gufe-complex>", () => {
     // The protein readout is the one `<gufe-protein>` shows, so the two panes
     // of one system agree about the structure.
     expect(text).toMatch(/residues/);
+  });
+
+  it("offers the same controls as the protein view, from the same menu", async () => {
+    // The two panes of one chemical system are the same view with different
+    // things in it, and they drifted once: a reader who opened a menu of
+    // controls in one met a toolbar of them in the other. What the complex has
+    // on top is the framing, which is the one thing a protein alone cannot be
+    // asked about.
+    const controls = (node: HTMLElement): string[] => {
+      openMenu(node);
+      return Array.from(node.querySelectorAll("button"), (b) => b.textContent ?? "").filter(Boolean);
+    };
+
+    const complex = controls(mount("gufe-complex", complexPayload()));
+    document.body.replaceChildren();
+    seedFakeEngines();
+    const protein = controls(mount("gufe-protein", readExample("protein_fragment.json")));
+
+    expect(protein).toEqual(["Cartoon", "Surface", "Stick", "Sphere", "Waters", "Hetero", "Spin", "Reset"]);
+    expect(complex).toEqual([...protein.slice(0, -1), "Site", "Whole", "Reset"]);
   });
 
   it("says so, rather than drawing half a scene, when a component goes missing", async () => {
@@ -203,10 +237,11 @@ describe("<gufe-chemical-system> with a bound complex", () => {
     const node = mount("gufe-chemical-system", complexPayload());
     await flush();
 
-    // The strip's own buttons: two lines in a span each, unlike the flat
-    // toolbar buttons of whatever it has mounted below them.
+    // The strip's own buttons: two lines in a span each, unlike the buttons of
+    // whatever it has mounted beside them. The empty ones are that pane's menu
+    // button, whose only span is the icon it draws.
     const strip = Array.from(node.querySelectorAll("button"), (b) => b.querySelector("span")?.textContent).filter(
-      (title) => title !== undefined,
+      (title) => title,
     );
     expect(strip).toEqual(["Complex", "ligand", "solvent"]);
     // The count is about the system, not about the strip: it still has three.

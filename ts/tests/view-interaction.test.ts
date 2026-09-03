@@ -51,6 +51,20 @@ function resetButton(node: HTMLElement): HTMLButtonElement | undefined {
   );
 }
 
+/**
+ * Open the view's chrome menu, where it has one.
+ *
+ * A menu builds its contents on the first open, so a control that lives in one
+ * is not in the document until somebody has pressed the button. Found by
+ * `aria-expanded` rather than by label, so this stays true of whichever views
+ * carry a menu.
+ */
+function openMenu(node: HTMLElement): void {
+  Array.from(node.querySelectorAll("button"))
+    .find((b) => b.getAttribute("aria-expanded") === "false")
+    ?.click();
+}
+
 const VIEWS: [string, string][] = [
   ["gufe-small-molecule", "small_molecule.json"],
   ["gufe-protein", "protein.json"],
@@ -158,6 +172,7 @@ describe.each(WITH_RESET)("%s", (tag, fixture) => {
     const container = viewerContainer(node);
     container.dispatchEvent(pointer("pointerdown"));
     container.dispatchEvent(wheel(-120));
+    openMenu(node);
     const button = resetButton(node);
     expect(button).toBeTruthy();
 

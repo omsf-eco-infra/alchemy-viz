@@ -21,26 +21,22 @@
  * and `complexPartsFor` is what decides whether there is anything to mount.
  */
 
-import { buttonGroup, dropdown, toggleButton, el, errText, nameWanted, viewerHost } from "../shared/dom.js";
+import { buttonGroup, errText } from "../shared/dom.js";
 import { defineElement, GufeElement, type ViewHandle } from "../shared/element.js";
-import { choice, flag, type Setting } from "../shared/settings.js";
-import { load3Dmol, ThreeDmol, type ThreeDmolViewer } from "../shared/engines.js";
-import { resetControl, viewerInteraction, type BoundedZoom, type Interaction } from "../shared/interact.js";
+import { choice } from "../shared/settings.js";
+import { load3Dmol, ThreeDmol } from "../shared/engines.js";
+import { viewerInteraction } from "../shared/interact.js";
 import {
   applyLigandStyles,
   applyProteinStyles,
   parsePdbStats,
   proteinStatsText,
   type PdbStats,
-  type ProteinColorScheme,
-  type ProteinOptions,
-  type ProteinRepresentation,
-  type StatusFn,
 } from "../shared/pdb.js";
+import { proteinScene } from "../shared/protein-scene.js";
 import { ensureSDFTerminator, parseCounts } from "../shared/sdf.js";
 import { buildRegistry, lookup, type RegistryIndex } from "../schema/registry.js";
-import { FONT, SURFACE, TOOLBAR } from "../shared/style.js";
-import { T } from "../shared/theme.js";
+import { SURFACE } from "../shared/style.js";
 import type { ChemicalSystemViz, ComponentViz, SmallMoleculeComponentViz } from "../schema/types.js";
 import type { PdbPayload } from "./protein.js";
 
@@ -78,20 +74,7 @@ export function hasComplex(parts: ComplexParts): boolean {
   return parts.structures.length > 0 && parts.ligands.length > 0;
 }
 
-const PROTEIN_REPS = [
-  { id: "cartoon", label: "Cartoon", title: "Ribbon / cartoon backbone" },
-  { id: "surface", label: "Surface", title: "Molecular (VDW) surface" },
-  { id: "stick", label: "Stick", title: "All-atom sticks" },
-  { id: "sphere", label: "Sphere", title: "Space-filling spheres" },
-] as const;
-
-const PROTEIN_COLOR_SCHEMES = [
-  { id: "chain", label: "Chain" },
-  { id: "spectrum", label: "Spectrum" },
-  { id: "ss", label: "Secondary structure" },
-  { id: "element", label: "Element" },
-] as const;
-
+/** The one control this view has that `<gufe-protein>` does not. */
 const FOCUS_MODES = [
   { id: "site", label: "Site", title: "Frame the ligand and the site around it" },
   { id: "whole", label: "Whole", title: "Frame the entire complex" },
@@ -125,153 +108,52 @@ export class GufeComplex extends GufeElement<ChemicalSystemViz> {
     const proteinModels = parts.structures.map((_, i) => i);
     const ligandModels = parts.ligands.map((_, i) => parts.structures.length + i);
 
-    // The same stored preferences as `<gufe-protein>`, on purpose. "I read
-    // proteins as ribbons coloured by chain" is a fact about the reader, not
-    // about which pane they are looking at, and two keys for it would mean
-    // setting it twice. Waters are the exception the protein view already makes
-    // for its own reason and this one makes for another: in a complex they sit
-    // between the eye and the site.
-    const repSetting = choice(
-      "protein.representation",
-      "cartoon",
-      PROTEIN_REPS.map((r) => r.id),
-    );
-    const colorSetting = choice(
-      "protein.color",
-      "chain",
-      PROTEIN_COLOR_SCHEMES.map((c) => c.id),
-    );
-    const watersSetting = flag("protein.waters", false);
-    const heteroSetting = flag("protein.hetero", true);
-    const spinSetting = flag("protein.spin", false);
+    // Which framing is in force. Read before the scene is built: a menu that
+    // was left open builds its controls during that call, and the focus buttons
+    // are wired to this.
     const focusSetting = choice<Focus>(
       "complex.focus",
       "site",
       FOCUS_MODES.map((f) => f.id),
     );
-
-    const opts: ProteinOptions = {
-      rep: repSetting.get() as ProteinRepresentation,
-      color: colorSetting.get() as ProteinColorScheme,
-      waters: watersSetting.get(),
-      hetero: heteroSetting.get(),
-      spin: spinSetting.get(),
-    };
     let focus: Focus = focusSetting.get();
-    let viewer: ThreeDmolViewer | null = null;
-    let interaction: (BoundedZoom & Interaction) | null = null;
     let stats: PdbStats | null = null;
 
-    // --- toolbar ---
-    const toolbar = el("div", TOOLBAR.top);
-    host.appendChild(toolbar);
-
-    if (nameWanted(this)) {
-      toolbar.appendChild(
-        el(
-          "span",
-          `font-weight:700;font-size:${FONT.heading};letter-spacing:.02em;color:${T.titleColor};`,
-          payload.name || "Complex",
-        ),
-      );
-    }
-
-    const groupLabel = (text: string) => el("span", `font-size:${FONT.small};color:${T.textMuted};`, text);
-
-    toolbar.appendChild(groupLabel("Style:"));
-    toolbar.appendChild(
-      buttonGroup(
-        PROTEIN_REPS,
-        opts.rep,
-        (id) => {
-          opts.rep = id as ProteinRepresentation;
-          restyle();
-        },
-        repSetting,
-      ),
-    );
-
-    toolbar.appendChild(groupLabel("Color:"));
-    toolbar.appendChild(
-      dropdown(
-        PROTEIN_COLOR_SCHEMES,
-        opts.color,
-        (id) => {
-          opts.color = id as ProteinColorScheme;
-          restyle();
-        },
-        colorSetting,
-      ),
-    );
-
-    toolbar.appendChild(groupLabel("Focus:"));
-    toolbar.appendChild(
-      buttonGroup(
-        FOCUS_MODES,
-        focus,
-        (id) => {
-          focus = id as Focus;
-          reframe();
-        },
-        focusSetting,
-      ),
-    );
-
-    const toggles = el("div", "display:flex;gap:4px;");
-    toolbar.appendChild(toggles);
-    const toggleSpecs: [keyof ProteinOptions, string, string, Setting<boolean>, () => void][] = [
-      ["waters", "Waters", "Show water molecules", watersSetting, () => restyle()],
-      ["hetero", "Hetero", "Show hetero atoms / ions / lipids in the structure", heteroSetting, () => restyle()],
-      ["spin", "Spin", "Rotate the view continuously", spinSetting, () => viewer?.spin(opts.spin ? "y" : false)],
-    ];
-    for (const [key, label, title, remember, onChange] of toggleSpecs) {
-      toggles.appendChild(
-        toggleButton(
-          label,
-          opts[key] as boolean,
-          (on) => {
-            (opts[key] as boolean) = on;
-            onChange();
-          },
-          { title, remember },
-        ),
-      );
-    }
-
-    // Reset goes back to the framing in force, not to the whole scene: someone
-    // reading a site who has spun the camera off it wants the site back.
-    toggles.appendChild(resetControl(() => reframe(), "Reset view"));
-
-    const statsEl = el("span", `margin-left:auto;font-size:${FONT.small};white-space:nowrap;color:${T.textMuted2};`);
-    toolbar.appendChild(statsEl);
-
-    // --- viewer + status overlay ---
-    const pane = viewerHost();
-    host.appendChild(pane.wrap);
-
-    const statusEl = el(
-      "div",
-      "position:absolute;top:12px;left:50%;transform:translateX(-50%);padding:6px 14px;border-radius:6px;" +
-        `font-size:${FONT.body};z-index:20;display:none;pointer-events:none;`,
-    );
-    pane.wrap.appendChild(statusEl);
-
-    const showStatus: StatusFn = (msg, kind) => {
-      if (msg == null) {
-        statusEl.style.display = "none";
-        return;
-      }
-      statusEl.textContent = msg;
-      statusEl.style.display = "block";
-      const isError = kind === "error";
-      statusEl.style.background = isError ? T.warnBg : T.toolbarBg;
-      statusEl.style.color = isError ? T.warnFg : T.textMuted;
-      statusEl.style.border = `1px solid ${isError ? T.warnBorder : T.toolbarBorder}`;
-    };
+    const scene = proteinScene({
+      element: this,
+      host,
+      title: payload.name ?? "",
+      fallbackTitle: "Complex",
+      // The exception the protein view makes for its own reason and this one
+      // makes for another: in a complex the waters sit between the eye and the
+      // site.
+      waters: false,
+      heteroTitle: "Show hetero atoms / ions / lipids in the structure",
+      menuLabel: "Representation, colouring, framing and display options",
+      restyle,
+      // The framing belongs beside the reset, which is the other control that
+      // moves the camera rather than what is in front of it.
+      camera: () =>
+        [
+          buttonGroup(
+            FOCUS_MODES,
+            focus,
+            (id) => {
+              focus = id as Focus;
+              reframe();
+            },
+            focusSetting,
+          ),
+        ],
+      // Back to the framing in force, not to the whole scene: someone reading a
+      // site who has spun the camera off it wants the site back.
+      reset: () => reframe(),
+    });
 
     function restyle(): void {
+      const viewer = scene.viewer();
       if (!viewer) return;
-      applyProteinStyles(viewer, opts, stats, showStatus, { model: proteinModels });
+      applyProteinStyles(viewer, scene.opts, stats, scene.showStatus, { model: proteinModels });
       applyLigandStyles(viewer, { model: ligandModels });
       viewer.render();
     }
@@ -285,6 +167,7 @@ export class GufeComplex extends GufeElement<ChemicalSystemViz> {
      * site needed.
      */
     function reframe(): void {
+      const viewer = scene.viewer();
       if (!viewer) return;
       if (focus === "site" && ligandModels.length) {
         viewer.zoomTo({ model: ligandModels });
@@ -293,70 +176,48 @@ export class GufeComplex extends GufeElement<ChemicalSystemViz> {
         viewer.zoomTo();
       }
       viewer.render();
-      interaction?.cleanup();
-      interaction = viewerInteraction(pane.container, viewer);
+      scene.interaction()?.cleanup();
+      scene.setInteraction(viewerInteraction(scene.pane.container, viewer));
     }
 
     if (!parts.structures.length || !parts.ligands.length) {
       // `<gufe-chemical-system>` only offers this pane when both are there, so
       // reaching it means a payload changed under the element rather than a
       // reader clicking something they should not have been shown.
-      showStatus("This system has no ligand and structure to draw together.");
+      scene.showStatus("This system has no ligand and structure to draw together.");
       return {};
     }
 
-    statsEl.textContent = complexStatsText(parts, () => stats);
+    scene.setStats(complexStatsText(parts, () => stats));
     try {
       // The first structure's statistics, which is all of them in every payload
       // gufe produces: a system with two proteins in it has no natural single
       // readout, and the colour-by-residue gradient needs one structure's range.
       stats = parsePdbStats(parts.structures[0].pdb);
-      statsEl.textContent = complexStatsText(parts, () => stats);
+      scene.setStats(complexStatsText(parts, () => stats));
     } catch (e) {
-      showStatus(`PDB parse error: ${errText(e)}`, "error");
+      scene.showStatus(`PDB parse error: ${errText(e)}`, "error");
     }
 
-    showStatus("Loading 3D viewer...");
+    scene.showStatus("Loading 3D viewer...");
     load3Dmol()
       .then(() => {
-        viewer = ThreeDmol!.createViewer(pane.container, { backgroundColor: SURFACE.viewer });
+        const viewer = ThreeDmol!.createViewer(scene.pane.container, { backgroundColor: SURFACE.viewer });
+        scene.setViewer(viewer);
         // Structures first, then ligands: this is what `proteinModels` and
         // `ligandModels` above are indices into.
         for (const structure of parts.structures) viewer.addModel(structure.pdb, "pdb");
         for (const ligand of parts.ligands) viewer.addModel(ensureSDFTerminator(ligand.sdf), "sdf");
         restyle();
         reframe();
-        viewer.spin(opts.spin ? "y" : false);
+        viewer.spin(scene.opts.spin ? "y" : false);
         viewer.render();
       })
       .catch((e: unknown) => {
-        showStatus(`Failed to render structure: ${errText(e)}`, "error");
+        scene.showStatus(`Failed to render structure: ${errText(e)}`, "error");
       });
 
-    return {
-      onResize() {
-        if (viewer) {
-          viewer.resize();
-          viewer.render();
-        }
-      },
-      cleanup() {
-        interaction?.cleanup();
-        interaction = null;
-        if (!viewer) return;
-        try {
-          viewer.spin(false);
-        } catch {
-          /* 3Dmol v1 quirk */
-        }
-        try {
-          viewer.clear();
-        } catch {
-          /* already gone */
-        }
-        viewer = null;
-      },
-    };
+    return scene.handle;
   }
 }
 

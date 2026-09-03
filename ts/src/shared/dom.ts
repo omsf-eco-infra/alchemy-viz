@@ -673,14 +673,17 @@ const MENU_ICONS = {
 const MENU_ICON: () => HTMLSpanElement = MENU_ICONS.openFreeEnergy;
 
 /**
- * Attach a collapsible menu to `header`, and hand back the panel to place.
+ * Attach a collapsible menu to `into`, and hand back the panel to place.
  *
- * The button goes into the header's own toggle slot, which is what makes the
- * control appear in the same position in every view without each view having to
- * agree about it.
+ * Given a header strip the button goes into its own toggle slot, which is what
+ * makes the control appear in the same position in every view carrying a header
+ * without each view having to agree about it. Given any other element the
+ * button goes straight into it, which is what a view with no header does: the
+ * 3D panes float their chrome over the picture rather than spending a row of
+ * height on a bar above it, and the button is part of what floats.
  */
 export function chromeMenu(
-  header: HeaderStrip,
+  into: HeaderStrip | HTMLElement,
   build: () => Node,
   options: ChromeMenuOptions = {},
 ): ChromeMenu {
@@ -725,9 +728,10 @@ export function chromeMenu(
     button.style.background = open ? BUTTON.bgActive : BUTTON.bg;
   };
 
+  const strip = "toggleEl" in into ? into : null;
   // Only now does the slot take any room: an empty one must not indent the title.
-  header.toggleEl.style.marginRight = "2px";
-  header.toggleEl.appendChild(button);
+  if (strip) strip.toggleEl.style.marginRight = "2px";
+  (strip ? strip.toggleEl : into).appendChild(button);
   apply();
 
   return {
