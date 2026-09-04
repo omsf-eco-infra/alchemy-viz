@@ -387,7 +387,14 @@ interface CompositionGroups {
  * have stopped being a distinction and started being decoration.
  */
 function compositionGroups(nodes: readonly GraphNode[], registry: RegistryIndex): CompositionGroups {
-  const plain: NodeColors = { fill: T.cardBg, stroke: T.cardBorder };
+  // The canvas's own uncoloured node rather than a card's, which is what this
+  // used to borrow. A card sits on a panel and is bordered just enough to come
+  // away from it; a box sits on the graph canvas, and in the light theme that
+  // canvas is the same white the box is filled with - so a card's border there
+  // left a white box on a white ground held together by nothing but its text.
+  // `netNodeStroke` is the shade the ligand network draws its own plain nodes
+  // in, and it is a good deal darker.
+  const plain: NodeColors = { fill: T.netNodeFill, stroke: T.netNodeStroke };
   const signatures = nodes.map((node) => compositionOf(node, registry));
   const compositions = [...new Set(signatures)];
   // The colouring is dropped here, and the compositions are handed back

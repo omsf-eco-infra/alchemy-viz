@@ -9217,7 +9217,7 @@ function ka(e, t) {
 }
 const Yp = (e, t) => ka(e, t).join(" + ");
 function Xp(e, t) {
-  const n = { fill: T.cardBg, stroke: T.cardBorder }, r = e.map((s) => Yp(s, t)), o = [...new Set(r)];
+  const n = { fill: T.netNodeFill, stroke: T.netNodeStroke }, r = e.map((s) => Yp(s, t)), o = [...new Set(r)];
   if (o.length < 2 || o.length > T.netGroupFill.length)
     return { signatures: r, compositions: o, colorOf: () => n, legend: [] };
   const i = new Map(
