@@ -730,7 +730,24 @@ describe("<gufe-chemical-system>", () => {
     const labels = Object.keys((payload as { components: Record<string, string> }).components);
     expect(labels.length).toBeGreaterThan(1);
     for (const label of labels) expect(node.textContent).toContain(label);
-    expect(node.textContent).toContain(String(labels.length));
+  });
+
+  it("heads the component column with the system's name, above nothing else", async () => {
+    // The name shares the column with the list it belongs to, so the whole
+    // height of the pane beside it is the drawing's. Anything across the top
+    // would take a line of that height off every component this ever shows.
+    const payload = readExample("chemical_system.json") as unknown as { name: string };
+    const node = mount("gufe-chemical-system", payload as unknown as Parameters<typeof mount>[1]);
+    await flush();
+
+    const column = node.querySelector("button")!.parentElement!.parentElement!;
+    expect(column.firstElementChild!.textContent).toBe(payload.name);
+    // The column and the drawing divide the pane between them, with nothing
+    // stacked above either, and no count where the name used to sit.
+    const split = column.parentElement!;
+    expect(split.children).toHaveLength(2);
+    expect(split.children[1].querySelector("gufe-view")).toBeTruthy();
+    expect(node.textContent).not.toContain("components");
   });
 
   it("draws the selected component through a nested dispatcher", async () => {
@@ -1611,6 +1628,24 @@ describe("<gufe-transformation>", () => {
     // The ligand does differ, so that one is written twice, marked A and B.
     expect(text).toContain("State A");
     expect(text).toContain("State B");
+  });
+
+  it("heads the diff column with the name, the protocol and the count", async () => {
+    // Nothing is stacked above the two halves, so the whole height of the pane
+    // beside the diff belongs to the scenes the mapping draws.
+    const payload = readExample("transformation.json") as unknown as { name: string };
+    const node = mount("gufe-transformation", payload as unknown as Parameters<typeof mount>[1]);
+    await flush();
+
+    const mapping = node.querySelector("gufe-atom-mapping")!;
+    // The diff column and the mapping side, and no third thing above them.
+    const body = mapping.parentElement!.parentElement!;
+    expect(body.children).toHaveLength(2);
+    const column = body.children[0];
+    expect(column.firstElementChild!.textContent).toContain(payload.name);
+    expect(column.firstElementChild!.textContent).toContain("DummyProtocol");
+    expect(column.firstElementChild!.textContent).toContain("mappings");
+    expect(node.querySelector(".gufe-header")).toBeNull();
   });
 
   it("embeds the mapping view rather than drawing its own", async () => {

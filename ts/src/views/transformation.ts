@@ -19,6 +19,10 @@
  * both halves came out cramped. The diff wants width for a name and nothing
  * more; the molecules want everything left over, in both directions.
  *
+ * The name of the transformation, the protocol and the mapping count head that
+ * column too, for the same reason: a strip across the top of the pane would
+ * charge both scenes a row of height for three lines the column has room for.
+ *
  * The diff is therefore written down the column rather than across it: a label,
  * then what each state has under it, which is one line when the two states
  * agree - a solvent shared by both sides is one fact, not two - and two marked
@@ -26,7 +30,7 @@
  * anything, the same blocks become a band above the molecules instead.
  */
 
-import { buttonGroup, centredMessage, el, headerStrip, onWidth, statChip, typeBadge } from "../shared/dom.js";
+import { buttonGroup, centredMessage, el, onWidth, statChip, typeBadge } from "../shared/dom.js";
 import { defineElement, GufeElement, type ViewHandle } from "../shared/element.js";
 import { FONT, PANE_LABEL, RADIUS, SPACE, WEIGHT } from "../shared/style.js";
 import { T } from "../shared/theme.js";
@@ -222,6 +226,38 @@ function mappingLabelFor(mapping: { componentA: string; componentB: string }, re
   return `${from ? entryLabel(from) : "A"} to ${to ? entryLabel(to) : "B"}`;
 }
 
+/**
+ * The transformation's name, at the head of the column the states are written
+ * down.
+ *
+ * A step smaller than a chemical system's title, because what names a
+ * transformation is two system names joined by a word: it is a sentence rather
+ * than a label, and at title size it wraps to four lines of a 210px column.
+ */
+function transformationTitle(name: string): HTMLDivElement {
+  return el(
+    "div",
+    `font-weight:${WEIGHT.bold};font-size:${FONT.heading};color:${T.titleColor};` +
+      `letter-spacing:.02em;line-height:1.35;overflow-wrap:anywhere;flex-shrink:0;`,
+    name,
+  );
+}
+
+/**
+ * One fact about the transformation as a whole, under its name.
+ *
+ * Not `statChip`: these live in a column narrow enough that a protocol's class
+ * name has to be allowed to wrap, and a chip is built not to.
+ */
+function metaLine(label: string, value: string): HTMLDivElement {
+  const row = el("div", `display:flex;align-items:baseline;gap:${SPACE.md};min-width:0;font-size:${FONT.small};`);
+  row.appendChild(el("span", `flex:0 0 auto;color:${T.textMuted};`, label));
+  row.appendChild(
+    el("span", `min-width:0;font-weight:${WEIGHT.bold};color:${T.textPrimary};overflow-wrap:anywhere;`, value),
+  );
+  return row;
+}
+
 export class GufeTransformation extends GufeElement<TransformationViz> {
   protected override placeholder(): string {
     return "Waiting for a Transformation payload...";
@@ -237,13 +273,12 @@ export class GufeTransformation extends GufeElement<TransformationViz> {
     const protocol = lookupOfType<ProtocolViz>(registry, payload.protocol, "ProtocolViz");
     const mappings = payload.mappings ?? [];
 
-    const bar = headerStrip(payload.name || "Transformation");
-    // A Protocol has no name of its own, so the class name is what identifies it.
-    bar.statsEl.appendChild(statChip("protocol", protocol?.gufe_type || protocol?.name || "-"));
-    bar.statsEl.appendChild(statChip("mappings", String(mappings.length)));
-    host.appendChild(bar);
+    const name = payload.name || "Transformation";
 
     if (!stateA || !stateB) {
+      const named = el("div", "padding:12px 14px;flex-shrink:0;");
+      named.appendChild(transformationTitle(name));
+      host.appendChild(named);
       host.appendChild(
         centredMessage("This transformation names two chemical systems, and its registry does not hold them."),
       );
@@ -267,6 +302,19 @@ export class GufeTransformation extends GufeElement<TransformationViz> {
 
     const mappingSide = el("div", "flex:1;min-width:0;min-height:0;display:flex;flex-direction:column;");
     body.appendChild(mappingSide);
+
+    // The name and the two facts about the whole transformation head the column
+    // the diff is written down, rather than a strip across the pane. In the
+    // detail pane of an alchemical network that strip was a row of height taken
+    // off two 3D scenes for a line that fits perfectly well over a column which
+    // is already there - and the scenes are the half of the pane that has
+    // nothing to spare.
+    const header = el("div", `display:flex;flex-direction:column;gap:${SPACE.md};min-width:0;`);
+    header.appendChild(transformationTitle(name));
+    // A Protocol has no name of its own, so the class name is what identifies it.
+    header.appendChild(metaLine("protocol", protocol?.gufe_type || protocol?.name || "-"));
+    header.appendChild(metaLine("mappings", String(mappings.length)));
+    diff.appendChild(header);
 
     // Which state is which, once at the top, rather than as headings over two
     // columns of cells - there are no columns to head any more, and the A and B

@@ -248,8 +248,6 @@ describe("<gufe-chemical-system> with a bound complex", () => {
       (title) => title,
     );
     expect(strip).toEqual(["Complex", "ligand", "solvent"]);
-    // The count is about the system, not about the strip: it still has three.
-    expect(node.textContent).toContain("components");
 
     const ligand = Array.from(node.querySelectorAll("button")).find(
       (b) => b.querySelector("span")?.textContent === "ligand",

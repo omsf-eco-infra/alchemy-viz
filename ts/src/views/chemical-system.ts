@@ -1,6 +1,6 @@
 /**
- * `<gufe-chemical-system>` - the labelled components in a strip, the selected
- * one drawn under it.
+ * `<gufe-chemical-system>` - the system's name over the labelled components in
+ * a strip, the selected one drawn beside them.
  *
  * A chemical system is a dictionary of labels to gufe keys, and each key
  * resolves to a whole, standalone component payload - the same object that
@@ -19,10 +19,8 @@ import {
   centredMessage,
   el,
   floatingWarning,
-  headerStrip,
   HIDE_NAME_ATTRIBUTE,
   onWidth,
-  statChip,
   typeBadge,
 } from "../shared/dom.js";
 import {
@@ -31,7 +29,7 @@ import {
   type ViewHandle,
 } from "../shared/element.js";
 import { text } from "../shared/settings.js";
-import { FONT } from "../shared/style.js";
+import { FONT, WEIGHT } from "../shared/style.js";
 import { T } from "../shared/theme.js";
 import {
   buildRegistry,
@@ -124,6 +122,23 @@ function componentBadge(component: ComponentViz): HTMLSpanElement | null {
     : null;
 }
 
+/**
+ * The system's name, sitting at the head of the components column.
+ *
+ * It is a heading rather than a bar: nothing is laid out beside it, so it wraps
+ * within the column at any width instead of pushing a row of its own across the
+ * pane, and the drawing beside it keeps the full height.
+ */
+function systemTitle(name: string): HTMLDivElement {
+  return el(
+    "div",
+    `padding:10px 10px 16px;font-weight:${WEIGHT.bold};font-size:${FONT.title};` +
+      `color:${T.titleColor};letter-spacing:.02em;line-height:1.3;` +
+      "overflow-wrap:anywhere;flex-shrink:0;",
+    name,
+  );
+}
+
 export class GufeChemicalSystem extends GufeElement<ChemicalSystemViz> {
   protected override placeholder(): string {
     return "Waiting for a ChemicalSystem payload...";
@@ -146,11 +161,10 @@ export class GufeChemicalSystem extends GufeElement<ChemicalSystemViz> {
       else unresolved.push(label);
     }
 
-    const bar = headerStrip(payload.name || "Chemical system");
-    bar.statsEl.appendChild(statChip("components", String(entries.length)));
-    host.appendChild(bar);
+    const name = payload.name || "Chemical system";
 
     if (!entries.length) {
+      host.appendChild(systemTitle(name));
       // Naming the cause matters: "no components" and "its components are
       // missing from the registry" are very different bugs to go looking for.
       host.appendChild(
@@ -181,12 +195,25 @@ export class GufeChemicalSystem extends GufeElement<ChemicalSystemViz> {
       );
     }
 
-    const list = el(
+    // The name heads the column it belongs to rather than a strip across the
+    // top, because a strip charges the drawing a line of height for a word that
+    // fits above the list with room to spare - and in a detail pane a few
+    // hundred pixels tall that line is the difference between a molecule and a
+    // sliver of one. There is no count beside it: the list under it *is* the
+    // count, and reading it takes no longer than reading the number would.
+    const aside = el(
       "div",
-      "min-width:0;overflow-y:auto;display:flex;gap:6px;padding:10px;" +
+      "min-width:0;min-height:0;display:flex;flex-direction:column;" +
         `background:${T.panelBg};`,
     );
-    split.appendChild(list);
+    split.appendChild(aside);
+    aside.appendChild(systemTitle(name));
+
+    const list = el(
+      "div",
+      "min-width:0;min-height:0;overflow-y:auto;display:flex;gap:6px;padding:0 10px 10px;",
+    );
+    aside.appendChild(list);
 
     const detail = el(
       "div",
@@ -371,12 +398,12 @@ export class GufeChemicalSystem extends GufeElement<ChemicalSystemViz> {
       if (narrow === stacked) return;
       stacked = narrow;
       split.style.flexDirection = narrow ? "column" : "row";
-      list.style.flex = narrow ? "0 0 auto" : `0 0 ${STRIP_WIDTH}px`;
+      aside.style.flex = narrow ? "0 0 auto" : `0 0 ${STRIP_WIDTH}px`;
+      aside.style.maxHeight = narrow ? STRIP_MAX_HEIGHT : "none";
+      aside.style.borderRight = narrow ? "none" : `1px solid ${T.splitBorder}`;
+      aside.style.borderBottom = narrow ? `1px solid ${T.splitBorder}` : "none";
       list.style.flexDirection = narrow ? "row" : "column";
       list.style.flexWrap = narrow ? "wrap" : "nowrap";
-      list.style.maxHeight = narrow ? STRIP_MAX_HEIGHT : "none";
-      list.style.borderRight = narrow ? "none" : `1px solid ${T.splitBorder}`;
-      list.style.borderBottom = narrow ? `1px solid ${T.splitBorder}` : "none";
       // What is mounted was drawn to the old shape, and a 3D viewer sizes its
       // canvas once.
       mounted?.resize?.();
