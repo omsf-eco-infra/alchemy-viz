@@ -50,6 +50,10 @@ export interface FakeViewer extends ThreeDmolViewer {
    * does: 3Dmol handles those itself, so nothing of ours is called.
    */
   dragZoom(factor: number): void;
+  /** Turn the camera the same way: a drag, which nothing of ours sees. */
+  dragRotate(quaternion: [number, number, number, number]): void;
+  /** The camera's quaternion, which `getView` reports at indices 4 to 7. */
+  rotation(): [number, number, number, number];
 }
 
 /** 3Dmol's own default, and what `interact.ts` assumes when a viewer is silent. */
@@ -74,12 +78,16 @@ export function makeFakeViewer(): FakeViewer {
   // `CAMERA_Z - distance` at index 3. A fake that ignored all this would let a
   // broken clamp pass.
   let distance = FAKE_OPENING_DISTANCE;
+  // The camera's orientation, which `setView` writes and `getView` reads back.
+  // Only a pose carried between ligands cares what is in it, and that one cares
+  // that the number it stored is the number that comes out.
+  let rotation: [number, number, number, number] = [0, 0, 0, 1];
   let limits: { lower: number; upper: number } | null = null;
   const clampDistance = (d: number): number => {
     if (!limits) return d;
     return Math.min(Math.max(d, limits.lower), limits.upper);
   };
-  const position = () => [0, 0, 0, FAKE_CAMERA_Z - distance, 0, 0, 0, 1];
+  const position = () => [0, 0, 0, FAKE_CAMERA_Z - distance, ...rotation];
   const viewer = {
     calls,
     styles,
@@ -100,6 +108,10 @@ export function makeFakeViewer(): FakeViewer {
     dragZoom: (factor: number) => {
       distance = clampDistance(distance / factor);
     },
+    dragRotate: (next: [number, number, number, number]) => {
+      rotation = [...next];
+    },
+    rotation: () => [...rotation] as [number, number, number, number],
     zoomTo: (selection?: object) => {
       // A framing of the whole scene stays plain `zoomTo`, which is what every
       // single-structure view records; a framing of part of it says which part,
@@ -139,8 +151,10 @@ export function makeFakeViewer(): FakeViewer {
     setView: (next: unknown) => {
       // Unclamped, as in 3Dmol: `setView` restores a camera rather than moving
       // it by hand.
-      const z = (next as number[])[3];
+      const view = next as number[];
+      const z = view[3];
       if (typeof z === "number") distance = FAKE_CAMERA_Z - z;
+      if (view.length >= 8) rotation = view.slice(4, 8) as [number, number, number, number];
       calls.push("setView");
     },
     rotate: (angle: number, axis: string) => {

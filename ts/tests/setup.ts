@@ -10,14 +10,17 @@
  * The remembered cameras are the same problem in a different store: a structure
  * left rotated in one test would open rotated in the next, and a view that
  * restores a camera does not frame the scene, so the framing a test asserts
- * would simply not happen.
+ * would simply not happen. The ligand pose is the same again, one store wider:
+ * it is shared by every ligand view rather than kept per structure.
  */
 
 import { beforeEach } from "vitest";
+import { forgetLigandPose } from "../src/shared/ligand-camera.js";
 import { forgetCameras } from "../src/shared/protein-scene.js";
 import { resetSettings } from "../src/shared/settings.js";
 
 beforeEach(() => {
   resetSettings();
   forgetCameras();
+  forgetLigandPose();
 });

@@ -9,6 +9,7 @@ import {
   CARD,
   FONT,
   HEADER,
+  HEADER_LINE,
   MENU_PANEL_STACKED_SHARE,
   MENU_PANEL_WIDTH,
   MENU_VAR,
@@ -385,10 +386,12 @@ export function headerStrip(title: string): HeaderStrip {
     `display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-left:auto;font-size:${FONT.small};color:${TEXT.muted};`,
   );
   // The text sits in a row of its own so the two alignments do not fight: the
-  // stats keep the title's baseline in here, and the strip centres this whole
-  // row against the menu button, which is taller than a line of title text.
+  // stats keep the title's baseline in here, and the strip aligns this whole
+  // row's first line with the menu button beside it.
   bar.textEl = el("div", "display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;flex:1;min-width:0;");
-  bar.toggleEl = el("div", "display:flex;align-items:center;flex-shrink:0;");
+  // A slot one line tall, so the button is centred against the title rather
+  // than against however many lines the stats have wrapped onto below it.
+  bar.toggleEl = el("div", `display:flex;align-items:center;height:${HEADER_LINE};flex-shrink:0;`);
   // First, so the menu button is at the top left wherever a view carries one.
   bar.appendChild(bar.toggleEl);
   bar.textEl.appendChild(bar.titleEl);

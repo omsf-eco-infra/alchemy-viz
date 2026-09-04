@@ -13,6 +13,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { buttonGroup, CHROME_OPEN_BY_DEFAULT, chromeMenu, el, headerStrip, splitter } from "../src/shared/dom.js";
 import { num } from "../src/shared/settings.js";
+import { HEADER_LINE } from "../src/shared/style.js";
 
 describe("chromeMenu", () => {
   let header: ReturnType<typeof headerStrip>;
@@ -89,14 +90,19 @@ describe("chromeMenu", () => {
     expect(header.toggleEl.compareDocumentPosition(header.titleEl) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
-  it("centres the button against the header text", () => {
+  it("keeps the button on the header's first line", () => {
     // The button is taller than a line of title text, and a baseline-aligned
     // strip puts its baseline group flush to the top, which left the title
-    // riding above the button. So the strip centres, and the text keeps its
+    // riding above the button. So every line of the strip is given the button's
+    // own height and the two are aligned to the top of it: centring instead put
+    // the button halfway down a header whose stats had wrapped, level with the
+    // gap between the lines rather than with the title. The text keeps its
     // shared baseline in a row of its own. jsdom has no layout engine, so this
     // checks the rules are set rather than the pixels they produce - the pixels
     // are what the gallery is for.
-    expect(header.style.alignItems).toBe("center");
+    expect(header.style.alignItems).toBe("flex-start");
+    expect(header.style.lineHeight).toBe(HEADER_LINE);
+    expect(header.toggleEl.style.height).toBe(HEADER_LINE);
     expect(header.textEl.style.alignItems).toBe("baseline");
     expect(header.textEl.contains(header.titleEl)).toBe(true);
     expect(header.textEl.contains(header.statsEl)).toBe(true);

@@ -125,16 +125,28 @@ export const INPUT = `${SELECT}width:100%;box-sizing:border-box;cursor:text;`;
 // --- containers ------------------------------------------------------------
 
 /**
+ * How tall one line of a header strip is, which is how tall the menu button is:
+ * a 14px icon, 4px of padding above and below it, and a 1px border.
+ *
+ * Every line in the strip is given this height so the button can be aligned to
+ * the first of them. In a pane narrow enough to wrap the stats onto a second
+ * line, a centred button hangs in the gap between the two rather than beside
+ * the title it belongs to.
+ */
+export const HEADER_LINE = "24px";
+
+/**
  * The strip at the top of a view: menu slot, title, stats.
  *
- * Centred, not baseline-aligned. The menu button is taller than the title's
- * line box, and a baseline-aligned line puts its baseline group flush to the
- * top, which left the title sitting a few pixels above the button beside it.
- * Title and stats keep their shared baseline inside `headerStrip`'s own row.
+ * Top-aligned, not baseline-aligned. A baseline-aligned line puts its baseline
+ * group flush to the top, which left the title sitting a few pixels above the
+ * button beside it; the shared `line-height` is what centres them against each
+ * other instead. Title and stats keep their shared baseline inside
+ * `headerStrip`'s own row.
  */
 export const HEADER =
-  `display:flex;align-items:center;gap:12px;padding:9px ${SPACE.xxl};flex-shrink:0;` +
-  `background:${T.toolbarBg};border-bottom:1px solid ${T.toolbarBorder};`;
+  `display:flex;align-items:flex-start;gap:12px;padding:9px ${SPACE.xxl};flex-shrink:0;` +
+  `line-height:${HEADER_LINE};background:${T.toolbarBg};border-bottom:1px solid ${T.toolbarBorder};`;
 
 /** How wide the menu is allowed to be when it is a column beside the panes. */
 export const MENU_PANEL_WIDTH = { min: "236px", max: "340px" };

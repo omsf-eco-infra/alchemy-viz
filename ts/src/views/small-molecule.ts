@@ -30,6 +30,7 @@ import { defineElement, GufeElement, type ViewHandle } from "../shared/element.j
 import { choice, flag } from "../shared/settings.js";
 import { load3Dmol, loadRDKit, ThreeDmol, type ThreeDmolViewer } from "../shared/engines.js";
 import { viewerInteraction, type BoundedZoom, type Interaction } from "../shared/interact.js";
+import { rememberLigandPose, restoreLigandPose } from "../shared/ligand-camera.js";
 import { DEPICT_STYLE } from "../shared/depict-style.js";
 import { depictSVG, ensureSDFTerminator, parseCounts, placeDepiction } from "../shared/sdf.js";
 import { FONT, OVERLAY_CONTROLS, PANE_LABEL_OVERLAY, SPACE, SURFACE } from "../shared/style.js";
@@ -242,6 +243,12 @@ export class GufeSmallMolecule extends GufeElement<SmallMoleculeComponentViz> {
         viewer.render();
         // After zoomTo, so the bound is measured from the opening framing.
         interaction = viewerInteraction(host3D.container, viewer);
+        // ... and after that, so the pose is applied through the same bounds a
+        // wheel goes through. Clicking along a network is a different ligand
+        // every time, and this is what makes the run of them comparable: the
+        // molecule is framed fresh and then turned to where the reader had the
+        // last one.
+        restoreLigandPose(viewer, interaction);
         applySpin();
       })
       .catch((e: unknown) => {
@@ -257,6 +264,8 @@ export class GufeSmallMolecule extends GufeElement<SmallMoleculeComponentViz> {
       },
       cleanup() {
         modes.cleanup();
+        // Before anything is torn down: a cleared viewer has no camera to read.
+        rememberLigandPose(viewer, interaction);
         interaction?.cleanup();
         interaction = null;
         if (!viewer) return;

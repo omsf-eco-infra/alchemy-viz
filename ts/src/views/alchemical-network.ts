@@ -149,8 +149,15 @@ interface NodeColors {
  * the extra is the square the ligand is drawn in plus the two rows of text that
  * move underneath it.
  *
+ * `platedHeight` is the third case, and it is the plate and its padding and
+ * nothing else: out where `LABEL_MIN_PX` has taken the two lines of text away,
+ * a box still tall enough for them is a picture with a band of empty colour
+ * under it. It is the same box as `depictedHeight` with the part that held the
+ * writing cut off, so what a zoom takes away is only ever the thing it stopped
+ * drawing.
+ *
  * A box grows into the taller shape when its ligand is drawn and shrinks back
- * when it is not, which is why the layout reserves room for the taller one
+ * when it is not, which is why the layout reserves room for the tallest one
  * whether or not it is in force: a campaign of twenty systems frames itself
  * well below the structure threshold, and boxes that stayed tall out there
  * would be twenty empty rectangles taking three times the room their names need
@@ -159,7 +166,7 @@ interface NodeColors {
  * enough apart for the taller box, so nothing a zoom does can make two of them
  * collide.
  */
-const NODE = { width: 148, height: 46, depictedHeight: 148, radius: 10 };
+const NODE = { width: 176, height: 54, depictedHeight: 176, platedHeight: 134, radius: 10 };
 
 /**
  * The white square a ligand is drawn on inside its box, and the room it leaves.
@@ -172,13 +179,31 @@ const NODE = { width: 148, height: 46, depictedHeight: 148, radius: 10 };
  * goes on saying which leg. Square because a depiction is - a plate wider than
  * the drawing it holds is a white band with a molecule in the middle of it.
  */
-const PLATE = { pad: 6, size: 96, radius: 6, inset: 4 };
+const PLATE = { pad: 6, size: 122, radius: 6, inset: 4 };
 
 /** The square RDKit is asked to draw in, in its own units. */
 const DEPICT_SIZE = 200;
 
 /** The name and the composition line: their sizes, and where they sit. */
 const CAPTION = { nameSize: 12, subSize: 10, gap: 13, bottom: 9, nameChars: 20, subChars: 24 };
+
+/**
+ * The smallest either line of a box may be drawn, on screen, before it is not
+ * drawn at all.
+ *
+ * Text in a box is in the graph's own units, so it is scaled by the zoom along
+ * with everything else: a 12px name is 12px only at a zoom of 1, and a campaign
+ * of twenty frames itself at about a third, where it is four. Four pixels is
+ * not a name - it is a grey bar in the middle of every box, and twenty of them
+ * are a texture laid over exactly the shape somebody pulled back to see.
+ *
+ * A floor in *screen* pixels is what makes this one decision rather than a pair
+ * of thresholds guessed against two font sizes: the same number covers both
+ * lines, and the smaller one goes first because it is the smaller one. Nothing
+ * is lost by it - the box keeps its composition colour, which the legend names,
+ * and hovering one still gives its name and its composition in full.
+ */
+const LABEL_MIN_PX = 7;
 
 /**
  * One zoom level: what a node draws at that distance.
@@ -201,19 +226,20 @@ export interface NodeDetail {
  * The levels, closest zoom first.
  *
  * The threshold is where the drawing stops being big enough to recognise a
- * molecule in - about 30 pixels across, a little under what the ligand network
- * crosses its own at. Lower on purpose: a campaign of twenty frames itself at
- * about 0.17, so a threshold set where every label is legible is one nobody
- * meets without zooming a long way in, and the outline of a ligand is worth
- * seeing well before its element letters are. Below that the boxes are what the
- * canvas is for - which systems exist and what runs between them - and a grid
- * of unreadable structures is texture over exactly the shape somebody pulled
- * back to see. It is also what keeps the cost down: a structure is an RDKit
- * call and an SVG subtree, and zoomed out is where the most nodes are on screen
- * at once.
+ * molecule in, and it is deliberately well under the zoom at which any of the
+ * writing in a box is still legible - see `LABEL_MIN_PX`. The outline of a
+ * ligand survives being made small in a way that letters do not: a chemist
+ * reads a molecule by its shape long before its element symbols, so a campaign
+ * that frames itself at a third should open on its ligands rather than on
+ * twenty boxes that have to be zoomed into one at a time before they say
+ * anything. Below the threshold the boxes are what the canvas is for - which
+ * systems exist and what runs between them - and a grid of structures too small
+ * to tell apart is texture over exactly the shape somebody pulled back to see.
+ * It is also what keeps the cost down: a structure is an RDKit call and an SVG
+ * subtree, and zoomed out is where the most nodes are on screen at once.
  */
 export const ZOOM_LEVELS: readonly NodeDetail[] = [
-  { id: "structures", from: 0.35, structure: true },
+  { id: "structures", from: 0.24, structure: true },
   { id: "boxes", from: 0, structure: false },
 ];
 
@@ -242,16 +268,26 @@ const CULL_MARGIN = 200;
 const EDGE = { width: 2, selectedWidth: 3.5, hit: 20 };
 
 /**
- * `collisionRadius` holds two centres 220 apart, which clears the corner of a
- * depicted box - half its diagonal is a little over 104 - so no zoom can bring
+ * `collisionRadius` holds two centres 252 apart, which clears the corner of a
+ * depicted box - half its diagonal is a little under 125 - so no zoom can bring
  * two boxes into each other. That is the only reason it is this number, and it
- * is why growing `NODE` is a change to this table as well.
+ * is why growing `NODE` is a change to this table as well. `linkDistance` is
+ * twice it for the reason the ligand network's own forces are written against
+ * one number: a link asking for less than collision enforces is a squeeze every
+ * pair resists by sitting exactly on the collision boundary, which is a layout
+ * with no structure left in it.
+ *
+ * `chargeStrength` was pulled in when the boxes grew. Repulsion is what sets
+ * how far apart the graph settles, and leaving it where it was would have
+ * inflated the layout by as much as the boxes grew - the same picture at a
+ * smaller framing, which is no bigger a box on anybody's screen. Pulling it in
+ * is what turns a bigger box into a bigger share of the canvas.
  */
 const FORCE = {
-  linkDistance: 220,
+  linkDistance: 252,
   linkStrength: 0.4,
-  chargeStrength: -1200,
-  collisionRadius: 110,
+  chargeStrength: -950,
+  collisionRadius: 126,
   collisionIterations: 3,
   tickMultiplier: 2,
 };
@@ -796,7 +832,10 @@ export class GufeAlchemicalNetwork extends GufeElement<AlchemicalNetworkViz> {
     bar.statsEl.appendChild(statChip("systems", String(nodes.length)));
     bar.statsEl.appendChild(statChip("transformations", String(edges.length)));
     if (protocols.size) bar.statsEl.appendChild(statChip("protocol", [...protocols].join(", ")));
-    host.appendChild(bar);
+    // Placed inside the graph pane rather than above the whole view - see
+    // `left` below. The name and the counts are about the network, so they sit
+    // over the network, and the detail pane keeps the full height for whatever
+    // view is drawing the current selection.
 
     const groups = compositionGroups(nodes, registry);
 
@@ -922,16 +961,26 @@ export class GufeAlchemicalNetwork extends GufeElement<AlchemicalNetworkViz> {
         remember: flag("alchemical-network.menuOpen", false),
       },
     );
-    split.appendChild(menu.panel);
-
     // `min-height` as well as `min-width`, because the split divides the height
     // instead when the view is taller than it is wide: without it a pane's
     // contents are its floor along whichever axis it is being divided on, and
     // the graph pushes the detail pane off the bottom.
+    //
+    // The header and the menu are inside this pane rather than above the split,
+    // so the row the splitter divides is the graph against the detail pane and
+    // nothing else: a selected system gets the pane's whole height for the view
+    // that draws it.
     const left = el("div", `min-width:0;min-height:0;display:flex;flex-direction:column;background:${T.netCanvasBg};`);
     const right = el("div", `min-width:0;min-height:0;display:flex;flex-direction:column;background:${T.appBg};`);
     const canvas = el("div", `flex:1;min-height:0;position:relative;overflow:hidden;background:${T.netCanvasBg};`);
-    left.appendChild(canvas);
+    // The menu beside the canvas, both under the header: a column while there
+    // is width for one, a band above the graph when there is not, which is the
+    // arrangement `orientMenuPanel` styles the panel for.
+    const graphRow = el("div", "flex:1;min-width:0;min-height:0;display:flex;flex-direction:row;overflow:hidden;");
+    graphRow.appendChild(menu.panel);
+    graphRow.appendChild(canvas);
+    left.appendChild(bar);
+    left.appendChild(graphRow);
 
     split.appendChild(left);
     split.appendChild(
@@ -945,7 +994,13 @@ export class GufeAlchemicalNetwork extends GufeElement<AlchemicalNetworkViz> {
         // that has to be drawn again. Only at the end of the drag: on the far
         // side of this is a force simulation.
         onResize: () => redraw(),
-        onOrient: (stacked) => orientMenuPanel(menu.panel, stacked),
+        onOrient: (stacked) => {
+          // Stacked, the graph pane is a wide short box and the menu belongs
+          // above the canvas rather than beside it, which is the arrangement
+          // `orientMenuPanel` restyles the panel for.
+          graphRow.style.flexDirection = stacked ? "column" : "row";
+          orientMenuPanel(menu.panel, stacked);
+        },
       }),
     );
     split.appendChild(right);
@@ -1299,6 +1354,10 @@ export class GufeAlchemicalNetwork extends GufeElement<AlchemicalNetworkViz> {
     const subs: SVGTextElement[] = [];
     /** The white square under a ligand, and the group it is drawn into. Null where there is no ligand. */
     const plates: (SVGRectElement | null)[] = [];
+    // The group that puts the middle of the plate at the origin. Kept because
+    // the plate moves: which of the three box heights is in force decides where
+    // the top of the box is, and the plate is measured down from it.
+    const holders: (SVGGElement | null)[] = [];
     const depictions: (SVGGElement | null)[] = [];
 
     nodes.forEach((node, index) => {
@@ -1353,9 +1412,11 @@ export class GufeAlchemicalNetwork extends GufeElement<AlchemicalNetworkViz> {
         const depiction = svg("g", { class: "gufe-node-depiction", display: "none", "pointer-events": "none" });
         holder.appendChild(depiction);
         group.appendChild(holder);
+        holders.push(holder);
         depictions.push(depiction);
       } else {
         plates.push(null);
+        holders.push(null);
         depictions.push(null);
       }
 
@@ -1439,22 +1500,40 @@ export class GufeAlchemicalNetwork extends GufeElement<AlchemicalNetworkViz> {
     };
 
     /**
-     * Draw one node at a level.
+     * Draw one node at a level and a zoom.
      *
      * A node that has no ligand, or whose ligand has not been drawn yet, shows
      * what it showed before: its name and its composition in the middle of the
      * box. A node with one shows it, and the two lines of text move down to sit
      * under the picture rather than across it.
+     *
+     * `scale` is here for the writing alone. Which level is in force is a
+     * decision about the whole canvas; whether a line in a box can still be
+     * read is a measurement in screen pixels, and only the zoom knows that -
+     * see `LABEL_MIN_PX`. A box whose writing has gone loses the room it was
+     * being kept in with it, so what is left is the picture and its frame
+     * rather than the picture and a band of empty colour.
      */
-    const show = (index: number, structures: boolean): void => {
+    const show = (index: number, structures: boolean, scale: number): void => {
       const showing = structures && drawn.has(index);
+      const legible = (size: number): boolean => size * scale >= LABEL_MIN_PX;
+      const named = legible(CAPTION.nameSize);
+      const described = legible(CAPTION.subSize);
+      labels[index].setAttribute("display", named ? "inline" : "none");
+      subs[index].setAttribute("display", described ? "inline" : "none");
       plates[index]?.setAttribute("display", showing ? "inline" : "none");
       depictions[index]?.setAttribute("display", showing ? "inline" : "none");
-      const boxHeight = showing ? NODE.depictedHeight : NODE.height;
+      const written = named || described;
+      const boxHeight = showing ? (written ? NODE.depictedHeight : NODE.platedHeight) : NODE.height;
       boxes[index].setAttribute("y", String(-boxHeight / 2));
       boxes[index].setAttribute("height", String(boxHeight));
+      const top = -boxHeight / 2 + PLATE.pad;
+      plates[index]?.setAttribute("y", String(top));
+      holders[index]?.setAttribute("transform", `translate(0,${top + PLATE.size / 2})`);
       const bottom = boxHeight / 2 - CAPTION.bottom;
-      labels[index].setAttribute("y", String(showing ? bottom - CAPTION.gap : -2));
+      // The name takes the composition's row when the composition has gone, so
+      // a box is never padded out by a line that is not being drawn.
+      labels[index].setAttribute("y", String(showing ? bottom - (described ? CAPTION.gap : 0) : -2));
       subs[index].setAttribute("y", String(showing ? bottom : 14));
       const face = faces[index];
       subs[index].textContent = truncate(showing ? face.besides : face.composition, CAPTION.subChars);
@@ -1477,7 +1556,7 @@ export class GufeAlchemicalNetwork extends GufeElement<AlchemicalNetworkViz> {
       // is the first thing anyone asks when the picture looks wrong, and this
       // way it is visible in devtools and assertable in a test.
       root.setAttribute("data-detail", level.id);
-      for (let i = 0; i < nodes.length; i++) show(i, level.structure);
+      for (let i = 0; i < nodes.length; i++) show(i, level.structure, scale);
       if (!level.structure) return;
 
       // Only the nodes on screen, plus a margin so panning does not tear. This
@@ -1498,7 +1577,7 @@ export class GufeAlchemicalNetwork extends GufeElement<AlchemicalNetworkViz> {
           if (!RDKit || current !== level) return;
           for (const index of wanted) {
             inject(RDKit, index);
-            show(index, true);
+            show(index, true, scale);
           }
         })
         .catch(() => undefined);

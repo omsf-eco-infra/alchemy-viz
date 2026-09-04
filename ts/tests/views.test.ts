@@ -1962,7 +1962,7 @@ describe("<gufe-alchemical-network>", () => {
     // times the room their names need.
     const node = mount("gufe-alchemical-network", readExample("alchemical_network.json"));
     await flush();
-    const root = wheeledGraph(node, 600);
+    const root = wheeledGraph(node, 900);
     await flush();
 
     expect(root.getAttribute("data-detail")).toBe("boxes");
@@ -1971,7 +1971,51 @@ describe("<gufe-alchemical-network>", () => {
     expect([...node.querySelectorAll("rect.gufe-node-plate")].every((p) => p.getAttribute("display") === "none")).toBe(
       true,
     );
-    expect(new Set(boxHeights(node))).toEqual(new Set([46]));
+    expect(new Set(boxHeights(node))).toEqual(new Set([54]));
+  });
+
+  it("drops the writing where it is too small to read, and the room it sat in", async () => {
+    // Text in a box is in graph units, so the zoom shrinks it along with the
+    // picture: a 12px name at a third is four pixels, which is a grey bar in
+    // the middle of every box rather than a name. The ligand goes on being
+    // recognisable at that size, so the writing goes and the drawing stays.
+    const node = mount("gufe-alchemical-network", readExample("alchemical_network.json"));
+    await flush();
+    const labels = [...node.querySelectorAll("text.gufe-node-label")];
+    const subs = [...node.querySelectorAll("text.gufe-node-composition")];
+    expect(labels.every((t) => t.getAttribute("display") === "inline")).toBe(true);
+
+    const root = wheeledGraph(node, 500);
+    await flush();
+
+    // Still every structure - this is not the level that gives those up.
+    expect(root.getAttribute("data-detail")).toBe("structures");
+    expect(
+      [...node.querySelectorAll("rect.gufe-node-plate")].every((p) => p.getAttribute("display") === "inline"),
+    ).toBe(true);
+    expect(labels.every((t) => t.getAttribute("display") === "none")).toBe(true);
+    expect(subs.every((t) => t.getAttribute("display") === "none")).toBe(true);
+    // The box gives back the two rows the writing was being kept in, rather
+    // than standing the picture on a band of empty colour.
+    expect(new Set(boxHeights(node))).toEqual(new Set([134]));
+  });
+
+  it("gives up the smaller line first, and lets the name take its row", async () => {
+    // One floor in screen pixels rather than a threshold per font size, so the
+    // 10px composition goes while the 12px name is still legible.
+    const node = mount("gufe-alchemical-network", readExample("alchemical_network.json"));
+    await flush();
+    wheeledGraph(node, 230);
+    await flush();
+
+    const labels = [...node.querySelectorAll("text.gufe-node-label")];
+    const subs = [...node.querySelectorAll("text.gufe-node-composition")];
+    expect(labels.every((t) => t.getAttribute("display") === "inline")).toBe(true);
+    expect(subs.every((t) => t.getAttribute("display") === "none")).toBe(true);
+    // The name drops onto the row the composition has left, so the box is not
+    // padded out by a line nobody is drawing.
+    const bottoms = new Set(labels.map((t) => t.getAttribute("y")));
+    expect(bottoms).toEqual(new Set([String(176 / 2 - 9)]));
   });
 
   it("keeps the plain box where a system has no ligand to draw", async () => {
@@ -1989,7 +2033,7 @@ describe("<gufe-alchemical-network>", () => {
     const groups = [...node.querySelectorAll("g.gufe-node")];
     const bare = groups.filter((g) => !g.querySelector("g.gufe-node-depiction"));
     expect(bare, "the system with no small molecule was still given a depiction").toHaveLength(1);
-    expect(Number(bare[0].querySelector("rect.gufe-node-box")!.getAttribute("height"))).toBe(46);
+    expect(Number(bare[0].querySelector("rect.gufe-node-box")!.getAttribute("height"))).toBe(54);
     expect(groups.length - bare.length).toBeGreaterThan(0);
   });
 
@@ -2004,7 +2048,7 @@ describe("<gufe-alchemical-network>", () => {
       [...node.querySelectorAll("text.gufe-node-composition")].map((line) => line.textContent);
 
     expect(lines().every((line) => line === "Solvent")).toBe(true);
-    wheeledGraph(node, 600);
+    wheeledGraph(node, 900);
     await flush();
     expect(lines().every((line) => line === "SmallMolecule + Solvent")).toBe(true);
   });

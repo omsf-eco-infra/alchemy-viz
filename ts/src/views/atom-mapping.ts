@@ -83,6 +83,7 @@ import { defineElement, GufeElement, type ViewHandle } from "../shared/element.j
 import { choice } from "../shared/settings.js";
 import { load3Dmol, loadRDKit, ThreeDmol, type RDKitModule, type ThreeDmolViewer } from "../shared/engines.js";
 import { viewerInteraction, type BoundedZoom, type Interaction } from "../shared/interact.js";
+import { rememberLigandPose, restoreLigandPose } from "../shared/ligand-camera.js";
 import { applyRT, kabsch, type Vec3 } from "../shared/kabsch.js";
 import { buildSDF, parseSDF, placeDepiction, type Molecule } from "../shared/sdf.js";
 import { layoutPair } from "../shared/depict-layout.js";
@@ -543,10 +544,27 @@ export class GufeAtomMapping extends GufeElement<LigandAtomMappingViz> {
     let boxes: Box[] = [];
     let syncHandle = 0;
     let alive = true;
+    /**
+     * Whether what is on screen is a ligand held the way `ligand-camera.ts`
+     * means it.
+     *
+     * The plain and coloured modes are two molecules in their own frames, which
+     * is the same thing `<gufe-small-molecule>` draws one of, so a pose is worth
+     * carrying between them. The other two are not: `openfe` lays three copies
+     * out across the screen and `lines` turns the camera on purpose so the lift
+     * runs across it rather than into it. Restoring a pose over either would
+     * undo the arrangement that is the whole point of the mode, and recording
+     * one from them would carry that arrangement out to every ligand after.
+     */
+    let posed = false;
 
     const clearBoxes = (): void => {
       if (syncHandle) cancelAnimationFrame(syncHandle);
       syncHandle = 0;
+      // Before anything is torn down. The two boxes are kept pointing the same
+      // way, so either of them answers for both.
+      if (posed) rememberLigandPose(boxes[0]?.viewer ?? null, boxes[0]?.interaction ?? null);
+      posed = false;
       for (const box of boxes) {
         box.interaction?.cleanup();
         try {
@@ -635,6 +653,18 @@ export class GufeAtomMapping extends GufeElement<LigandAtomMappingViz> {
       if (box.viewer) box.interaction = viewerInteraction(box.container, box.viewer);
     };
 
+    /**
+     * Hand a box the pose the last ligand was left in, once it is settled.
+     *
+     * After `settle` rather than before it, so the zoom is applied through the
+     * bounds a wheel goes through and measured against this scene's own
+     * framing - see `shared/ligand-camera.ts`.
+     */
+    const pose = (box: Box): void => {
+      restoreLigandPose(box.viewer, box.interaction);
+      posed = true;
+    };
+
     // --- the modes ---
 
     const renderPlain = (): void => {
@@ -648,6 +678,7 @@ export class GufeAtomMapping extends GufeElement<LigandAtomMappingViz> {
         viewer.zoomTo();
         viewer.render();
         settle(box);
+        pose(box);
       }
       startSync();
     };
@@ -703,6 +734,7 @@ export class GufeAtomMapping extends GufeElement<LigandAtomMappingViz> {
         viewer.zoomTo();
         viewer.render();
         settle(box);
+        pose(box);
       }
       startSync();
     };
