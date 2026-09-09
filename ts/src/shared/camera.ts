@@ -131,8 +131,12 @@ export function extentOf(
  * a wheel that cannot move the view any further has to be handed back to the
  * page rather than swallowed. The floor is only the fixed one where the whole
  * graph is already visible above it - see `floor` below.
+ *
+ * Exported because a view's zoom levels are thresholds on this same scale: one
+ * set at or below `min` is one a small graph can never reach, since the wheel
+ * stops there.
  */
-const ZOOM_LIMITS = { min: 0.15, max: 5 };
+export const ZOOM_LIMITS = { min: 0.15, max: 5 };
 
 /** Below this a factor has not moved the view, and is a rounding error. */
 const ZOOM_EPSILON = 1e-9;

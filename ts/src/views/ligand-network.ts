@@ -43,6 +43,7 @@ import { withoutLayout } from "../shared/layout.js";
 import { loadD3, loadRDKit, type RDKitModule } from "../shared/engines.js";
 import { DEPICT_STYLE, rgbTriple } from "../shared/depict-style.js";
 import { depictSVG } from "../shared/sdf.js";
+import { depictThemeOptions, nodeCardCaption, nodeCardGround } from "../shared/depict-theme.js";
 import { mountDepiction } from "../shared/depict-node.js";
 import { createMatcher, smartsBox, type MatchOutcome } from "../shared/smarts.js";
 import { FONT, MENU_LIST, MENU_PANEL, TOOLBAR } from "../shared/style.js";
@@ -236,8 +237,27 @@ function placeNodesAt(nodes: NetNode[], at: readonly [number, number][]): void {
 const CANVAS_SHARE = { initial: 0.58, min: 0.25, max: 0.8 };
 
 const NODE_RADIUS = 38;
+/** The ring round a node, drawn on the styled disc and on the plate that replaces it. */
+const NODE_STROKE = 1.5;
 const DEPICT_SIZE = 200;
-const DEPICT_PADDING = 4;
+
+/** How much clear ground is left between the structure's square and the ring. */
+const DEPICT_PADDING = 2;
+
+/**
+ * The square a structure is drawn in, inside a round node.
+ *
+ * A square *inscribed* in the disc, not one spanning its width: the corners of a
+ * square as wide as the circle stand a further 41% out from the centre, which is
+ * where a compact ligand - a fused ring with a substituent on each side, which
+ * is most of a campaign - crossed the ring and ran out onto the canvas. A long
+ * thin molecule never showed it, because RDKit scales a drawing to its box and a
+ * long one only reaches the sides, where the circle is widest.
+ *
+ * RDKit's own margin inside the box is on top of this, so the clearance a reader
+ * sees is a little more than `DEPICT_PADDING` rather than exactly it.
+ */
+const DEPICT_FIT = Math.SQRT2 * (NODE_RADIUS - DEPICT_PADDING);
 const LABEL_MAX_CHARS = 14;
 const INITIALS_SIZE = 18;
 
@@ -259,19 +279,25 @@ const CAPTION = {
 };
 
 /**
- * The white ground a depicted node stands on.
+ * The ground a depicted node stands on, painted the canvas's own colour.
  *
  * A disc of exactly `NODE_RADIUS`, which is the disc the zooms below draw, so
  * crossing the threshold changes what is inside a node and not how big it is.
- * It is there because RDKit draws for paper: black bonds, and element letters
- * from a palette picked against white. Without it a structure over a dark
- * canvas is a structure nobody can read, and over a light one it is a structure
- * with the network's own edges running through it.
+ * What it is for is clearing the way: without it a structure is drawn over the
+ * styled disc and has the network's own edges running through it. Which colour
+ * that is comes from `depict-theme.ts`, along with the palette the structure on
+ * it is drawn in, because a plate and its ink are one decision.
+ *
+ * It carries the node's ring too, in `NODE_STROKE`, which is the styled disc's
+ * own weight. A structure takes the disc away, and with it the only thing
+ * saying where one node ends: unringed, a ligand at the structure level is a
+ * drawing floating on the canvas with the edges arriving at nothing. The ring
+ * takes the match colour for the same reason the disc below it does.
  *
  * The name below the disc gets its own plate rather than a bigger disc, for the
- * same reason the disc is not simply grown: the ring of white a name needs is
- * the shape of the name, and a disc wide enough to hold one would swallow the
- * edges arriving at the node.
+ * same reason the disc is not simply grown: the clearing a name needs is the
+ * shape of the name, and a disc wide enough to hold one would swallow the edges
+ * arriving at the node.
  */
 const PLATE = { captionPadX: 4, captionPadY: 1, captionRadius: 3 };
 const EDGE_MIN_WIDTH = 1.5;
@@ -349,10 +375,17 @@ export interface DetailLevel {
  * opens on its shape. The cost of moving it down is that more nodes are on
  * screen when structures switch on, and each of those is a depiction - which
  * is what the cull and the once-each rule above are for.
+ *
+ * The two thresholds moved out together, and by the same factor, so the band
+ * each level covers is the one it always had. A structure at this distance is
+ * read by its outline rather than its letters, which is the same bargain the
+ * alchemical network makes, and both have to stay above `ZOOM_LIMITS.min`: the
+ * wheel stops there on a graph small enough to be framed above it, so a level
+ * starting at the floor is a level with nothing reachable below it.
  */
 export const ZOOM_LEVELS: readonly DetailLevel[] = [
-  { id: "structures", from: 0.55, disc: false, structure: true, name: "below", initials: false, edgeScores: true },
-  { id: "names", from: 0.35, disc: true, structure: false, name: "inside", initials: false, edgeScores: true },
+  { id: "structures", from: 0.4, disc: false, structure: true, name: "below", initials: false, edgeScores: true },
+  { id: "names", from: 0.25, disc: true, structure: false, name: "inside", initials: false, edgeScores: true },
   { id: "shape", from: 0, disc: true, structure: false, name: "none", initials: true, edgeScores: false },
 ];
 
@@ -542,7 +575,7 @@ interface DetailParts {
  * before the first frame.
  *
  * A node showing a structure loses the styled disc - its fill and its border
- * both say things the structure says better - and gains the white one behind
+ * both say things the structure says better - and gains the plain one behind
  * it that `PLATE` describes. A node without a structure keeps the styled disc,
  * and its name moves inside it, where there is nothing else to show.
  */
@@ -553,6 +586,15 @@ function levelOfDetail(parts: DetailParts): {
 } {
   const injected = new Set<number>();
   let failed = new Set<number>();
+
+  /**
+   * The palette every structure here is drawn in, asked for once per view.
+   *
+   * `cpk` because a node is one molecule rather than a mapping, and RDKit's
+   * element colours are what a reader picks a ligand out by. On a dark page
+   * these are the dark ones, which is the page on which `PLATE` is dark.
+   */
+  const depictOptions = depictThemeOptions("cpk");
 
   /** The match a structure was drawn against, so a new one knows what to redraw. */
   const drawnAgainst: string[] = [];
@@ -570,15 +612,16 @@ function levelOfDetail(parts: DetailParts): {
         DEPICT_SIZE,
         DEPICT_STYLE.layout,
         atoms && { atoms, color: MATCH_RGB, radius: MATCH_ATOM_RADIUS },
+        depictOptions,
       );
     if (!drawn) {
       failed.add(index);
       return;
     }
-    // The white RDKit draws behind a structure is dropped on the way in, and
+    // The ground RDKit draws behind a structure is dropped on the way in, and
     // `PLATE`'s disc is what this view puts there instead: round, and exactly
     // the size of the node rather than of the square the depiction was drawn in.
-    if (!mountDepiction(parts.depictionGroups[index], drawn, DEPICT_SIZE, (NODE_RADIUS - DEPICT_PADDING) * 2)) {
+    if (!mountDepiction(parts.depictionGroups[index], drawn, DEPICT_SIZE, DEPICT_FIT)) {
       failed.add(index);
       return;
     }
@@ -667,12 +710,14 @@ function levelOfDetail(parts: DetailParts): {
   const show = (index: number, wanted: DetailLevel): void => {
     const level = wanted.structure && !injected.has(index) ? levelUnder(wanted) : wanted;
     parts.depictionGroups[index].setAttribute("display", level.structure ? "inline" : "none");
-    parts.plates[index].setAttribute("display", level.structure ? "inline" : "none");
+    const plate = parts.plates[index];
+    plate.setAttribute("display", level.structure ? "inline" : "none");
     // A match has to be visible at every level, and each level has a different
     // thing to say it with: the disc when there is one, the name when there is
-    // one, and the matched atoms themselves once the structure is drawn - which
-    // is also the level where the disc is gone.
+    // one, and once the structure is drawn both its matched atoms and the ring
+    // the plate carries in the disc's place.
     const hit = parts.matched().has(index);
+    plate.setAttribute("stroke", hit ? T.netMatchStroke : T.netNodeStroke);
     // The disc is painted out rather than removed, so the whole node stays a hit
     // target for hover and drag; a structure's thin strokes are nothing to grab.
     const circle = parts.circles[index];
@@ -682,10 +727,10 @@ function levelOfDetail(parts: DetailParts): {
 
     const caption = parts.captions[index];
     const below = level.name === "below";
-    // Below the node the name is on the white plate, so it takes the ink that
-    // reads against white in either theme rather than the one picked to sit
+    // Below the node the name is on the plate, so it takes the ink that reads
+    // against whatever the plate was painted rather than the one picked to sit
     // against the canvas.
-    caption.setAttribute("fill", hit ? T.netMatchStroke : below ? T.netDepictCaption : T.netNodeCaption);
+    caption.setAttribute("fill", hit ? T.netMatchStroke : below ? nodeCardCaption() : T.netNodeCaption);
     caption.setAttribute("display", level.name === "none" ? "none" : "inline");
     if (!below) parts.captionPlates[index].setAttribute("display", "none");
     if (level.name === "none") return;
@@ -1534,7 +1579,7 @@ export class GufeLigandNetwork extends GufeElement<LigandNetworkViz> {
         r: NODE_RADIUS,
         fill: T.netNodeFill,
         stroke: T.netNodeStroke,
-        "stroke-width": 1.5,
+        "stroke-width": NODE_STROKE,
         "pointer-events": "all",
       }) as SVGCircleElement;
       group.appendChild(circle);
@@ -1545,7 +1590,9 @@ export class GufeLigandNetwork extends GufeElement<LigandNetworkViz> {
       const plate = svg("circle", {
         class: "gufe-node-plate",
         r: NODE_RADIUS,
-        fill: T.netDepictBg,
+        fill: nodeCardGround(),
+        stroke: T.netNodeStroke,
+        "stroke-width": NODE_STROKE,
         display: "none",
         "pointer-events": "none",
       }) as SVGCircleElement;
@@ -1587,7 +1634,7 @@ export class GufeLigandNetwork extends GufeElement<LigandNetworkViz> {
       const captionPlate = svg("rect", {
         class: "gufe-node-caption-plate",
         rx: PLATE.captionRadius,
-        fill: T.netDepictBg,
+        fill: nodeCardGround(),
         display: "none",
         "pointer-events": "none",
       }) as SVGRectElement;

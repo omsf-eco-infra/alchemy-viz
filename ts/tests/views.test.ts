@@ -17,7 +17,9 @@ import { inFrameOf, mappingPayloadFor, openfeShift, pairColour, uniqueAtoms } fr
 import { DEPICT_STYLE, markGroups, threeDmolColor } from "../src/shared/depict-style.js";
 import { diffStatus, transformationPayloadFor } from "../src/views/transformation.js";
 import { systemPayloadFor } from "../src/views/chemical-system.js";
-import { ZOOM_LEVELS, levelAt } from "../src/views/ligand-network.js";
+import { ZOOM_LEVELS, levelAt, type DetailLevel } from "../src/views/ligand-network.js";
+import { ZOOM_LEVELS as ALCHEMICAL_ZOOM_LEVELS, edgePx, levelAt as alchemicalLevelAt, strokePx } from "../src/views/alchemical-network.js";
+import { ZOOM_LIMITS } from "../src/shared/camera.js";
 import { clearFakeEngines, exampleNames, flush, readExample, seedFakeEngines, type SeededEnginesResult } from "./helpers.js";
 import type {
   ChemicalSystemViz,
@@ -289,11 +291,24 @@ describe("<gufe-ligand-network>", () => {
     return root;
   };
 
+  /**
+   * Out until a named level is in force, however many wheels that takes.
+   *
+   * Where each threshold sits is a judgement in `ZOOM_LEVELS` and has been
+   * retuned more than once. A test that spends one fixed gesture is a test that
+   * measures the gesture rather than the level, and fails the next retune.
+   */
+  const pulledBackTo = (node: HTMLElement, level: DetailLevel["id"]): SVGSVGElement => {
+    let root = node.querySelector<SVGSVGElement>("svg.gufe-graph")!;
+    for (let i = 0; i < 12 && root.getAttribute("data-detail") !== level; i++) root = wheeled(node, 200);
+    return root;
+  };
+
   /** Out far enough to reach the `shape` level. */
-  const zoomedOut = (node: HTMLElement): SVGSVGElement => wheeled(node, 600);
+  const zoomedOut = (node: HTMLElement): SVGSVGElement => pulledBackTo(node, "shape");
 
   /** Out to the `names` level: under the structure threshold, still naming every node. */
-  const zoomedBack = (node: HTMLElement): SVGSVGElement => wheeled(node, 400);
+  const zoomedBack = (node: HTMLElement): SVGSVGElement => pulledBackTo(node, "names");
 
   it("stops drawing the structures a notch below the zoom that asks for them", async () => {
     // The structures are the expensive part - one RDKit call and an SVG subtree
@@ -315,17 +330,17 @@ describe("<gufe-ligand-network>", () => {
     expect(depictionGroups.every((g) => g.getAttribute("display") === "none")).toBe(true);
   });
 
-  it("stands a depicted node on a white disc the size of the disc it replaces", async () => {
-    // RDKit draws for paper. Without the plate the black bonds sit on the dark
-    // canvas in one theme and on the network's own edges in the other, and the
-    // name under them is unreadable over whatever it happens to cross.
+  it("stands a depicted node on a plate the size of the disc it replaces", async () => {
+    // Without the plate a structure is drawn over the styled disc and has the
+    // network's own edges running through it, and the name under it is
+    // unreadable over whatever it happens to cross.
     const node = mount("gufe-ligand-network", network());
     await flush();
 
     const plates = Array.from(node.querySelectorAll<SVGCircleElement>("circle.gufe-node-plate"));
     expect(plates.length).toBe(node.querySelectorAll("circle.gufe-node-disc").length);
     // A node with no structure in it has the styled disc instead, and nothing
-    // to stand on white.
+    // to stand on a plate.
     zoomedBack(node);
     await flush();
     expect(plates.every((p) => p.getAttribute("display") === "none")).toBe(true);
@@ -340,6 +355,25 @@ describe("<gufe-ligand-network>", () => {
     // is inside a node rather than how big the node is.
     const disc = node.querySelector<SVGCircleElement>("circle.gufe-node-disc")!;
     expect(shown.every((p) => p.getAttribute("r") === disc.getAttribute("r"))).toBe(true);
+  });
+
+  it("rings a depicted node, since the structure took its disc away", async () => {
+    // Without it a ligand at the structure level is a drawing floating on the
+    // canvas: nothing says where the node ends, and the edges arrive at nothing.
+    const node = mount("gufe-ligand-network", network());
+    await flush();
+    wheeled(node, -200);
+    await flush();
+
+    const shown = [...node.querySelectorAll<SVGCircleElement>("circle.gufe-node-plate")].filter(
+      (plate) => plate.getAttribute("display") === "inline",
+    );
+    expect(shown.length).toBeGreaterThan(0);
+    const disc = node.querySelector<SVGCircleElement>("circle.gufe-node-disc")!;
+    // The weight of the disc it replaced, so crossing the threshold does not
+    // change how heavily a node is drawn.
+    expect(shown.every((plate) => plate.getAttribute("stroke-width") === disc.getAttribute("stroke-width"))).toBe(true);
+    expect(shown.every((plate) => plate.getAttribute("stroke") === T.netNodeStroke)).toBe(true);
   });
 
   it("hides the captions when zoomed far enough out", async () => {
@@ -383,12 +417,18 @@ describe("<gufe-ligand-network>", () => {
       expect(ZOOM_LEVELS[i].from, "levels run from the closest zoom down").toBeLessThan(ZOOM_LEVELS[i - 1].from);
     }
     expect(ZOOM_LEVELS[ZOOM_LEVELS.length - 1].from, "the last level catches every zoom left").toBe(0);
+    // Read off the table rather than typed out again: what is being checked is
+    // that each threshold is the lowest zoom of its own level and the highest of
+    // the next one down, whatever the numbers have been retuned to.
     expect(levelAt(4).id).toBe("structures");
-    expect(levelAt(0.55).id).toBe("structures");
-    expect(levelAt(0.54).id).toBe("names");
-    expect(levelAt(0.35).id).toBe("names");
-    expect(levelAt(0.34).id).toBe("shape");
+    for (const [i, level] of ZOOM_LEVELS.entries()) {
+      expect(levelAt(level.from).id, `${level.id} covers its own threshold`).toBe(level.id);
+      if (i > 0) expect(levelAt(level.from - 0.001).id).toBe(ZOOM_LEVELS[i + 1]?.id ?? level.id);
+    }
     expect(levelAt(0).id).toBe("shape");
+    // And reachable: the wheel stops at the camera's floor, so a level starting
+    // at or below it is one nobody can get to.
+    expect(ZOOM_LEVELS[ZOOM_LEVELS.length - 2].from).toBeGreaterThan(ZOOM_LIMITS.min);
   });
 
   it("labels unnamed ligands from their gufe key, and named ones by name", async () => {
@@ -1933,6 +1973,18 @@ describe("<gufe-alchemical-network>", () => {
     return root;
   };
 
+  /**
+   * Pull back until the boxes stop showing their ligands, however many wheels
+   * that takes. Asserted against rather than assumed: where that threshold sits
+   * is a judgement in `ZOOM_LEVELS` and has moved before, and a test that hard
+   * codes one gesture is a test that fails the next time it is retuned.
+   */
+  const pulledBackToBoxes = (node: HTMLElement): SVGSVGElement => {
+    let root = node.querySelector<SVGSVGElement>("svg.gufe-graph")!;
+    for (let i = 0; i < 12 && root.getAttribute("data-detail") !== "boxes"; i++) root = wheeledGraph(node, 900);
+    return root;
+  };
+
   /** The height of each system's box, which is what a structure changes. */
   const boxHeights = (node: HTMLElement): number[] =>
     [...node.querySelectorAll("rect.gufe-node-box")].map((box) => Number(box.getAttribute("height")));
@@ -1949,11 +2001,97 @@ describe("<gufe-alchemical-network>", () => {
     expect(depictions).toHaveLength(node.querySelectorAll("g.gufe-node").length);
     expect(depictions.every((g) => g.getAttribute("display") === "inline")).toBe(true);
     expect(depictions.every((g) => g.childElementCount > 0), "a structure was never drawn").toBe(true);
-    // On its own white plate: RDKit draws for paper, so a structure straight
-    // onto the box's composition colour is one nobody can read.
+    // On its own plate: a structure straight onto the box's composition colour
+    // is one nobody can read, whichever palette it was drawn in.
     const plates = [...node.querySelectorAll("rect.gufe-node-plate")];
     expect(plates.every((p) => p.getAttribute("display") === "inline")).toBe(true);
     expect(boxHeights(node).every((height) => height > 100)).toBe(true);
+  });
+
+  it("draws a box's border in screen pixels, so pulling out cannot take it away", async () => {
+    // A campaign frames at a few tenths and a dense one at a few hundredths, so
+    // a border in graph units is a border that thins out exactly where it is
+    // doing the most work: far enough back, the outline is the only thing left
+    // telling one system from the next.
+    expect(strokePx(1, false)).toBeGreaterThan(strokePx(0.2, false));
+    expect(strokePx(0.02, false)).toBe(strokePx(0.002, false));
+    expect(strokePx(1, true)).toBeGreaterThan(strokePx(1, false));
+
+    const node = mount("gufe-alchemical-network", readExample("alchemical_network.json"));
+    await flush();
+    const boxes = [...node.querySelectorAll<SVGRectElement>("rect.gufe-node-box")];
+    expect(boxes.every((box) => box.getAttribute("vector-effect") === "non-scaling-stroke")).toBe(true);
+
+    const widths = (): number[] => boxes.map((box) => Number(box.getAttribute("stroke-width")));
+    const near = widths();
+    wheeledGraph(node, 900);
+    await flush();
+    const far = widths();
+    expect(far.every((width, i) => width <= near[i])).toBe(true);
+    // Still drawn: a floor is the whole point of measuring in pixels.
+    expect(far.every((width) => width > 0)).toBe(true);
+  });
+
+  it("keeps its levels inside the range the wheel can reach", () => {
+    // The wheel stops at `ZOOM_LIMITS.min` on a graph small enough to be framed
+    // above it, so a level that starts at or below the floor is a level nobody
+    // can get to: the boxes would be unreachable on a campaign of three.
+    const structures = ALCHEMICAL_ZOOM_LEVELS.find((level) => level.structure)!;
+    expect(structures.from).toBeGreaterThan(ZOOM_LIMITS.min);
+    expect(alchemicalLevelAt(ZOOM_LIMITS.min).id).toBe("boxes");
+  });
+
+  it("thins the transformations as the reader pulls out, down to a floor", async () => {
+    // A line held at its full-zoom weight while the boxes shrink with the scene
+    // turns a pulled-back campaign into a mesh of cables between dots: the
+    // picture becomes mostly edge, and the edge is the part that carries the
+    // least at that distance. The floor is what keeps it drawn at all.
+    expect(edgePx(1, false)).toBeGreaterThan(edgePx(0.2, false));
+    expect(edgePx(0.02, false)).toBe(edgePx(0.002, false));
+    expect(edgePx(0.002, false)).toBeGreaterThan(0);
+    expect(edgePx(1, true)).toBeGreaterThan(edgePx(1, false));
+
+    const node = mount("gufe-alchemical-network", readExample("alchemical_network.json"));
+    await flush();
+    const lines = [...node.querySelectorAll<SVGLineElement>("svg.gufe-graph line")].filter(
+      (line) => line.getAttribute("stroke") !== "transparent",
+    );
+    expect(lines.length).toBeGreaterThan(0);
+    const widths = (): number[] => lines.map((line) => Number(line.getAttribute("stroke-width")));
+    const near = widths();
+    wheeledGraph(node, 900);
+    await flush();
+
+    expect(widths().every((width, i) => width < near[i])).toBe(true);
+    // The target under it does not thin out: an edge on a dense graph is hard
+    // enough to hit already.
+    const hits = [...node.querySelectorAll<SVGLineElement>("svg.gufe-graph line")].filter(
+      (line) => line.getAttribute("stroke") === "transparent",
+    );
+    expect(new Set(hits.map((line) => line.getAttribute("stroke-width"))).size).toBe(1);
+  });
+
+  it("keeps the zoom's weight when a system is selected", async () => {
+    // Selection used to write a fixed width, which was the right one at exactly
+    // one zoom: clicking a node in a pulled-back graph redrew its border at the
+    // weight it would have had up close.
+    const node = mount("gufe-alchemical-network", readExample("alchemical_network.json"));
+    await flush();
+    wheeledGraph(node, 900);
+    await flush();
+
+    const box = node.querySelector<SVGRectElement>("rect.gufe-node-box")!;
+    const resting = Number(box.getAttribute("stroke-width"));
+    node.querySelector<SVGGElement>("g.gufe-node")!.dispatchEvent(new MouseEvent("pointerup", { bubbles: true }));
+    await flush();
+
+    // It is the selected one now, which is what the colour says.
+    expect(box.getAttribute("stroke")).toBe(T.cardBorderActive);
+    // Out here both weights are on the floor, so selecting one changes its
+    // colour and not its heft. The old code wrote a fixed width instead, which
+    // drew a pulled-back graph's selected box at a zoomed-in weight.
+    expect(Number(box.getAttribute("stroke-width"))).toBe(resting);
+    expect(resting).toBeLessThan(strokePx(1, true));
   });
 
   it("shrinks the boxes back to their names when the reader pulls out", async () => {
@@ -1962,7 +2100,7 @@ describe("<gufe-alchemical-network>", () => {
     // times the room their names need.
     const node = mount("gufe-alchemical-network", readExample("alchemical_network.json"));
     await flush();
-    const root = wheeledGraph(node, 900);
+    const root = pulledBackToBoxes(node);
     await flush();
 
     expect(root.getAttribute("data-detail")).toBe("boxes");
@@ -2048,7 +2186,7 @@ describe("<gufe-alchemical-network>", () => {
       [...node.querySelectorAll("text.gufe-node-composition")].map((line) => line.textContent);
 
     expect(lines().every((line) => line === "Solvent")).toBe(true);
-    wheeledGraph(node, 900);
+    pulledBackToBoxes(node);
     await flush();
     expect(lines().every((line) => line === "SmallMolecule + Solvent")).toBe(true);
   });

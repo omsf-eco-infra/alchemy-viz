@@ -22,11 +22,14 @@
  * It is not a user setting. If it becomes one it belongs in `DepictStyle` with
  * the rest of the taste, not here.
  *
- * ## What is deliberately not dark
+ * ## Two grounds, one switch
  *
- * The structures inside network nodes. Those are cards on a canvas rather than
- * panels, they stay white in both themes, and `ligand-network.ts` and
- * `alchemical-network.ts` pass no options from here at all.
+ * A depiction sits on a panel in the single-molecule and mapping views and on a
+ * node's plate in the two network views, and those are different colours. Both
+ * come from here so that neither can be flipped without the other: a plate that
+ * stayed on paper while its structures went dark would be a white square in the
+ * middle of a dark graph, and one that went dark while they did not would be a
+ * node with nothing drawn in it.
  */
 
 import type { ElementColors } from "./depict-style.js";
@@ -54,6 +57,19 @@ export function setDarkDepictions(on: boolean): void {
  */
 export function depictGround(): string {
   return (dark ? THEMES.dark : THEMES.light).canvas2DBg;
+}
+
+/**
+ * The plate a network node's structure sits on, and the ink for the name under
+ * it. The plate is the graph canvas's own colour, so what it really does is
+ * cover the styled disc and whatever edge passes beneath.
+ */
+export function nodeCardGround(): string {
+  return (dark ? THEMES.dark : THEMES.light).netDepictBg;
+}
+
+export function nodeCardCaption(): string {
+  return (dark ? THEMES.dark : THEMES.light).netDepictCaption;
 }
 
 /**

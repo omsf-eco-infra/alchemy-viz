@@ -17,7 +17,14 @@ import {
   DARK_MONO_PALETTE,
   MAPPING_BW_PALETTE,
 } from "../src/shared/atom-colors.js";
-import { darkDepictions, depictGround, depictThemeOptions, setDarkDepictions } from "../src/shared/depict-theme.js";
+import {
+  darkDepictions,
+  depictGround,
+  depictThemeOptions,
+  nodeCardCaption,
+  nodeCardGround,
+  setDarkDepictions,
+} from "../src/shared/depict-theme.js";
 import { DEFAULT_DEPICT_STYLE, depictionDetails } from "../src/shared/depict-style.js";
 import { depictSVG } from "../src/shared/sdf.js";
 import { THEMES } from "../src/shared/theme.js";
@@ -97,11 +104,20 @@ describe("2D depictions and the page theme", () => {
     expect(details.atoms).toBeUndefined();
   });
 
-  it("leaves a network node's structure on its white card", () => {
+  it("moves a network node's plate with the structures drawn on it", () => {
+    // The failure this rules out is a plate left on paper under a dark
+    // structure, or the other way round: either is an empty-looking node.
+    expect(nodeCardGround()).toBe(THEMES.light.netDepictBg);
     setDarkDepictions(true);
-    // What the network views pass: no options, because a node is a card.
-    depictSVG(seededRDKit(), "mol", 90, "rdkit");
-    expect(engines.highlighted).toHaveLength(0);
-    expect(THEMES.dark.netDepictBg).toBe(THEMES.light.netDepictBg);
+    expect(nodeCardGround()).toBe(THEMES.dark.netDepictBg);
+    expect(nodeCardGround()).not.toBe(THEMES.light.netDepictBg);
+    // and the name under it takes an ink that reads against the new plate
+    expect(nodeCardCaption()).toBe(THEMES.dark.netDepictCaption);
+  });
+
+  it("keeps the plate the canvas's own colour, so it clears rather than shows", () => {
+    for (const theme of [THEMES.light, THEMES.dark]) {
+      expect(theme.netDepictBg).toBe(theme.netCanvasBg);
+    }
   });
 });

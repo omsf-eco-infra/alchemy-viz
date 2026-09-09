@@ -14,6 +14,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import "../src/index.js";
 import { clearFakeEngines, flush, readExample, seedFakeEngines, type SeededEnginesResult } from "./helpers.js";
 import { VIEW_STATE_GLOBAL } from "../src/shared/element.js";
+import { ZOOM_LEVELS } from "../src/views/ligand-network.js";
 import type { LigandNetworkViz, SmallMoleculeComponentViz } from "../src/schema/types.js";
 
 /** A network of `count` ligands, all sharing one real SDF from the fixtures. */
@@ -136,7 +137,12 @@ describe("a large ligand network", () => {
 
     // The whole point of level-of-detail. Before it, this was 934 RDKit calls
     // and 934 SVG subtrees, all up front. What remains is the detail pane's two.
-    expect(node.querySelector("svg.gufe-graph")!.getAttribute("data-detail")).toBe("shape");
+    //
+    // Which level a big network opens in is `ZOOM_LEVELS`, and the thresholds
+    // there get retuned; what has to hold is that whichever one it is draws no
+    // structures, not that it is the last one by name.
+    const detail = node.querySelector("svg.gufe-graph")!.getAttribute("data-detail");
+    expect(ZOOM_LEVELS.find((level) => level.id === detail)?.structure).toBe(false);
     expect(engines.depicted.length).toBeLessThan(10);
   });
 

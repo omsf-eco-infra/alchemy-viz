@@ -10,6 +10,7 @@ import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { BUTTON, FONT, MENU_LIST, MENU_PANEL, SELECT } from "../src/shared/style.js";
+import { THEMES } from "../src/shared/theme.js";
 
 const SRC = join(import.meta.dirname, "..", "src");
 
@@ -93,7 +94,30 @@ describe("the network menus", () => {
   });
 });
 
+/** Relative luminance, so a claim about a colour reading against another is checkable. */
+const luminance = (hex: string): number => {
+  const linear = [1, 3, 5]
+    .map((i) => parseInt(hex.slice(i, i + 2), 16) / 255)
+    .map((c) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4));
+  return 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2];
+};
+
+const contrast = (a: string, b: string): number => {
+  const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+  return (hi + 0.05) / (lo + 0.05);
+};
+
 describe("theme.ts", () => {
+  it("outlines a node more strongly than it borders a card, on a dark ground", () => {
+    // These are different jobs. A card's border lifts it off the panel behind
+    // it and a step is enough; a node's outline says where the node is, and on
+    // an alchemical network with one composition to tell apart it is the only
+    // thing that does. Harmonizing the two puts that outline a step above the
+    // canvas, where nobody can see it.
+    const { netNodeStroke, netCanvasBg, cardBorder } = THEMES.dark;
+    expect(contrast(netNodeStroke, netCanvasBg)).toBeGreaterThan(contrast(cardBorder, netCanvasBg));
+  });
+
   it("holds no chemical colour", () => {
     const text = readFileSync(join(SRC, "shared", "theme.ts"), "utf-8");
     for (const key of ["colorCore", "colorUnique", "linesMol", "overlayMol", "linesDash"]) {

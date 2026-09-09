@@ -98,19 +98,33 @@ export interface Theme {
   // graphs (network views)
   netCanvasBg: string;
   netNodeFill: string;
+  /**
+   * The outline of a node nothing has been said about: a ligand's disc, the ring
+   * round a depicted one, and an alchemical box in a network with a single
+   * composition to tell apart.
+   *
+   * The dark value is lighter than a border elsewhere in that theme rather than
+   * the same shade. A panel's border only has to lift a card off the panel
+   * behind it, and a step is enough; a node's outline is doing the work of
+   * saying where the node is, on a canvas whose fill is a step away already, and
+   * a border a step above the ground it sits on is one nobody can see.
+   */
   netNodeStroke: string;
   netNodeLabel: string;
   /**
    * The ground a node's 2D structure and its name sit on once the zoom draws
-   * them. White in both themes, unlike `canvas2DBg`: a node is a card lying on
-   * the graph canvas rather than a panel of its own, and a hundred dark cards on
-   * a dark canvas is a graph with no cards in it. The structures on them are
-   * drawn in RDKit's paper palette to match, which `depict-theme.ts` decides.
+   * them, and what the styled disc is painted out with to make room.
+   *
+   * The same colour as the canvas in both themes, which is what makes it a
+   * plate rather than a card: on a ligand network it is invisible and only
+   * hides what it covers, and inside an alchemical network's coloured box it
+   * reads as the picture's own ground. A view asks `depict-theme.ts` for it,
+   * because it has to move with the palette its structures are drawn in.
    */
   netDepictBg: string;
   /** A ligand's name under its structure: quieter than the structure itself. */
   netNodeCaption: string;
-  /** The same name where it sits on `netDepictBg`, which needs a dark ink in either theme. */
+  /** The same name where it sits on `netDepictBg`, which the plate decides and not the theme. */
   netDepictCaption: string;
   netInitials: string;
   /**
@@ -198,11 +212,11 @@ export const THEMES: { dark: Theme; light: Theme } = {
 
     netCanvasBg: "#2b2b40",
     netNodeFill: "#33334d",
-    netNodeStroke: "#45455e",
+    netNodeStroke: "#6a6c82",
     netNodeLabel: "#f2f3f7",
-    netDepictBg: "#ffffff",
+    netDepictBg: "#2b2b40",
     netNodeCaption: "#b9bccb",
-    netDepictCaption: "#55555f",
+    netDepictCaption: "#b9bccb",
     netInitials: "#51cbee",
     netMatchFill: "#4a3c22",
     netMatchStroke: "#e69f00",

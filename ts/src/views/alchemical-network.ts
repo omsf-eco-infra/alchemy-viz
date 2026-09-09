@@ -64,6 +64,7 @@ import { createMatcher, smartsBox, type MatchOutcome } from "../shared/smarts.js
 import { errText } from "../shared/dom.js";
 import { svg, titled } from "../shared/svg.js";
 import { depictSVG } from "../shared/sdf.js";
+import { depictThemeOptions, nodeCardGround } from "../shared/depict-theme.js";
 import { DEPICT_STYLE } from "../shared/depict-style.js";
 import { mountDepiction } from "../shared/depict-node.js";
 import { FONT, MENU_LIST, MENU_PANEL, TOOLBAR } from "../shared/style.js";
@@ -169,15 +170,17 @@ interface NodeColors {
 const NODE = { width: 176, height: 54, depictedHeight: 176, platedHeight: 134, radius: 10 };
 
 /**
- * The white square a ligand is drawn on inside its box, and the room it leaves.
+ * The square a ligand is drawn on inside its box, and the room it leaves.
  *
- * White because RDKit draws for paper - black bonds, and element letters from a
- * palette picked against white - so a structure straight onto the box's own
- * composition colour is a structure nobody can read. The plate is square and
- * inset rather than filling the box, which leaves the colour showing as a frame
- * on all four sides: the picture says which ligand, and the frame around it
- * goes on saying which leg. Square because a depiction is - a plate wider than
- * the drawing it holds is a white band with a molecule in the middle of it.
+ * A plate at all because a structure drawn straight onto the box's own
+ * composition colour is a structure nobody can read: whichever palette RDKit is
+ * using, it was picked against a plain ground and not against a wash of blue or
+ * amber. `depict-theme.ts` says which plain ground, so that the plate and the
+ * ink on it move together. The plate is square and inset rather than filling the
+ * box, which leaves the colour showing as a frame on all four sides: the picture
+ * says which ligand, and the frame around it goes on saying which leg. Square
+ * because a depiction is - a plate wider than the drawing it holds is a band
+ * with a molecule in the middle of it.
  */
 const PLATE = { pad: 6, size: 122, radius: 6, inset: 4 };
 
@@ -229,17 +232,27 @@ export interface NodeDetail {
  * molecule in, and it is deliberately well under the zoom at which any of the
  * writing in a box is still legible - see `LABEL_MIN_PX`. The outline of a
  * ligand survives being made small in a way that letters do not: a chemist
- * reads a molecule by its shape long before its element symbols, so a campaign
- * that frames itself at a third should open on its ligands rather than on
- * twenty boxes that have to be zoomed into one at a time before they say
- * anything. Below the threshold the boxes are what the canvas is for - which
- * systems exist and what runs between them - and a grid of structures too small
- * to tell apart is texture over exactly the shape somebody pulled back to see.
- * It is also what keeps the cost down: a structure is an RDKit call and an SVG
- * subtree, and zoomed out is where the most nodes are on screen at once.
+ * reads a molecule by its shape long before its element symbols, so the levels
+ * pull the writing out of a box well before they pull the picture out of it,
+ * and a campaign that frames itself well under a third still opens on its
+ * ligands rather than on twenty boxes that have to be zoomed into one at a time
+ * before they say anything. A twenty-system campaign frames at about a fifth,
+ * which is the case this number is set for.
+ *
+ * Below the threshold the boxes are what the canvas is for - which systems
+ * exist and what runs between them - and a grid of structures too small to tell
+ * apart is texture over exactly the shape somebody pulled back to see. It is
+ * also what keeps the cost down: a structure is an RDKit call and an SVG
+ * subtree, and zoomed out is where the most nodes are on screen at once. The
+ * culling in `applyLevel` is what bounds that, so the threshold trades
+ * legibility rather than a campaign's worth of RDKit calls.
+ *
+ * It has to stay above `ZOOM_LIMITS.min`, which is where the wheel stops on a
+ * graph small enough to be framed above it. A threshold at the floor is a level
+ * below it that a reader can never reach.
  */
 export const ZOOM_LEVELS: readonly NodeDetail[] = [
-  { id: "structures", from: 0.24, structure: true },
+  { id: "structures", from: 0.18, structure: true },
   { id: "boxes", from: 0, structure: false },
 ];
 
@@ -254,18 +267,56 @@ const CULL_MARGIN = 200;
  * How wide a transformation is drawn, and how wide it is to a pointer.
  *
  * Both in screen pixels rather than in graph units - `vector-effect` below is
- * what makes that true. The camera frames a whole campaign at once and never
- * zooms in past 1, so a twenty-system graph is drawn at about a third and a
- * two-hundred-system one at a few hundredths: scaled strokes there are a
- * hairline nobody can see and a target nobody can hit, and the denser the
- * network the thinner it gets, which is exactly backwards. A node's box is a
- * shape and scales with the scene; an edge is a line and a target, and neither
- * of those is measured in the graph's own units.
+ * what makes that true - but the drawn line and the target answer the zoom
+ * differently, because they are asked different questions.
  *
- * `hit` is the invisible line under the visible one, so an edge can be easy to
- * click without being drawn heavy enough to crowd the boxes it runs between.
+ * The target does not move. The camera frames a whole campaign at once and
+ * never zooms in past 1, so a twenty-system graph is drawn at about a third and
+ * a two-hundred-system one at a few hundredths: a target that shrank with the
+ * graph would be hardest to hit on exactly the networks with the most edges to
+ * tell apart. `hit` is that target, an invisible line under the visible one, so
+ * an edge can be easy to click without being drawn heavy enough to crowd the
+ * boxes it runs between.
+ *
+ * The drawn line does move, through `edgePx`. Held at one weight it reads well
+ * up close and turns a pulled-back campaign into a mesh of cables between dots:
+ * the boxes shrink with the scene and the lines between them do not, so what is
+ * left is mostly edge. It tracks the zoom down to `min`, which is the floor that
+ * keeps a hairline drawn at all - under the floor `BOX_STROKE` keeps, so a
+ * pulled-back campaign reads as boxes with lines between them rather than the
+ * other way round.
  */
-const EDGE = { width: 2, selectedWidth: 3.5, hit: 20 };
+const EDGE = { width: 2, selectedWidth: 3.5, min: 1, hit: 20 };
+
+/** How heavy an edge is drawn at this zoom, in screen pixels. */
+export const edgePx = (scale: number, selected: boolean): number => {
+  const full = selected ? EDGE.selectedWidth : EDGE.width;
+  return Math.max(EDGE.min, Math.min(full, full * scale));
+};
+
+/**
+ * The border round a system's box, in screen pixels rather than graph units.
+ *
+ * A box is a shape and scales with the scene, but its border is a line, and a
+ * line drawn in graph units is a line the zoom can take away: the camera frames
+ * a whole campaign at once, so a dense network sits at a few hundredths and a
+ * two-unit border there is nothing at all. That is exactly backwards - the
+ * further back a reader stands, the more the outline is what tells one box from
+ * the next, because the picture inside it has stopped being legible.
+ *
+ * So it is drawn like the edges are, in pixels through `vector-effect`, and
+ * `strokePx` tracks the zoom between `min` and the full-zoom weight. `min` is
+ * what a box pulled back to a block keeps; without a floor the border would
+ * vanish at the zoom that needs it most, and without a ceiling a block a few
+ * pixels across would be drawn as nothing but border.
+ */
+const BOX_STROKE = { width: 3, selectedWidth: 4.5, min: 1.25 };
+
+/** How heavy a box's border is drawn at this zoom, in screen pixels. */
+export const strokePx = (scale: number, selected: boolean): number => {
+  const full = selected ? BOX_STROKE.selectedWidth : BOX_STROKE.width;
+  return Math.max(BOX_STROKE.min, Math.min(full, full * scale));
+};
 
 /**
  * `collisionRadius` holds two centres 252 apart, which clears the corner of a
@@ -389,11 +440,11 @@ interface CompositionGroups {
 function compositionGroups(nodes: readonly GraphNode[], registry: RegistryIndex): CompositionGroups {
   // The canvas's own uncoloured node rather than a card's, which is what this
   // used to borrow. A card sits on a panel and is bordered just enough to come
-  // away from it; a box sits on the graph canvas, and in the light theme that
-  // canvas is the same white the box is filled with - so a card's border there
-  // left a white box on a white ground held together by nothing but its text.
-  // `netNodeStroke` is the shade the ligand network draws its own plain nodes
-  // in, and it is a good deal darker.
+  // away from it; a box sits on the graph canvas, and a card's border on a
+  // canvas is a box held together by nothing but its text - white on white in
+  // the light theme, and a shade off the ground in the dark one. `netNodeStroke`
+  // is the shade the ligand network draws its own plain nodes in, and it is
+  // picked to carry an outline rather than to edge a card.
   const plain: NodeColors = { fill: T.netNodeFill, stroke: T.netNodeStroke };
   const signatures = nodes.map((node) => compositionOf(node, registry));
   const compositions = [...new Set(signatures)];
@@ -1308,7 +1359,7 @@ export class GufeAlchemicalNetwork extends GufeElement<AlchemicalNetworkViz> {
         x2: edge.to.x,
         y2: edge.to.y,
         stroke: T.netEdgeLine,
-        "stroke-width": EDGE.width,
+        "stroke-width": edgePx(1, false),
         "stroke-linecap": "round",
         "vector-effect": "non-scaling-stroke",
         style: "cursor:pointer;",
@@ -1359,7 +1410,7 @@ export class GufeAlchemicalNetwork extends GufeElement<AlchemicalNetworkViz> {
     const nodeGroups: SVGGElement[] = [];
     const labels: SVGTextElement[] = [];
     const subs: SVGTextElement[] = [];
-    /** The white square under a ligand, and the group it is drawn into. Null where there is no ligand. */
+    /** The plate under a ligand, and the group it is drawn into. Null where there is no ligand. */
     const plates: (SVGRectElement | null)[] = [];
     // The group that puts the middle of the plate at the origin. Kept because
     // the plate moves: which of the three box heights is in force decides where
@@ -1391,7 +1442,9 @@ export class GufeAlchemicalNetwork extends GufeElement<AlchemicalNetworkViz> {
         rx: NODE.radius,
         fill: face.colors.fill,
         stroke: face.colors.stroke,
-        "stroke-width": 2,
+        "stroke-width": strokePx(1, false),
+        // The border is a line in screen pixels, like an edge. See `BOX_STROKE`.
+        "vector-effect": "non-scaling-stroke",
       });
       group.appendChild(box);
       boxes.push(box);
@@ -1405,7 +1458,7 @@ export class GufeAlchemicalNetwork extends GufeElement<AlchemicalNetworkViz> {
           width: PLATE.size,
           height: PLATE.size,
           rx: PLATE.radius,
-          fill: T.netDepictBg,
+          fill: nodeCardGround(),
           display: "none",
           "pointer-events": "none",
         }) as SVGRectElement;
@@ -1490,12 +1543,21 @@ export class GufeAlchemicalNetwork extends GufeElement<AlchemicalNetworkViz> {
     const drawn = new Set<number>();
     const failed = new Set<number>();
 
+    /**
+     * The palette every ligand here is drawn in, asked for once per view.
+     *
+     * `cpk`: a box shows one molecule, not a mapping, so RDKit's element colours
+     * are what a reader recognises it by. On a dark page they are the dark ones,
+     * which is the page on which `PLATE` is dark.
+     */
+    const depictOptions = depictThemeOptions("cpk");
+
     const inject = (RDKit: RDKitModule, index: number): void => {
       if (drawn.has(index) || failed.has(index)) return;
       const target = depictions[index];
       const sdf = faces[index].sdf;
       if (!target || !sdf) return;
-      const markup = depictSVG(RDKit, sdf, DEPICT_SIZE, DEPICT_STYLE.layout);
+      const markup = depictSVG(RDKit, sdf, DEPICT_SIZE, DEPICT_STYLE.layout, undefined, depictOptions);
       // Marked failed rather than left to be tried again: a molecule RDKit
       // cannot draw now will not draw on the next pan either, and a node that
       // keeps asking pays for the attempt every time the view moves.
@@ -1556,6 +1618,32 @@ export class GufeAlchemicalNetwork extends GufeElement<AlchemicalNetworkViz> {
      */
     let current: NodeDetail | null = null;
 
+    /**
+     * Every stroke the zoom and the selection decide between them, repainted
+     * when either moves.
+     *
+     * A box's border and an edge each say two things at once - what it is, in
+     * its colour, and whether it is the selected one - while how heavily it says
+     * them is the zoom's business. Both writers go through here so that neither
+     * can put back a weight the other has just chosen: selecting used to write a
+     * fixed width, which at any zoom but one was the wrong one.
+     */
+    let zoomScale = 1;
+    let selectedBox: number | null = null;
+    let selectedLine: number | null = null;
+    const paintStrokes = (): void => {
+      boxes.forEach((box, index) => {
+        const active = selectedBox === index;
+        box.setAttribute("stroke", active ? T.cardBorderActive : restingStroke[index]);
+        box.setAttribute("stroke-width", String(strokePx(zoomScale, active)));
+      });
+      lines.forEach((line, index) => {
+        const active = selectedLine === index;
+        line.setAttribute("stroke", active ? T.netHaloColor : T.netEdgeLine);
+        line.setAttribute("stroke-width", String(edgePx(zoomScale, active)));
+      });
+    };
+
     const applyLevel = (scale: number, tx: number, ty: number): void => {
       const level = levelAt(scale);
       current = level;
@@ -1563,6 +1651,8 @@ export class GufeAlchemicalNetwork extends GufeElement<AlchemicalNetworkViz> {
       // is the first thing anyone asks when the picture looks wrong, and this
       // way it is visible in devtools and assertable in a test.
       root.setAttribute("data-detail", level.id);
+      zoomScale = scale;
+      paintStrokes();
       for (let i = 0; i < nodes.length; i++) show(i, level.structure, scale);
       if (!level.structure) return;
 
@@ -1652,16 +1742,9 @@ export class GufeAlchemicalNetwork extends GufeElement<AlchemicalNetworkViz> {
 
     return {
       setSelected(selection) {
-        boxes.forEach((box, i) => {
-          const active = selection?.kind === "node" && selection.index === i;
-          box.setAttribute("stroke", active ? T.cardBorderActive : restingStroke[i]);
-          box.setAttribute("stroke-width", active ? "3" : "2");
-        });
-        lines.forEach((line, i) => {
-          const active = selection?.kind === "edge" && selection.index === i;
-          line.setAttribute("stroke", active ? T.netHaloColor : T.netEdgeLine);
-          line.setAttribute("stroke-width", String(active ? EDGE.selectedWidth : EDGE.width));
-        });
+        selectedBox = selection?.kind === "node" ? selection.index : null;
+        selectedLine = selection?.kind === "edge" ? selection.index : null;
+        paintStrokes();
       },
       /**
        * Dim what is not lit rather than hiding it.

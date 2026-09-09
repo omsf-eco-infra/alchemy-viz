@@ -11,11 +11,15 @@
  * the node has, and centred on the node's own origin.
  *
  * The backing rect is dropped rather than kept. It is square and as wide as the
- * whole depiction, so on a round node it is a white square sticking out past
- * the disc, and on a boxed one it paints over the colour the box is drawn in.
- * What white a structure needs behind it is the calling view's business - it
- * knows the shape of its own nodes - so it draws its own plate and this drops
- * RDKit's.
+ * whole depiction, so on a round node it is a square sticking out past the disc,
+ * and on a boxed one it paints over the colour the box is drawn in. What ground
+ * a structure needs behind it is the calling view's business - it knows the
+ * shape of its own nodes - so it draws its own plate and this drops RDKit's.
+ *
+ * Which rect that is depends on how the depiction was asked for: white when it
+ * was drawn for paper, and fully transparent when `depict-theme.ts` asked for no
+ * background at all. Both are dropped, so a build that ignored the option and a
+ * build that honoured it leave the same thing behind.
  */
 
 /**
@@ -32,7 +36,19 @@ const fillOf = (element: Element): string => {
 };
 
 const WHITE = new Set(["#fff", "#ffffff", "white", "rgb(255,255,255)"]);
-const isWhite = (element: Element): boolean => WHITE.has(fillOf(element));
+
+/** A fill nobody can see: `none`, `transparent`, or a hex whose alpha channel is zero. */
+const isInvisible = (fill: string): boolean => {
+  if (fill === "none" || fill === "transparent") return true;
+  if (/^#[0-9a-f]{8}$/.test(fill)) return fill.slice(7) === "00";
+  if (/^#[0-9a-f]{4}$/.test(fill)) return fill[4] === "0";
+  return false;
+};
+
+const isBacking = (element: Element): boolean => {
+  const fill = fillOf(element);
+  return WHITE.has(fill) || isInvisible(fill);
+};
 
 /**
  * Draw a depiction into a node's group, centred on its origin.
@@ -56,8 +72,8 @@ export function mountDepiction(target: SVGGElement, markup: string, size: number
     if (tag === "defs" || tag === "metadata" || tag === "title") continue;
     // The colour is in `style` on the builds this has met and in `fill` in
     // RDKit's own documentation, so both are read: a rect that survives this is
-    // a white square over whatever the node is drawn in.
-    if (tag === "rect" && isWhite(child as Element)) continue;
+    // a square over whatever the node is drawn in.
+    if (tag === "rect" && isBacking(child as Element)) continue;
     target.appendChild(document.importNode(child, true));
     appended++;
   }
