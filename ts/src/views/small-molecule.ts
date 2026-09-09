@@ -33,6 +33,7 @@ import { viewerInteraction, type BoundedZoom, type Interaction } from "../shared
 import { rememberLigandPose, restoreLigandPose } from "../shared/ligand-camera.js";
 import { DEPICT_STYLE } from "../shared/depict-style.js";
 import { depictSVG, ensureSDFTerminator, parseCounts, placeDepiction } from "../shared/sdf.js";
+import { depictGround, depictThemeOptions } from "../shared/depict-theme.js";
 import { FONT, OVERLAY_CONTROLS, PANE_LABEL_OVERLAY, SPACE, SURFACE } from "../shared/style.js";
 import { T } from "../shared/theme.js";
 import type { SmallMoleculeComponentViz } from "../schema/types.js";
@@ -80,7 +81,7 @@ export class GufeSmallMolecule extends GufeElement<SmallMoleculeComponentViz> {
     const depictBox = el(
       "div",
       `${PANE}display:flex;align-items:center;justify-content:center;overflow:hidden;padding:8px;` +
-        `background:${SURFACE.canvas2D};`,
+        `background:${depictGround()};`,
     );
     stage.appendChild(depictBox);
 
@@ -220,7 +221,10 @@ export class GufeSmallMolecule extends GufeElement<SmallMoleculeComponentViz> {
     depictBox.appendChild(centredMessage("Loading 2D depiction..."));
     loadRDKit()
       .then((RDKit) => {
-        const svg = depictSVG(RDKit, sdf, DEPICT_SIZE, DEPICT_STYLE.layout);
+        // `cpk`: a single molecule is drawn in RDKit's element colours. `mono` is
+        // gufe's mapping palette and belongs to the mapping view, not here.
+        const options = depictThemeOptions("cpk");
+        const svg = depictSVG(RDKit, sdf, DEPICT_SIZE, DEPICT_STYLE.layout, undefined, options);
         if (svg) {
           placeDepiction(depictBox, svg, DEPICT_SIZE);
         } else {

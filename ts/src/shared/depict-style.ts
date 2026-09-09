@@ -45,7 +45,8 @@
 import type { RDKitModule } from "./engines.js";
 import type { Layout2D } from "./depict-layout.js";
 import type { Molecule } from "./sdf.js";
-import { MAPPING_BW_PALETTE, MAPPING_COLORS } from "./atom-colors.js";
+import { MAPPING_COLORS } from "./atom-colors.js";
+import { depictThemeOptions } from "./depict-theme.js";
 import { errText } from "./dom.js";
 import committed from "./depict-style.json" with { type: "json" };
 
@@ -475,7 +476,9 @@ export function depictionDetails(
     bondLineWidth: style.bondWidth,
     scaleBondWidth: false,
   };
-  if (style.elementColors === "mono") details.atomColourPalette = MAPPING_BW_PALETTE;
+  // The palette, and on a dark ground the inks that go with it. `depict-theme.ts`
+  // decides both together with the surface the view paints behind this.
+  Object.assign(details, depictThemeOptions(style.elementColors));
   // gufe's setting, and the reason the marks read as marks rather than as bands.
   if (markStyle === "rdkit") details.continuousHighlight = false;
 

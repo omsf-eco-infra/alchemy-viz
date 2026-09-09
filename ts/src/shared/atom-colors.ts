@@ -9,8 +9,10 @@
  * gufe or openfe cannot disagree about what a colour means. CI regenerates this
  * file and fails if it differs from what is committed.
  *
- * Element colouring is deliberately absent: that belongs to 3Dmol's `Jmol`
- * scheme in 3D and to RDKit's defaults in 2D, and both are left to do it.
+ * Element colouring in 3D belongs to 3Dmol's `Jmol` scheme and is left to it. In
+ * 2D it belongs to RDKit's defaults, which are drawn for paper, so the only
+ * element colours here are the two RDKit itself switches to when the paper
+ * assumption fails: gufe's black-and-white palette, and RDKit's dark-mode one.
  */
 
 /**
@@ -330,4 +332,195 @@ export const MAPPING_DRAW_OPTIONS = {
   atomColourPalette: MAPPING_BW_PALETTE,
   addAtomIndices: true,
   continuousHighlight: false,
+} as const;
+
+const DARK_INK: readonly [number, number, number] = [0.9, 0.9, 0.9];
+
+/**
+ * RDKit's own element palette for a dark ground, from `SetDarkMode`.
+ *
+ * The default palette is drawn for paper: carbon is black, and so is every bond
+ * line and every unlabelled atom, which on a dark ground is a molecule nobody
+ * can see. This is what RDKit itself switches to instead, so a dark depiction
+ * here and a dark depiction drawn by any other RDKit caller agree.
+ *
+ * RDKit-JS has no `setDarkMode`, only JSON draw options, which is why this is a
+ * palette rather than a flag - the same reason `MAPPING_BW_PALETTE` is one.
+ */
+export const DARK_ATOM_PALETTE: Readonly<
+  Record<number, readonly [number, number, number]>
+> = {
+  "-1": [0.8, 0.8, 0.8],
+  0: [0.9, 0.9, 0.9],
+  1: [0.9, 0.9, 0.9],
+  6: [0.9, 0.9, 0.9],
+  7: [0.33, 0.41, 0.92],
+  8: [1.0, 0.2, 0.2],
+  9: [0.2, 0.8, 0.8],
+  15: [1.0, 0.5, 0.0],
+  16: [0.8, 0.8, 0.0],
+  17: [0.0, 0.802, 0.0],
+  35: [0.71, 0.4, 0.07],
+  53: [0.89, 0.004, 1.0],
+  201: [0.68, 0.85, 0.9],
+};
+
+/**
+ * Every element in one ink, which is `MAPPING_BW_PALETTE` for a dark ground.
+ *
+ * gufe draws a mapping with no element colour at all so that its two highlight
+ * colours are the only colour on the page. Keeping that on a dark ground means
+ * keeping the single ink and lifting it off the background, so this is RDKit's
+ * own dark carbon everywhere rather than a colour chosen here. It covers the
+ * whole periodic table, plus the two keys RDKit's palette carries outside it,
+ * so nothing is left drawn in the paper palette's black.
+ */
+export const DARK_MONO_PALETTE: Readonly<
+  Record<number, readonly [number, number, number]>
+> = {
+  "-1": DARK_INK,
+  0: DARK_INK,
+  1: DARK_INK,
+  2: DARK_INK,
+  3: DARK_INK,
+  4: DARK_INK,
+  5: DARK_INK,
+  6: DARK_INK,
+  7: DARK_INK,
+  8: DARK_INK,
+  9: DARK_INK,
+  10: DARK_INK,
+  11: DARK_INK,
+  12: DARK_INK,
+  13: DARK_INK,
+  14: DARK_INK,
+  15: DARK_INK,
+  16: DARK_INK,
+  17: DARK_INK,
+  18: DARK_INK,
+  19: DARK_INK,
+  20: DARK_INK,
+  21: DARK_INK,
+  22: DARK_INK,
+  23: DARK_INK,
+  24: DARK_INK,
+  25: DARK_INK,
+  26: DARK_INK,
+  27: DARK_INK,
+  28: DARK_INK,
+  29: DARK_INK,
+  30: DARK_INK,
+  31: DARK_INK,
+  32: DARK_INK,
+  33: DARK_INK,
+  34: DARK_INK,
+  35: DARK_INK,
+  36: DARK_INK,
+  37: DARK_INK,
+  38: DARK_INK,
+  39: DARK_INK,
+  40: DARK_INK,
+  41: DARK_INK,
+  42: DARK_INK,
+  43: DARK_INK,
+  44: DARK_INK,
+  45: DARK_INK,
+  46: DARK_INK,
+  47: DARK_INK,
+  48: DARK_INK,
+  49: DARK_INK,
+  50: DARK_INK,
+  51: DARK_INK,
+  52: DARK_INK,
+  53: DARK_INK,
+  54: DARK_INK,
+  55: DARK_INK,
+  56: DARK_INK,
+  57: DARK_INK,
+  58: DARK_INK,
+  59: DARK_INK,
+  60: DARK_INK,
+  61: DARK_INK,
+  62: DARK_INK,
+  63: DARK_INK,
+  64: DARK_INK,
+  65: DARK_INK,
+  66: DARK_INK,
+  67: DARK_INK,
+  68: DARK_INK,
+  69: DARK_INK,
+  70: DARK_INK,
+  71: DARK_INK,
+  72: DARK_INK,
+  73: DARK_INK,
+  74: DARK_INK,
+  75: DARK_INK,
+  76: DARK_INK,
+  77: DARK_INK,
+  78: DARK_INK,
+  79: DARK_INK,
+  80: DARK_INK,
+  81: DARK_INK,
+  82: DARK_INK,
+  83: DARK_INK,
+  84: DARK_INK,
+  85: DARK_INK,
+  86: DARK_INK,
+  87: DARK_INK,
+  88: DARK_INK,
+  89: DARK_INK,
+  90: DARK_INK,
+  91: DARK_INK,
+  92: DARK_INK,
+  93: DARK_INK,
+  94: DARK_INK,
+  95: DARK_INK,
+  96: DARK_INK,
+  97: DARK_INK,
+  98: DARK_INK,
+  99: DARK_INK,
+  100: DARK_INK,
+  101: DARK_INK,
+  102: DARK_INK,
+  103: DARK_INK,
+  104: DARK_INK,
+  105: DARK_INK,
+  106: DARK_INK,
+  107: DARK_INK,
+  108: DARK_INK,
+  109: DARK_INK,
+  110: DARK_INK,
+  111: DARK_INK,
+  112: DARK_INK,
+  113: DARK_INK,
+  114: DARK_INK,
+  115: DARK_INK,
+  116: DARK_INK,
+  117: DARK_INK,
+  118: DARK_INK,
+  201: DARK_INK,
+};
+
+/**
+ * What else a depiction has to pass to be drawn for a dark ground.
+ *
+ * The inks are RDKit's, every one its own `SetDarkMode` moves off the paper
+ * value, found by diffing rather than by listing the ones anybody remembered.
+ * `atomNoteColour` is why: an atom index is a note rather than an annotation, so
+ * a depiction with a correct `annotationColour` still numbers its atoms in
+ * black. The generator checks each key survives RDKit's JSON parser, which is
+ * the only route a browser has and which ignores what it does not know.
+ *
+ * The background is the one deliberate departure. RDKit's dark mode paints the
+ * SVG black; this asks for no paint at all, so the view's own surface is the
+ * ground and one depiction can sit on two different panels without carrying a
+ * colour that disagrees with either.
+ */
+export const DARK_DRAW_OPTIONS = {
+  backgroundColour: [0, 0, 0, 0],
+  annotationColour: [0.9, 0.9, 0.9, 1.0],
+  atomNoteColour: [0.9, 0.9, 0.9, 1.0],
+  legendColour: [0.9, 0.9, 0.9, 1.0],
+  symbolColour: [0.9, 0.9, 0.9, 1.0],
+  variableAttachmentColour: [0.3, 0.3, 0.3, 1.0],
 } as const;

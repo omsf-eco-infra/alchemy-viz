@@ -91,9 +91,11 @@ export const SURFACE = {
   split: T.splitBorder,
   /** Where a 3D engine draws. Interface, not chemistry: it is the paper. */
   viewer: T.viewerBg,
-  /** Where a 2D depiction is placed, for the same reason. */
-  canvas2D: T.canvas2DBg,
 } as const;
+
+// The 2D depiction ground is deliberately absent. It has to be decided with the
+// palette RDKit draws in, so it comes from `depictGround()` in `depict-theme.ts`
+// and is read when a view draws rather than when this module loads.
 
 // --- controls --------------------------------------------------------------
 

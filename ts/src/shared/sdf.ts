@@ -130,6 +130,13 @@ export function parseCounts(sdf: string): { atoms: number; bonds: number } | nul
  * parses - hydrogens removed - so whatever produced them has to have parsed it
  * the same way, or every index above the first hydrogen marks the wrong atom.
  * A build too old for `get_svg_with_highlights` simply draws without them.
+ *
+ * `drawOptions` is anything else RDKit should be told, already in the JSON form
+ * its options take: `depict-theme.ts` produces the palette and inks a dark
+ * ground needs, and a caller drawing on white passes nothing. Same bargain as
+ * `highlight` - this file stays about SDF and RDKit and knows nothing about
+ * anyone's palette. A build too old for `get_svg_with_highlights` ignores them,
+ * which draws a paper depiction rather than no depiction.
  */
 export interface DepictHighlight {
   atoms: readonly number[];
@@ -149,6 +156,7 @@ export function depictSVG(
   size: number,
   layout: Layout2D,
   highlight?: DepictHighlight,
+  drawOptions?: Record<string, unknown>,
 ): string | null {
   let rdmol = null;
   try {
@@ -161,20 +169,21 @@ export function depictSVG(
         /* SMILES have no coords to replace */
       }
     }
-    if (highlight?.atoms.length && rdmol.get_svg_with_highlights) {
-      const colors: Record<number, readonly [number, number, number]> = {};
-      const radii: Record<number, number> = {};
-      for (const atom of highlight.atoms) {
-        colors[atom] = highlight.color;
-        radii[atom] = highlight.radius;
+    const marks = highlight?.atoms.length ? highlight : null;
+    const styled = !!drawOptions && Object.keys(drawOptions).length > 0;
+    if ((marks || styled) && rdmol.get_svg_with_highlights) {
+      const details: Record<string, unknown> = { width: size, height: size, ...drawOptions };
+      if (marks) {
+        const colors: Record<number, readonly [number, number, number]> = {};
+        const radii: Record<number, number> = {};
+        for (const atom of marks.atoms) {
+          colors[atom] = marks.color;
+          radii[atom] = marks.radius;
+        }
+        details.atoms = [...marks.atoms];
+        details.highlightAtomColors = colors;
+        details.highlightAtomRadii = radii;
       }
-      const details = {
-        width: size,
-        height: size,
-        atoms: [...highlight.atoms],
-        highlightAtomColors: colors,
-        highlightAtomRadii: radii,
-      };
       return rdmol.get_svg_with_highlights(JSON.stringify(details)) || null;
     }
     return rdmol.get_svg(size, size) || null;

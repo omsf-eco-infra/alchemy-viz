@@ -78,6 +78,14 @@ export interface Theme {
 
   // 3D viewers (3Dmol wants 0x-prefixed colours)
   viewerBg: string;
+  /**
+   * The ground a full-panel 2D depiction is drawn on. It tracks `viewerBg`, so
+   * switching a molecule between 2D and 3D does not switch grounds under it.
+   *
+   * A view asks `depict-theme.ts` for this rather than reading it here, because
+   * the depiction ground and the palette RDKit draws with have to be decided
+   * together: light ink on a light ground is nothing at all.
+   */
   canvas2DBg: string;
 
 
@@ -94,10 +102,10 @@ export interface Theme {
   netNodeLabel: string;
   /**
    * The ground a node's 2D structure and its name sit on once the zoom draws
-   * them. White in both themes, because RDKit draws a depiction for paper: its
-   * bonds are black and its element letters are a palette picked against white,
-   * and every other depiction in this project is already on `canvas2DBg`. A
-   * structure over a dark canvas is a structure nobody can read.
+   * them. White in both themes, unlike `canvas2DBg`: a node is a card lying on
+   * the graph canvas rather than a panel of its own, and a hundred dark cards on
+   * a dark canvas is a graph with no cards in it. The structures on them are
+   * drawn in RDKit's paper palette to match, which `depict-theme.ts` decides.
    */
   netDepictBg: string;
   /** A ligand's name under its structure: quieter than the structure itself. */
@@ -180,7 +188,7 @@ export const THEMES: { dark: Theme; light: Theme } = {
     errorFg: "#ff8080",
 
     viewerBg: "0x2b2b40",
-    canvas2DBg: "#ffffff",
+    canvas2DBg: "#2b2b40",
 
 
     diffUnchanged: "#64748b",
@@ -294,4 +302,7 @@ function prefersDark(): boolean {
   }
 }
 
-export const T: Theme = prefersDark() ? THEMES.dark : THEMES.light;
+/** Which of the two is in force, for the few places that have to know. */
+export const IS_DARK: boolean = prefersDark();
+
+export const T: Theme = IS_DARK ? THEMES.dark : THEMES.light;

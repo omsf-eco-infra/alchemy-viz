@@ -87,6 +87,7 @@ import { rememberLigandPose, restoreLigandPose } from "../shared/ligand-camera.j
 import { applyRT, kabsch, type Vec3 } from "../shared/kabsch.js";
 import { buildSDF, parseSDF, placeDepiction, type Molecule } from "../shared/sdf.js";
 import { layoutPair } from "../shared/depict-layout.js";
+import { depictGround } from "../shared/depict-theme.js";
 import {
   DEPICT_STYLE,
   depictStyledSVG,
@@ -888,7 +889,7 @@ export class GufeAtomMapping extends GufeElement<LigandAtomMappingViz> {
         const box = el(
           "div",
           "flex:1;min-height:0;display:flex;align-items:center;justify-content:center;padding:8px;" +
-            `background:${SURFACE.canvas2D};`,
+            `background:${depictGround()};`,
         );
         box.appendChild(centredMessage("Loading 2D depiction..."));
         wrap.appendChild(box);

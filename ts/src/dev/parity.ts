@@ -20,6 +20,7 @@ import { mount } from "../index.js";
 import { withDebugFlag } from "../shared/debug.js";
 import { errText } from "../shared/dom.js";
 import { MAPPING_COLORS } from "../shared/atom-colors.js";
+import { depictGround, setDarkDepictions } from "../shared/depict-theme.js";
 import { T } from "../shared/theme.js";
 
 /** gufe's drawings, if they have been generated. */
@@ -47,12 +48,17 @@ function panel(title: string, note: string): { wrap: HTMLElement; body: HTMLElem
   wrap.appendChild(bar);
 
   const body = document.createElement("div");
-  body.style.cssText = `flex:1;min-height:0;display:flex;background:${T.canvas2DBg};`;
+  body.style.cssText = `flex:1;min-height:0;display:flex;background:${depictGround()};`;
   wrap.appendChild(body);
   return { wrap, body };
 }
 
 export async function buildParity(host: HTMLElement): Promise<void> {
+  // gufe draws on paper and always will, so this page does too even when the
+  // host asks for a dark interface. A white drawing beside a dark one compares
+  // nothing, and the question this page exists to answer is about the colours.
+  setDarkDepictions(false);
+
   const header = document.createElement("header");
   header.style.cssText =
     "padding:16px 20px 4px;font:13px/1.6 ui-sans-serif,system-ui,sans-serif;" + `color:${T.textMuted};`;
@@ -69,7 +75,9 @@ export async function buildParity(host: HTMLElement): Promise<void> {
     "<li>everything else <b>unhighlighted</b> - gufe gives core atoms no colour at all</li>" +
     "<li>the molecules <b>black and white</b>, not RDKit's element palette</li>" +
     "<li>every atom labelled with its <b>index</b></li>" +
-    "</ul>";
+    "</ul>" +
+    "<div style=\"margin-top:6px;font-size:12px;\">Both panels are drawn on paper whatever the " +
+    "page theme is; a dark depiction has nothing to compare against here.</div>";
   host.appendChild(header);
 
   const row = document.createElement("div");
