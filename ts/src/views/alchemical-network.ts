@@ -65,9 +65,10 @@ import { errText } from "../shared/dom.js";
 import { svg, titled } from "../shared/svg.js";
 import { depictSVG } from "../shared/sdf.js";
 import { depictThemeOptions, nodeCardGround } from "../shared/depict-theme.js";
+import { chargeLabel } from "../shared/charge.js";
 import { DEPICT_STYLE } from "../shared/depict-style.js";
 import { mountDepiction } from "../shared/depict-node.js";
-import { FONT, MENU_LIST, MENU_PANEL, TOOLBAR } from "../shared/style.js";
+import { FONT, MENU_LIST, MENU_PANEL, TOOLBAR, WEIGHT } from "../shared/style.js";
 import { T } from "../shared/theme.js";
 import { buildRegistry, entryLabel, lookup, lookupOfType, type RegistryIndex } from "../schema/registry.js";
 import { systemPayloadFor } from "./chemical-system.js";
@@ -185,6 +186,37 @@ const PLATE = { pad: 6, size: 122, radius: 6, inset: 4 };
 
 /** The square RDKit is asked to draw in, in its own units. */
 const DEPICT_SIZE = 200;
+
+/**
+ * The formal charge of the ligand in a box, and the mark on a transformation
+ * that changes one. See `shared/charge.ts` for why either is drawn at all.
+ *
+ * The badge is pinned to the box's top corner, which is where a reader looks
+ * for a mark on a thing rather than a mark on its picture. It is drawn over
+ * whatever is there and nothing is laid out around it: the box is the size the
+ * system's own contents make it, with or without a charge, so a charged system
+ * and a neutral one are the same shape. Dashes rather than a colour on the
+ * edges: a line's colour here already says whether it is the selected one.
+ */
+const CHARGE_BADGE = {
+  /** How far in from the box's top corner the charge is written. */
+  inset: 22,
+  fontSize: 26,
+  /**
+   * The charge on the zooms that draw no ligand: bigger, and across the upper
+   * part of the box rather than in its corner.
+   *
+   * Out there a box is a rectangle with a name in it, and the charge is the
+   * only other thing this view still knows about the system. At the corner size
+   * it would be a mark on a block; this is the second thing a reader can still
+   * make out. `bigAt` is a fraction of the box's height and keeps it off the
+   * two lines of writing, which sit in the middle once there is no picture for
+   * them to sit under.
+   */
+  bigAt: 0.28,
+  bigFontSize: 64,
+};
+const CHARGE_DASH = "6 4";
 
 /** The name and the composition line: their sizes, and where they sit. */
 const CAPTION = { nameSize: 12, subSize: 10, gap: 13, bottom: 9, nameChars: 20, subChars: 24 };
@@ -491,6 +523,8 @@ function systemHaystack(system: ChemicalSystemViz, registry: RegistryIndex): str
 interface LigandIndex {
   /** One structure per distinct small molecule, which is what the matcher sweeps. */
   sources: string[];
+  /** The formal charge of each of those, in the same order. */
+  charges: number[];
   /** Which of those each system carries, indexed as the nodes are. */
   perNode: number[][];
 }
@@ -510,6 +544,7 @@ interface LigandIndex {
  */
 function ligandIndex(nodes: readonly GraphNode[], registry: RegistryIndex): LigandIndex {
   const sources: string[] = [];
+  const charges: number[] = [];
   const at = new Map<GufeKey, number>();
   const perNode = nodes.map((node) => {
     const mine: number[] = [];
@@ -521,12 +556,13 @@ function ligandIndex(nodes: readonly GraphNode[], registry: RegistryIndex): Liga
         index = sources.length;
         at.set(key, index);
         sources.push(component.sdf ?? "");
+        charges.push(component.total_charge ?? 0);
       }
       mine.push(index);
     }
     return mine;
   });
-  return { sources, perNode };
+  return { sources, charges, perNode };
 }
 
 /**
@@ -544,6 +580,16 @@ interface NodeFace {
   besides: string;
   /** The ligand to draw in the box, as SDF, or null where there is none to draw. */
   sdf: string | null;
+  /**
+   * The formal charge of that same ligand, and 0 where there is none.
+   *
+   * The ligand the box is showing rather than a total over the system, so the
+   * number a reader sees belongs to the picture it is written on. A cofactor
+   * carries its own charge and is not counted here; it is the same cofactor on
+   * both ends of a transformation, so it cancels out of the one question this
+   * is for, which is whether an edge changes the charge.
+   */
+  charge: number;
 }
 
 /**
@@ -954,13 +1000,15 @@ export class GufeAlchemicalNetwork extends GufeElement<AlchemicalNetworkViz> {
       // The first small molecule with a structure in it. A system with two is a
       // ligand and a cofactor, and which of them the network is about is the
       // one the payload lists first; the subtitle goes on naming both.
-      const sdf = ligands.perNode[index].map((source) => ligands.sources[source]).find((source) => source) ?? null;
+      const drawable = ligands.perNode[index].find((source) => ligands.sources[source]);
+      const sdf = drawable === undefined ? null : ligands.sources[drawable];
       const types = componentTypes(node, registry);
       return {
         colors: groups.colorOf(index),
         composition: types.join(" + "),
         besides: subtitleFor(types, sdf !== null, ligands.perNode[index].length),
         sdf,
+        charge: drawable === undefined ? 0 : ligands.charges[drawable],
       };
     });
 
@@ -1106,7 +1154,13 @@ export class GufeAlchemicalNetwork extends GufeElement<AlchemicalNetworkViz> {
      */
     let era = 0;
 
-    left.appendChild(this.#canvasBar(groups.legend, () => resetView()));
+    // Whether any transformation changes the charge, which decides whether the
+    // strip below explains the dashes. Read off the same ligands the boxes show.
+    const chargeByKey = new Map(nodes.map((node, index) => [node["gufe-key"], faces[index].charge]));
+    const anyChargeChange = edges.some(
+      (edge) => (chargeByKey.get(edge.to["gufe-key"]) ?? 0) !== (chargeByKey.get(edge.from["gufe-key"]) ?? 0),
+    );
+    left.appendChild(this.#canvasBar(groups.legend, () => resetView(), anyChargeChange));
 
     const select = (kind: "node" | "edge", index: number): void => {
       selectedItem = { kind, index };
@@ -1212,14 +1266,25 @@ export class GufeAlchemicalNetwork extends GufeElement<AlchemicalNetworkViz> {
   /**
    * The strip under the canvas: how to get back, and what the colours mean.
    *
-   * The reset is always there and the legend is not. Zoom and pan have no
-   * bottom, so a network the reader has flung off the edge needs one control
-   * that is always in the same place; a network of one composition has nothing
-   * to explain and a legend saying so is noise.
+   * The reset is always there and neither key is. Zoom and pan have no bottom,
+   * so a network the reader has flung off the edge needs one control that is
+   * always in the same place; a network of one composition has nothing to
+   * explain, and one whose transformations all keep the charge draws no dashes
+   * for a key to name.
    */
-  #canvasBar(entries: readonly [string, NodeColors][], onReset: () => void): HTMLDivElement {
+  #canvasBar(
+    entries: readonly [string, NodeColors][],
+    onReset: () => void,
+    anyChargeChange: boolean,
+  ): HTMLDivElement {
     const bar = el("div", TOOLBAR.bottom);
     bar.appendChild(resetControl(onReset, "Reset pan and zoom"));
+    if (anyChargeChange) {
+      const charge = el("div", "display:flex;align-items:center;gap:6px;min-width:0;");
+      charge.appendChild(el("span", `width:24px;height:0;border-top:2px dashed ${T.netEdgeLine};flex-shrink:0;`));
+      charge.appendChild(el("span", `font-size:${FONT.small};color:${T.textMuted};`, "net charge change"));
+      bar.appendChild(charge);
+    }
     if (!entries.length) return bar;
     bar.appendChild(el("span", `font-size:${FONT.small};color:${T.textMuted};`, "systems made of"));
     for (const [signature, colors] of entries) {
@@ -1351,7 +1416,13 @@ export class GufeAlchemicalNetwork extends GufeElement<AlchemicalNetworkViz> {
     const lines: SVGLineElement[] = [];
     /** The invisible twin of each visible line, in the same order. */
     const hits: SVGLineElement[] = [];
+    // What each system's ligand carries, by key, so an edge can ask what it does
+    // to the charge. Faces are indexed as nodes are; an edge names its ends.
+    const chargeAt = new Map(nodes.map((node, index) => [node["gufe-key"], faces[index].charge]));
+    const chargeChangeOf = (edge: GraphEdge): number =>
+      (chargeAt.get(edge.to["gufe-key"]) ?? 0) - (chargeAt.get(edge.from["gufe-key"]) ?? 0);
     edges.forEach((edge, index) => {
+      const charged = chargeChangeOf(edge);
       const line = svg("line", {
         x1: edge.from.x,
         y1: edge.from.y,
@@ -1362,8 +1433,12 @@ export class GufeAlchemicalNetwork extends GufeElement<AlchemicalNetworkViz> {
         "stroke-linecap": "round",
         "vector-effect": "non-scaling-stroke",
         style: "cursor:pointer;",
+        ...(charged ? { "stroke-dasharray": CHARGE_DASH } : {}),
       });
-      titled(line, edge.name || "transformation");
+      titled(
+        line,
+        (edge.name || "transformation") + (charged ? ` - net charge change ${chargeLabel(charged)}` : ""),
+      );
       line.addEventListener("click", () => click("edge", index));
       lineLayer.appendChild(line);
       lines.push(line);
@@ -1411,6 +1486,8 @@ export class GufeAlchemicalNetwork extends GufeElement<AlchemicalNetworkViz> {
     const subs: SVGTextElement[] = [];
     /** The plate under a ligand, and the group it is drawn into. Null where there is no ligand. */
     const plates: (SVGRectElement | null)[] = [];
+    /** The formal charge, written on the box. Null on a system whose ligand is neutral, or which has none. */
+    const badges: (SVGTextElement | null)[] = [];
     // The group that puts the middle of the plate at the origin. Kept because
     // the plate moves: which of the three box heights is in force decides where
     // the top of the box is, and the plate is measured down from it.
@@ -1464,6 +1541,25 @@ export class GufeAlchemicalNetwork extends GufeElement<AlchemicalNetworkViz> {
         group.appendChild(plate);
         plates.push(plate);
 
+        // The box's top corner, not the plate's: it marks the system, and the
+        // drawing keeps all of its own room. Only a charged ligand gets one, and
+        // `show` takes it away again with the picture when the zoom has stopped
+        // drawing that.
+        if (face.charge) {
+          const text = svg("text", {
+            class: "gufe-node-charge",
+            "text-anchor": "middle",
+            "dominant-baseline": "central",
+            fill: T.badgeFg,
+            "pointer-events": "none",
+          }) as SVGTextElement;
+          text.textContent = chargeLabel(face.charge);
+          group.appendChild(text);
+          badges.push(text);
+        } else {
+          badges.push(null);
+        }
+
         // Two groups: this one puts the middle of the plate at the origin, and
         // the one inside it is what the depiction is mounted into - which
         // overwrites its own transform to scale the drawing down to size.
@@ -1477,6 +1573,7 @@ export class GufeAlchemicalNetwork extends GufeElement<AlchemicalNetworkViz> {
         plates.push(null);
         holders.push(null);
         depictions.push(null);
+        badges.push(null);
       }
 
       const label = svg("text", {
@@ -1594,6 +1691,23 @@ export class GufeAlchemicalNetwork extends GufeElement<AlchemicalNetworkViz> {
       depictions[index]?.setAttribute("display", showing ? "inline" : "none");
       const boxHeight = boxHeightOf(face.sdf);
       const top = -boxHeight / 2 + PLATE.pad;
+      // Drawn at every zoom, because a charge is a fact about the system rather
+      // than a detail of its picture, and the zoom that takes the picture away
+      // is the one with the least else left in the box. It only changes size:
+      // a corner badge over the plate, and half the box across without one.
+      const badge = badges[index];
+      if (badge) {
+        badge.setAttribute("x", String(showing ? NODE.width / 2 - CHARGE_BADGE.inset : 0));
+        badge.setAttribute(
+          "y",
+          String(showing ? -boxHeight / 2 + CHARGE_BADGE.inset : -boxHeight * CHARGE_BADGE.bigAt),
+        );
+        badge.setAttribute("font-size", String(showing ? CHARGE_BADGE.fontSize : CHARGE_BADGE.bigFontSize));
+        // Bold only where it is carrying the box on its own. Over a ligand it is
+        // a note beside a drawing, and a bold one competes with the drawing for
+        // the same glance.
+        badge.setAttribute("font-weight", showing ? WEIGHT.normal : WEIGHT.bold);
+      }
       plates[index]?.setAttribute("y", String(top));
       holders[index]?.setAttribute("transform", `translate(0,${top + PLATE.size / 2})`);
       const bottom = boxHeight / 2 - CAPTION.bottom;

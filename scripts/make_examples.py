@@ -145,7 +145,16 @@ def _somebodys_own_component() -> gufe.Component:
 
 
 def _renamed(mol: gufe.SmallMoleculeComponent) -> gufe.SmallMoleculeComponent:
-    """``mol`` again, named after its SMILES, with its atom order untouched.
+    """``mol`` again, named after its SMILES where it has no name of its own.
+
+    gufe's fixture ligands are unnamed, and a campaign built out of them is a
+    graph of systems called " in water" with nothing to tell them apart. A
+    SMILES is a poor name and a better one than nothing.
+
+    A molecule that arrived with a name keeps it, untouched: the Eg5 and TYK2
+    ligands are named by whoever prepared them, and replacing ``lig_CHEMBL1086410``
+    with sixty characters of SMILES would be this function making a real
+    campaign harder to read in order to help a synthetic one.
 
     The round trip through RDKit preserves atom indices, which is what makes it
     safe to keep an existing mapping's ``componentA_to_componentB`` when the
@@ -153,6 +162,8 @@ def _renamed(mol: gufe.SmallMoleculeComponent) -> gufe.SmallMoleculeComponent:
     """
     from gufe import SmallMoleculeComponent
 
+    if mol.name:
+        return mol
     return SmallMoleculeComponent.from_rdkit(mol.to_rdkit(), name=mol.smiles)
 
 
@@ -429,6 +440,32 @@ def _tyk2_network() -> gufe.LigandNetwork:
     return LigandNetwork.from_graphml((DATA / "tyk2_network.graphml").read_text(encoding="utf-8"))
 
 
+def _eg5_network() -> gufe.LigandNetwork:
+    """Ten Eg5 ligands, four of them neutral and six carrying a formal +1.
+
+    The one network here whose ligands are not all the same charge, which is what
+    it is for: a charge is drawn on a node only where there is one, and a mapping
+    is marked only where it changes one, so neither can be seen on a network of
+    neutral ligands. Every other fixture is exactly that.
+
+    Cut out of the Eg5 campaign OpenFE publishes as
+    ``networks/alchemical_networks/large_rbfe_network.json`` in ExampleNotebooks:
+    28 ligands, planned with LOMAP into a minimal spanning network. The ligands
+    and the mappings are that campaign's, read rather than replanned, for the
+    same reason :func:`_tyk2_network` reads a graphml - the planner is not a
+    dependency of this repository and would not be byte-stable if it were.
+
+    Ten of the 28, grown outwards from the single mapping in the whole campaign
+    that changes the charge. That it is single is the fact worth keeping: LOMAP
+    plans around charge changes where it can, so a real campaign has one or two
+    among dozens, and a picture that could not pick them out would be a picture
+    of the wrong thing.
+    """
+    from gufe import LigandNetwork
+
+    return LigandNetwork.from_graphml((DATA / "eg5_network.graphml").read_text(encoding="utf-8"))
+
+
 #: Forward edges per ligand in the large network, matching what
 #: ``make_big_network`` was run with. Three is enough to make the graph dense
 #: enough to be worth drawing without tripling the payload.
@@ -501,6 +538,7 @@ def build() -> dict[str, GufeTokenizable]:
         "ligand_network.json": network,
         "ligand_network_named.json": _named_network(network),
         "ligand_network_medium.json": _tyk2_network(),
+        "ligand_network_charged.json": _eg5_network(),
         "ligand_network_large.json": _large_network(),
         # Kinds that have no view yet. Committed now so the schema, both
         # validators and the "no visualization for X yet" panel are all exercised
@@ -529,6 +567,10 @@ def build() -> dict[str, GufeTokenizable]:
         # than a hydration one, which is the only place a protein reaches an
         # alchemical node.
         "alchemical_network.json": _alchemical_network(network, protocol),
+        # The charged ligands one layer up, so the campaign view has the same
+        # thing to show: a badge on the systems whose ligand carries a charge,
+        # and a dashed transformation where a leg changes one.
+        "alchemical_network_charged.json": _alchemical_network(_eg5_network(), protocol),
         "alchemical_network_medium.json": _tyk2_rbfe_network(),
         "alchemical_network_large.json": _large_alchemical_network(),
         # Not a gufe class at all, which is the only way to produce this type.

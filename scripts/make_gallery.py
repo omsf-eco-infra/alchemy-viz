@@ -76,6 +76,12 @@ NOTES = {
         "network at the size a real network starts at, where the layout and the score colouring "
         "begin to carry information rather than decorate three nodes."
     ),
+    "ligand_network_charged": (
+        "Ten Eg5 ligands from OpenFE's published campaign, four neutral and six carrying a formal "
+        "+1. The charge is badged on the nodes that have one and nowhere else, and the single "
+        "mapping that changes it is dashed - which is what a real campaign looks like, since LOMAP "
+        "plans around charge changes where it can."
+    ),
     "ligand_network_large": (
         "Two hundred ligands and 594 mappings, which is what the level-of-detail rule is for: "
         "depictions give way to dots and labels drop out as the graph gets denser, and zooming in "
@@ -100,6 +106,10 @@ NOTES = {
         "TYK2 edge above - it is here for what it is rather than for its size. **The "
         "correspondence is synthetic**, paired by atom index like every edge of that network, so "
         "the modes that draw it are drawing nothing a chemist should read."
+    ),
+    "alchemical_network_charged": (
+        "The same Eg5 ligands as solvated transformations: the charge badge moves onto the boxes "
+        "that carry a charged ligand, and both legs of the charge-changing mapping are dashed."
     ),
     "alchemical_network_medium": (
         "The same ten TYK2 ligands as a binding campaign: every mapping becomes two transformations, "

@@ -43,10 +43,11 @@ import { withoutLayout } from "../shared/layout.js";
 import { loadD3, loadRDKit, type RDKitModule } from "../shared/engines.js";
 import { DEPICT_STYLE, rgbTriple } from "../shared/depict-style.js";
 import { depictSVG } from "../shared/sdf.js";
+import { chargeChange, chargeLabel } from "../shared/charge.js";
 import { depictThemeOptions, nodeCardCaption, nodeCardGround } from "../shared/depict-theme.js";
 import { mountDepiction } from "../shared/depict-node.js";
 import { createMatcher, smartsBox, type MatchOutcome } from "../shared/smarts.js";
-import { FONT, MENU_LIST, MENU_PANEL, TOOLBAR } from "../shared/style.js";
+import { FONT, MENU_LIST, MENU_PANEL, TOOLBAR, WEIGHT } from "../shared/style.js";
 import { T } from "../shared/theme.js";
 import { buildRegistry, entryLabel, lookupOfType, type RegistryIndex } from "../schema/registry.js";
 import { mappingPayloadFor } from "./atom-mapping.js";
@@ -239,6 +240,39 @@ const CANVAS_SHARE = { initial: 0.58, min: 0.25, max: 0.8 };
 const NODE_RADIUS = 38;
 /** The ring round a node, drawn on the styled disc and on the plate that replaces it. */
 const NODE_STROKE = 1.5;
+
+/**
+ * The formal charge badge on a node, and the mark on an edge that changes one.
+ *
+ * A charge is drawn only where there is one: a neutral ligand gets no badge,
+ * because a badge on every node would be a column of zeros with the two that
+ * matter hidden in it. The same rule on the edges - a transformation that keeps
+ * the charge is drawn as it always was, and one that does not is dashed.
+ *
+ * Both read `total_charge` through `shared/charge.ts`, which is where the rule
+ * itself lives and where the alchemical network reads the same one.
+ */
+const CHARGE_BADGE = {
+  /** Where the charge sits while the structure has the middle of the node, as a fraction of the radius. */
+  at: 0.55,
+  fontSize: 22,
+  /**
+   * The charge on the zooms that draw no structure: bigger, and across the top
+   * of the node rather than in the corner of it.
+   *
+   * Out there a node is a disc with a name in it, and the charge is the only
+   * other thing about a ligand this view still knows. At the corner size it
+   * would be a dot on a dot; this is the second thing a reader can still make
+   * out, which is what a level of detail is for.
+   *
+   * It stays in the corner rather than moving to the middle, because the middle
+   * is where that name is drawn: a charge over it makes two unreadable things
+   * out of one readable one, and at this zoom the node is small enough that the
+   * corner is beside it rather than far from it.
+   */
+  bigFontSize: 30,
+};
+const CHARGE_DASH = "6 4";
 const DEPICT_SIZE = 200;
 
 /** How much clear ground is left between the structure's square and the ring. */
@@ -552,6 +586,8 @@ interface DetailParts {
   captionPlates: SVGRectElement[];
   captions: SVGTextElement[];
   initials: SVGTextElement[];
+  /** The formal charge, written on the node. Null on a neutral ligand. */
+  charges: (SVGTextElement | null)[];
   depictionGroups: SVGGElement[];
   /** Every edge score in one group, so a level can drop the lot in one write. */
   edgeLabels: SVGGElement;
@@ -724,6 +760,26 @@ function levelOfDetail(parts: DetailParts): {
     circle.setAttribute("fill", level.disc ? (hit ? T.netMatchFill : T.netNodeFill) : "none");
     circle.setAttribute("stroke", level.disc ? (hit ? T.netMatchStroke : T.netNodeStroke) : "none");
     parts.initials[index].setAttribute("display", level.initials ? "inline" : "none");
+    // At every level, because a charge is a fact about the ligand rather than a
+    // detail of the drawing, and the zooms that drop the drawing are the ones
+    // with the least else to say. It only changes size: a corner badge while
+    // the structure has the middle of the node, and half the node across once
+    // nothing is drawn there.
+    const charge = parts.charges[index];
+    if (charge) {
+      const big = !level.structure;
+      // The same corner at either size - the corner of a centred drawing, and
+      // so the emptiest part of a node that has one; beside the name rather
+      // than over it on a node that does not.
+      const at = NODE_RADIUS * CHARGE_BADGE.at;
+      charge.setAttribute("x", String(at));
+      charge.setAttribute("y", String(-at));
+      charge.setAttribute("font-size", String(big ? CHARGE_BADGE.bigFontSize : CHARGE_BADGE.fontSize));
+      // Bold only where it is carrying the node on its own. Over a structure it
+      // is a note beside a drawing, and a bold one competes with the drawing for
+      // the same glance.
+      charge.setAttribute("font-weight", big ? WEIGHT.bold : WEIGHT.normal);
+    }
 
     const caption = parts.captions[index];
     const below = level.name === "below";
@@ -1131,6 +1187,7 @@ export class GufeLigandNetwork extends GufeElement<LigandNetworkViz> {
       (next) => draw(next),
       () => resetView(),
       layoutSetting,
+      edges.some((edge) => chargeChange(edge.from, edge.to) !== 0),
     );
     left.appendChild(toolbar.bar);
 
@@ -1358,6 +1415,7 @@ export class GufeLigandNetwork extends GufeElement<LigandNetworkViz> {
     onLayout: (layout: Layout) => void,
     onReset: () => void,
     layoutSetting: Setting<string>,
+    anyChargeChange: boolean,
   ): { bar: HTMLDivElement; picker: HTMLSelectElement } {
     const toolbar = el(
       "div",
@@ -1374,6 +1432,21 @@ export class GufeLigandNetwork extends GufeElement<LigandNetworkViz> {
     );
     legend.appendChild(el("span", "", "0 -> 1"));
     toolbar.appendChild(legend);
+
+    // Only where there is one to explain. A network whose ligands all carry the
+    // same charge is the common case, and a key for a line it does not draw is
+    // a reader looking for something that is not there.
+    if (anyChargeChange) {
+      const charge = el("div", `display:flex;align-items:center;gap:6px;font-size:${FONT.small};color:${T.textMuted};`);
+      charge.appendChild(
+        el(
+          "span",
+          `width:24px;height:0;border-top:2px dashed ${T.netEdgeLine};display:inline-block;`,
+        ),
+      );
+      charge.appendChild(el("span", "", "net charge change"));
+      toolbar.appendChild(charge);
+    }
 
     toolbar.appendChild(el("label", `font-size:${FONT.body};margin-left:auto;color:${T.textMuted};`, "Layout"));
     const picker = dropdown(
@@ -1491,6 +1564,9 @@ export class GufeLigandNetwork extends GufeElement<LigandNetworkViz> {
         opacity: 0,
         "pointer-events": "none",
       });
+      // Dashed rather than recoloured: the colour of an edge is its score, and
+      // a second meaning in the same channel would make both harder to read.
+      const charged = chargeChange(edge.from, edge.to);
       const line = svg("line", {
         stroke: colour,
         "stroke-width": width,
@@ -1498,6 +1574,7 @@ export class GufeLigandNetwork extends GufeElement<LigandNetworkViz> {
         // A mapping runs from A to B, and the arrow is what says which is which.
         "marker-end": `url(#${markerFor(colour)})`,
         "pointer-events": "none",
+        ...(charged ? { "stroke-dasharray": CHARGE_DASH } : {}),
       });
       const hit = svg("line", { stroke: "transparent", "stroke-width": HIT_WIDTH, style: "cursor:pointer;" });
       hit.addEventListener("click", (event) => {
@@ -1510,6 +1587,11 @@ export class GufeLigandNetwork extends GufeElement<LigandNetworkViz> {
             (edge.score == null
               ? `<div style="color:${T.textMuted2};">no score</div>`
               : `<div style="margin-top:4px;">score <b>${edge.score.toFixed(3)}</b></div>`) +
+            (charged
+              ? `<div style="margin-top:4px;">net charge <b>${esc(chargeLabel(charged))}</b>` +
+                ` <span style="color:${T.textMuted2};">(${esc(chargeLabel(edge.from.total_charge ?? 0))} to ` +
+                `${esc(chargeLabel(edge.to.total_charge ?? 0))})</span></div>`
+              : "") +
             `<div style="margin-top:4px;font-size:${FONT.tiny};color:${T.textMuted2};">Click to see the mapping</div>`,
           event.offsetX,
           event.offsetY,
@@ -1543,6 +1625,7 @@ export class GufeLigandNetwork extends GufeElement<LigandNetworkViz> {
     const nodeHalos: SVGCircleElement[] = [];
     const initials: SVGTextElement[] = [];
     const captions: SVGTextElement[] = [];
+    const charges: (SVGTextElement | null)[] = [];
     const groups = nodes.map((node) => {
       const group = svg("g", { class: "gufe-node", style: "cursor:grab;" });
       group.addEventListener("mousemove", (event: MouseEvent) => {
@@ -1550,6 +1633,9 @@ export class GufeLigandNetwork extends GufeElement<LigandNetworkViz> {
           `<div style="font-weight:700;color:${T.titleColor};">${esc(label(node))}</div>` +
             (node.smiles
               ? `<div style="margin-top:3px;font-family:ui-monospace,Menlo,monospace;overflow-wrap:anywhere;">${esc(node.smiles)}</div>`
+              : "") +
+            (node.total_charge
+              ? `<div style="margin-top:3px;">formal charge <b>${esc(chargeLabel(node.total_charge))}</b></div>`
               : "") +
             `<div style="margin-top:3px;font-size:${FONT.tiny};color:${T.textMuted2};overflow-wrap:anywhere;">${esc(node["gufe-key"])}</div>` +
             `<div style="margin-top:4px;font-size:${FONT.tiny};color:${T.textMuted2};">Click to see the ligand</div>`,
@@ -1616,6 +1702,26 @@ export class GufeLigandNetwork extends GufeElement<LigandNetworkViz> {
       group.appendChild(initial);
       initials.push(initial);
 
+      // Pinned to the node's top corner, the way a mark on a thing is, rather
+      // than tucked into the drawing or set beside the name below. Drawn over
+      // whatever is there: a node is the size `NODE_RADIUS` makes it whether or
+      // not its ligand carries a charge, so nothing is laid out around this and
+      // a charged node is the same shape as a neutral one.
+      if (node.total_charge) {
+        const text = svg("text", {
+          class: "gufe-node-charge",
+          "text-anchor": "middle",
+          "dominant-baseline": "central",
+          fill: T.badgeFg,
+          "pointer-events": "none",
+        }) as SVGTextElement;
+        text.textContent = chargeLabel(node.total_charge);
+        group.appendChild(text);
+        charges.push(text);
+      } else {
+        charges.push(null);
+      }
+
       const caption = svg("text", {
         class: "gufe-node-caption",
         "text-anchor": "middle",
@@ -1681,6 +1787,7 @@ export class GufeLigandNetwork extends GufeElement<LigandNetworkViz> {
       matched: () => marks,
       captions,
       initials,
+      charges,
       depictionGroups,
       edgeLabels: labels,
       stage: root,

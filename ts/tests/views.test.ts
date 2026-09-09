@@ -409,6 +409,77 @@ describe("<gufe-ligand-network>", () => {
     expect(labels.getAttribute("display")).toBe("none");
   });
 
+  /**
+   * The same network with charges on its ligands, in the order the registry
+   * lists them. The committed fixtures are all neutral, which is the common
+   * case and the reason a charge is drawn only where there is one.
+   */
+  const charged = (...charges: number[]): LigandNetworkViz => {
+    const payload = network();
+    const ligands = payload.registry.filter((entry) => entry.type === "SmallMoleculeComponentViz");
+    ligands.forEach((ligand, index) => {
+      (ligand as SmallMoleculeComponentViz).total_charge = charges[index] ?? 0;
+    });
+    return payload;
+  };
+
+  it("badges a charged ligand and leaves a neutral one alone", async () => {
+    // A badge on every node would be a field of zeros with the one that matters
+    // hidden in it, so zero is silent. The number is gufe's `total_charge` and
+    // is never worked out from the structure beside it.
+    const node = mount("gufe-ligand-network", charged(-1, 0, 2));
+    await flush();
+
+    const badges = [...node.querySelectorAll(".gufe-node-charge")].map((badge) => badge.textContent);
+    expect(badges).toEqual(["-1", "+2"]);
+  });
+
+  it("grows the charge once there is no structure to sit beside", async () => {
+    // Zoomed in it is a mark in the corner of a drawing. Zoomed out the drawing
+    // is gone, the charge is the only thing left this view knows about the
+    // ligand, and a mark the same size would be a dot on a dot.
+    const node = mount("gufe-ligand-network", charged(-1, 0, 0));
+    await flush();
+
+    const charge = node.querySelector<SVGTextElement>("text.gufe-node-charge")!;
+    const size = (): number => Number(charge.getAttribute("font-size"));
+    const beside = size();
+
+    pulledBackTo(node, "names");
+    await flush();
+    // Bigger, because it is now most of what the node has left to say. How much
+    // bigger is a judgement in `CHARGE_BADGE` and has been retuned; that it
+    // grows rather than going away is the behaviour.
+    expect(size()).toBeGreaterThan(beside);
+    expect(charge.getAttribute("display")).not.toBe("none");
+  });
+
+  it("dashes a mapping that changes the charge, and says so under the canvas", async () => {
+    // Which transformations change a charge is a planning question - one needs a
+    // protocol that can run it - and nothing else on the canvas says it.
+    const node = mount("gufe-ligand-network", charged(-1, 0, 0));
+    await flush();
+
+    const drawn = [...node.querySelectorAll<SVGLineElement>("svg line")].filter(
+      (line) => line.getAttribute("stroke") !== "transparent" && line.getAttribute("opacity") !== "0",
+    );
+    const dashed = drawn.filter((line) => line.getAttribute("stroke-dasharray"));
+    // The two edges that touch the charged ligand, and not the one that does not.
+    expect(dashed).toHaveLength(2);
+    expect(node.textContent).toContain("net charge change");
+  });
+
+  it("draws no dashes and no key where every ligand carries the same charge", async () => {
+    const node = mount("gufe-ligand-network", network());
+    await flush();
+
+    expect(node.querySelectorAll("[stroke-dasharray]")).toHaveLength(0);
+    expect(node.querySelectorAll(".gufe-node-charge")).toHaveLength(0);
+    // A key for a line the canvas does not draw is a reader looking for
+    // something that is not there.
+    expect(node.textContent).not.toContain("net charge change");
+  });
+
   it("names its levels, and puts each zoom in exactly one of them", () => {
     // The table is the thing anyone edits to change what a zoom draws, so a gap
     // or an overlap in it is worth catching here rather than on the canvas.
@@ -703,6 +774,18 @@ describe("<gufe-solvent>", () => {
     // The key is how gufe hashes the object, not a fact about the solvent, and
     // it drags the class name in with it.
     expect(text).not.toContain(String(payload["gufe-key"]));
+  });
+
+  it("puts neutralizing with the ions rather than under a charge heading of its own", () => {
+    // `neutralize` says whether counter-ions are added on top of the
+    // concentration beside it. That is the same subject as the two ions above
+    // it, and a "net charge" section implied a fact about the system's charge
+    // that a SolventComponent does not carry and this card cannot compute.
+    const text = mount("gufe-solvent", readExample("solvent.json")).textContent ?? "";
+    expect(text).not.toContain("Net charge");
+    const ions = text.indexOf("Ions");
+    expect(ions).toBeGreaterThan(-1);
+    expect(text.indexOf("Neutralized")).toBeGreaterThan(ions);
   });
 
   it("says a solvent is not neutralized rather than leaving the reader to a 'no'", () => {
@@ -2030,6 +2113,60 @@ describe("<gufe-alchemical-network>", () => {
     expect(far.every((width, i) => width <= near[i])).toBe(true);
     // Still drawn: a floor is the whole point of measuring in pixels.
     expect(far.every((width) => width > 0)).toBe(true);
+  });
+
+  it("badges the ligand's charge on a box and dashes the transformations that change it", async () => {
+    // The charge belongs to the ligand the box is showing, so the number is
+    // written on the box that shows it; an edge between two of them is dashed
+    // when the two differ. A campaign with any of those is a campaign that
+    // needs a protocol able to run one.
+    const payload = structuredClone(readExample("alchemical_network.json")) as {
+      registry: { type: string; total_charge?: number }[];
+    };
+    const ligands = payload.registry.filter((entry) => entry.type === "SmallMoleculeComponentViz");
+    ligands.forEach((ligand, index) => (ligand.total_charge = index === 0 ? -1 : 0));
+
+    const node = mount("gufe-alchemical-network", payload);
+    await flush();
+
+    const badges = [...node.querySelectorAll(".gufe-node-charge")].map((badge) => badge.textContent);
+    expect(badges).toEqual(["-1"]);
+    const dashed = [...node.querySelectorAll<SVGLineElement>("svg.gufe-graph line")].filter((line) =>
+      line.getAttribute("stroke-dasharray"),
+    );
+    expect(dashed.length).toBeGreaterThan(0);
+    expect(node.textContent).toContain("net charge change");
+  });
+
+  it("grows the charge once the ligand has stopped being drawn", async () => {
+    const payload = structuredClone(readExample("alchemical_network.json")) as {
+      registry: { type: string; total_charge?: number }[];
+    };
+    const ligands = payload.registry.filter((entry) => entry.type === "SmallMoleculeComponentViz");
+    ligands.forEach((ligand, index) => (ligand.total_charge = index === 0 ? -1 : 0));
+
+    const node = mount("gufe-alchemical-network", payload);
+    await flush();
+
+    const charge = node.querySelector<SVGTextElement>("text.gufe-node-charge")!;
+    const size = (): number => Number(charge.getAttribute("font-size"));
+    const corner = size();
+
+    pulledBackToBoxes(node);
+    await flush();
+    // Bigger, and across the box rather than in its corner: out here the box
+    // has nothing else in it. How much bigger is a judgement in `CHARGE_BADGE`.
+    expect(size()).toBeGreaterThan(corner);
+    expect(charge.getAttribute("x")).toBe("0");
+  });
+
+  it("leaves a campaign of one charge undashed and unexplained", async () => {
+    const node = mount("gufe-alchemical-network", readExample("alchemical_network.json"));
+    await flush();
+
+    expect(node.querySelectorAll("[stroke-dasharray]")).toHaveLength(0);
+    expect(node.querySelectorAll(".gufe-node-charge")).toHaveLength(0);
+    expect(node.textContent).not.toContain("net charge change");
   });
 
   it("keeps its levels inside the range the wheel can reach", () => {

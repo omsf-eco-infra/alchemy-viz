@@ -11,9 +11,14 @@
  * What the fields *can* have is a shape. As six equal rows they read as a
  * dump: the solvent, the salt and the one real number in it all cost the same
  * effort to find. So they are grouped the way a reader asks for them - what the
- * solvent is, what is dissolved in it, and what was done about net charge - and
- * the concentration is set in `FONT.display`, because it is the single value
- * that differs between two otherwise identical solvents.
+ * solvent is, and how it is ionized - and the concentration is set in
+ * `FONT.display`, because it is the single value that differs between two
+ * otherwise identical solvents.
+ *
+ * `neutralize` belongs with the ions rather than in a section of its own. It is
+ * not a fact about charge that a reader has to reconcile with anything else on
+ * the card: it says whether counter-ions are added on top of the concentration
+ * beside it, which is the same subject as the two ions above it.
  *
  * There is no header strip. Its chips coloured the ions to match dots in that
  * old picture, and with the picture gone they said what the card below already
@@ -161,15 +166,14 @@ export class GufeSolvent extends GufeElement<SolventComponentViz> {
     amount.appendChild(caption("Ion concentration"));
     row.appendChild(amount);
     salt.appendChild(row);
-    panel.appendChild(salt);
 
-    // --- and what was done about net charge --------------------------------
-    const charge = section("Net charge");
+    // Whether more of these two are added than the concentration asks for, which
+    // is the whole of what `neutralize` says. Filled when something is added, an
+    // empty outline when nothing is, rather than two filled pills in two
+    // colours: the second colour would be a second accent on a card that
+    // already spends its one on the concentration.
     const on = payload.neutralize;
-    // Filled when something was done, an empty outline when it was not, rather
-    // than two filled pills in two colours: the second colour would be a second
-    // accent on a card that already spends its one on the concentration.
-    charge.appendChild(
+    salt.appendChild(
       el(
         "span",
         `${CHIP.plain}align-self:flex-start;font-weight:${WEIGHT.bold};` +
@@ -177,16 +181,16 @@ export class GufeSolvent extends GufeElement<SolventComponentViz> {
         on ? "Neutralized" : "Not neutralized",
       ),
     );
-    charge.appendChild(
+    salt.appendChild(
       el(
         "div",
         NOTE,
         on
-          ? "Counter-ions are added on top of the concentration above, enough to cancel the net charge of the system."
-          : "No counter-ions are added: the system keeps whatever net charge its components give it.",
+          ? "Counter-ions are added on top of the concentration above, enough to cancel whatever net charge the rest of the system carries."
+          : "Only the concentration above: nothing is added to cancel the net charge the rest of the system carries.",
       ),
     );
-    panel.appendChild(charge);
+    panel.appendChild(salt);
 
     body.appendChild(panel);
 
