@@ -150,24 +150,23 @@ interface NodeColors {
  * the extra is the square the ligand is drawn in plus the two rows of text that
  * move underneath it.
  *
- * `platedHeight` is the third case, and it is the plate and its padding and
- * nothing else: out where `LABEL_MIN_PX` has taken the two lines of text away,
- * a box still tall enough for them is a picture with a band of empty colour
- * under it. It is the same box as `depictedHeight` with the part that held the
- * writing cut off, so what a zoom takes away is only ever the thing it stopped
- * drawing.
+ * Which of the two a system gets is decided once, by whether it carries a
+ * ligand, and no zoom changes it. What a zoom changes is what is drawn inside:
+ * the writing goes when it is too small to read and the picture goes when it is
+ * too small to recognise, and through both of those a system stays the shape it
+ * was. It cost two shapes to fit the box to its contents at every distance, and
+ * what the reader got for it was a graph whose nodes changed shape underneath
+ * them as they pulled back, which is a worse thing to look at than a box with a
+ * little room to spare in it.
  *
- * A box grows into the taller shape when its ligand is drawn and shrinks back
- * when it is not, which is why the layout reserves room for the tallest one
- * whether or not it is in force: a campaign of twenty systems frames itself
- * well below the structure threshold, and boxes that stayed tall out there
- * would be twenty empty rectangles taking three times the room their names need
- * and shrinking the shape of the network to fit. Growing rather than reserving
- * on screen is safe because `FORCE.collisionRadius` holds two systems far
- * enough apart for the taller box, so nothing a zoom does can make two of them
- * collide.
+ * The layout reserves room for the taller box either way, and
+ * `FORCE.collisionRadius` holds two systems far enough apart for it, so no
+ * arrangement of shapes can bring two of them into each other.
  */
-const NODE = { width: 176, height: 54, depictedHeight: 176, platedHeight: 134, radius: 10 };
+const NODE = { width: 176, height: 54, depictedHeight: 176, radius: 10 };
+
+/** The shape a system is drawn in: its ligand decides, and the zoom never does. */
+const boxHeightOf = (sdf: string | null | undefined): number => (sdf ? NODE.depictedHeight : NODE.height);
 
 /**
  * The square a ligand is drawn on inside its box, and the room it leaves.
@@ -1423,7 +1422,7 @@ export class GufeAlchemicalNetwork extends GufeElement<AlchemicalNetworkViz> {
       // Built in the tall shape and shrunk by the first `show`, so everything
       // inside a depicted box - the plate, the group the structure mounts into -
       // is positioned once, against the only box height it is ever drawn in.
-      const boxHeight = face.sdf ? NODE.depictedHeight : NODE.height;
+      const boxHeight = boxHeightOf(face.sdf);
       // Placed by one transform on the group rather than by coordinates on each
       // child: a node is five elements now, and a drag that had to rewrite all
       // of them per pointer move is a drag that lags behind the hand.
@@ -1579,11 +1578,12 @@ export class GufeAlchemicalNetwork extends GufeElement<AlchemicalNetworkViz> {
      * `scale` is here for the writing alone. Which level is in force is a
      * decision about the whole canvas; whether a line in a box can still be
      * read is a measurement in screen pixels, and only the zoom knows that -
-     * see `LABEL_MIN_PX`. A box whose writing has gone loses the room it was
-     * being kept in with it, so what is left is the picture and its frame
-     * rather than the picture and a band of empty colour.
+     * see `LABEL_MIN_PX`. What none of it touches is the box: a node keeps the
+     * shape `NODE` gave it, so a zoom takes things out of a system and never
+     * remakes it.
      */
     const show = (index: number, structures: boolean, scale: number): void => {
+      const face = faces[index];
       const showing = structures && drawn.has(index);
       const legible = (size: number): boolean => size * scale >= LABEL_MIN_PX;
       const named = legible(CAPTION.nameSize);
@@ -1592,19 +1592,17 @@ export class GufeAlchemicalNetwork extends GufeElement<AlchemicalNetworkViz> {
       subs[index].setAttribute("display", described ? "inline" : "none");
       plates[index]?.setAttribute("display", showing ? "inline" : "none");
       depictions[index]?.setAttribute("display", showing ? "inline" : "none");
-      const written = named || described;
-      const boxHeight = showing ? (written ? NODE.depictedHeight : NODE.platedHeight) : NODE.height;
-      boxes[index].setAttribute("y", String(-boxHeight / 2));
-      boxes[index].setAttribute("height", String(boxHeight));
+      const boxHeight = boxHeightOf(face.sdf);
       const top = -boxHeight / 2 + PLATE.pad;
       plates[index]?.setAttribute("y", String(top));
       holders[index]?.setAttribute("transform", `translate(0,${top + PLATE.size / 2})`);
       const bottom = boxHeight / 2 - CAPTION.bottom;
       // The name takes the composition's row when the composition has gone, so
-      // a box is never padded out by a line that is not being drawn.
+      // the writing sits on the bottom of the box either way. With no picture
+      // above it there is nothing to sit under, and both lines go back to the
+      // middle.
       labels[index].setAttribute("y", String(showing ? bottom - (described ? CAPTION.gap : 0) : -2));
       subs[index].setAttribute("y", String(showing ? bottom : 14));
-      const face = faces[index];
       subs[index].textContent = truncate(showing ? face.besides : face.composition, CAPTION.subChars);
     };
 

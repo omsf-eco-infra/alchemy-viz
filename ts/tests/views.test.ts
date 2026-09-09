@@ -2094,12 +2094,16 @@ describe("<gufe-alchemical-network>", () => {
     expect(resting).toBeLessThan(strokePx(1, true));
   });
 
-  it("shrinks the boxes back to their names when the reader pulls out", async () => {
-    // A campaign of twenty frames itself well below the threshold, and boxes
-    // that stayed tall out there would be twenty empty rectangles taking three
-    // times the room their names need.
+  it("empties the boxes as the reader pulls out, and never reshapes them", async () => {
+    // A zoom takes things out of a system: the writing when it is too small to
+    // read, the picture when it is too small to recognise. It does not remake
+    // the system. Fitting the box to whatever was left meant a graph whose
+    // nodes changed shape underneath the reader as they pulled back, which is
+    // worse to look at than a box with a little room to spare in it.
     const node = mount("gufe-alchemical-network", readExample("alchemical_network.json"));
     await flush();
+    const before = boxHeights(node);
+
     const root = pulledBackToBoxes(node);
     await flush();
 
@@ -2109,10 +2113,10 @@ describe("<gufe-alchemical-network>", () => {
     expect([...node.querySelectorAll("rect.gufe-node-plate")].every((p) => p.getAttribute("display") === "none")).toBe(
       true,
     );
-    expect(new Set(boxHeights(node))).toEqual(new Set([54]));
+    expect(boxHeights(node)).toEqual(before);
   });
 
-  it("drops the writing where it is too small to read, and the room it sat in", async () => {
+  it("drops the writing where it is too small to read, and leaves the box alone", async () => {
     // Text in a box is in graph units, so the zoom shrinks it along with the
     // picture: a 12px name at a third is four pixels, which is a grey bar in
     // the middle of every box rather than a name. The ligand goes on being
@@ -2133,9 +2137,9 @@ describe("<gufe-alchemical-network>", () => {
     ).toBe(true);
     expect(labels.every((t) => t.getAttribute("display") === "none")).toBe(true);
     expect(subs.every((t) => t.getAttribute("display") === "none")).toBe(true);
-    // The box gives back the two rows the writing was being kept in, rather
-    // than standing the picture on a band of empty colour.
-    expect(new Set(boxHeights(node))).toEqual(new Set([134]));
+    // The room the writing sat in stays: the box is the shape of the system,
+    // not of whatever the zoom has left in it.
+    expect(new Set(boxHeights(node))).toEqual(new Set([176]));
   });
 
   it("gives up the smaller line first, and lets the name take its row", async () => {
