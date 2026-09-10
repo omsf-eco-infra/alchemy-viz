@@ -40,7 +40,8 @@ describe("chromeMenu", () => {
 
     menu.setOpen(true);
     expect(build).toHaveBeenCalledTimes(1);
-    expect(menu.panel.childElementCount).toBe(1);
+    // What was built, and the share row every menu ends with. See `framejs.ts`.
+    expect(menu.panel.childElementCount).toBe(2);
   });
 
   it("builds its contents exactly once across many toggles", () => {
@@ -63,7 +64,7 @@ describe("chromeMenu", () => {
     menu.setOpen(false);
     menu.setOpen(true);
     expect(menu.panel.firstElementChild).toBe(first);
-    expect(menu.panel.childElementCount).toBe(1);
+    expect(menu.panel.childElementCount).toBe(2);
   });
 
   it("reports the change so a view can re-lay-out", () => {

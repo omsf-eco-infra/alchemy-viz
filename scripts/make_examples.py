@@ -466,6 +466,81 @@ def _eg5_network() -> gufe.LigandNetwork:
     return LigandNetwork.from_graphml((DATA / "eg5_network.graphml").read_text(encoding="utf-8"))
 
 
+def _jak2_network() -> gufe.LigandNetwork:
+    """267 JAK2 inhibitors in the poses a docking run put them in.
+
+    The one network fixture whose ligands share a coordinate frame. Everywhere
+    else - gufe's benzenes, the TYK2 tutorial, the synthetic two hundred - each
+    ligand carries a conformer of its own, at whatever origin it was embedded or
+    written at, and the only place two components meet is
+    :func:`_tyk2_complex`. These 267 were docked into one frame of a JAK2
+    molecular dynamics trajectory with their shared aminopyrimidine core
+    restrained, so they are superposed on each other and on the kinase, which is
+    what a relative binding free energy campaign actually starts from.
+
+    Read rather than rebuilt, from ``scripts/data/jak2_docked_poses.sdf`` and the
+    edges beside it. ``make_jak2_network.py`` wrote both from the campaign's own
+    output and says what an edge here means - the correspondence is geometric,
+    no mapper was run - and why freezing it is what keeps this file byte-stable.
+    """
+    from make_jak2_network import network_from
+
+    return network_from(DATA / "jak2_docked_poses.sdf", DATA / "jak2_network_edges.json")
+
+
+#: Ligands in the docked ensemble: the busiest node of the JAK2 network and the
+#: five partners it overlaps best. Enough to read as an ensemble rather than as
+#: a pose, and few enough that 3Dmol's element colouring still separates them -
+#: the whole neighbourhood is thirteen, which draws as one object.
+_ENSEMBLE_LIGANDS = 6
+
+
+def _jak2_ensemble() -> gufe.ChemicalSystem:
+    """Six docked poses in the JAK2 site at once, as one chemical system.
+
+    :func:`_tyk2_complex` is a ligand in a site; this is an ensemble in one. The
+    difference is a code path rather than a nicety: every other fixture puts
+    exactly one small molecule in a system, so nothing until now has drawn two
+    components of the same kind into a single scene, and the overlap between
+    them is the thing this data has that no other fixture does.
+
+    Which six is decided by the network rather than chosen: the ligand with the
+    most edges, and the five of its partners whose poses overlap it best. So the
+    picture answers a question the network view raises - these ligands are joined
+    by an edge, what does that look like in the site - and it answers it on the
+    same objects, since both come out of :func:`_jak2_network`.
+    """
+    from gufe import ChemicalSystem, ProteinComponent, SolventComponent
+
+    network = _jak2_network()
+    by_name = {node.name: node for node in network.nodes}
+
+    degree: dict[str, int] = {name: 0 for name in by_name}
+    for edge in network.edges:
+        degree[edge.componentA.name] += 1
+        degree[edge.componentB.name] += 1
+    hub = min(degree, key=lambda name: (-degree[name], name))
+
+    partners = sorted(
+        (
+            (edge.annotations["score"], edge.componentB.name if edge.componentA.name == hub else edge.componentA.name)
+            for edge in network.edges
+            if hub in (edge.componentA.name, edge.componentB.name)
+        ),
+        key=lambda pair: (-pair[0], pair[1]),
+    )
+    chosen = [hub] + [name for _, name in partners[: _ENSEMBLE_LIGANDS - 1]]
+
+    return ChemicalSystem(
+        {
+            **{f"ligand_{name}": by_name[name] for name in chosen},
+            "protein": ProteinComponent.from_pdb_file(str(DATA / "jak2_protein.pdb"), name="jak2"),
+            "solvent": SolventComponent(),
+        },
+        name=f"{len(chosen)} docked poses in JAK2",
+    )
+
+
 #: Forward edges per ligand in the large network, matching what
 #: ``make_big_network`` was run with. Three is enough to make the graph dense
 #: enough to be worth drawing without tripling the payload.
@@ -540,6 +615,11 @@ def build() -> dict[str, GufeTokenizable]:
         "ligand_network_medium.json": _tyk2_network(),
         "ligand_network_charged.json": _eg5_network(),
         "ligand_network_large.json": _large_network(),
+        # The same size again, and real. The large network above measures what
+        # 200 nodes cost; this one is 267 ligands of a docking campaign, so it
+        # measures the same thing on molecules a chemist would recognise and is
+        # the only network whose ligands share a frame - see `_jak2_network`.
+        "ligand_network_docked.json": _jak2_network(),
         # Kinds that have no view yet. Committed now so the schema, both
         # validators and the "no visualization for X yet" panel are all exercised
         # against real data before the views exist.
@@ -584,6 +664,9 @@ def build() -> dict[str, GufeTokenizable]:
             name="benzene in water",
         ),
         "chemical_system_complex.json": _tyk2_complex(),
+        # And the same idea with more than one ligand in the site, which no
+        # other fixture has: six docked poses of a congeneric series, overlaid.
+        "chemical_system_ensemble.json": _jak2_ensemble(),
     }
 
 

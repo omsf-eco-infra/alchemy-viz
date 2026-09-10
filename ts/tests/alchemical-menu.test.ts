@@ -20,10 +20,6 @@ import {
 } from "./helpers.js";
 import { flag, text as textSetting } from "../src/shared/settings.js";
 
-interface DebugGlobal {
-  GUFE_VIZ_DEBUG?: boolean;
-}
-
 /**
  * The fixture, optionally with a second composition in it.
  *
@@ -94,7 +90,6 @@ describe("the alchemical network menu", () => {
   });
   afterEach(() => {
     clearFakeEngines();
-    delete (globalThis as DebugGlobal).GUFE_VIZ_DEBUG;
     document.body.replaceChildren();
   });
 
@@ -345,19 +340,11 @@ describe("the alchemical network menu", () => {
     expect(node.textContent).toContain("1 of 3 systems contain it");
   });
 
-  it("carries the framejs export, and only behind the debug switch", async () => {
-    const off = mountNetwork();
+  it("carries the framejs share button", async () => {
+    const node = mountNetwork();
     await flush();
-    hamburger(off).click();
+    hamburger(node).click();
     await flush();
-    expect(off.textContent).not.toContain("Open in framejs");
-
-    document.body.replaceChildren();
-    (globalThis as DebugGlobal).GUFE_VIZ_DEBUG = true;
-    const on = mountNetwork();
-    await flush();
-    hamburger(on).click();
-    await flush();
-    expect(on.textContent).toContain("Open in framejs");
+    expect(node.textContent).toContain("Share to the web");
   });
 });

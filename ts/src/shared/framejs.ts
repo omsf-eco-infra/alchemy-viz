@@ -1,6 +1,5 @@
 /**
- * A developer-only escape hatch: turn the page you are looking at into a
- * framejs app, and open it.
+ * Turn the page you are looking at into a framejs app, and open it.
  *
  * ## What this is for
  *
@@ -9,14 +8,15 @@
  * sending. This makes the same picture a link instead, which is what an issue
  * comment, a Slack thread and an office-hours screen share can all take.
  *
- * ## What it is not
+ * ## Where it sits
  *
- * Not part of the product. It is behind the debug switch (`?debug`, a `debug`
- * attribute, or `window.GUFE_VIZ_DEBUG` - see `debug.ts`), so a page exported
- * for a user never shows it and never reaches the network because of it. It is
- * also the only thing in this codebase that knows framejs exists at runtime, and
- * it is deliberately one file with one call site: deleting it is `rm` plus the
- * two lines in `chromeMenu` that call `framejsMenuItem`.
+ * In every chrome menu, for everyone: this is the share button, not a switch to
+ * find. Nothing is uploaded until it is pressed, which is what lets it be shown
+ * on a page that may never touch the network.
+ *
+ * It is the only thing in this codebase that knows framejs exists at runtime,
+ * and it is deliberately one file with one call site: deleting it is `rm` plus
+ * the two lines in `chromeMenu` that call `framejsMenuItem`.
  *
  * ## How it works
  *
@@ -69,11 +69,10 @@
  * it and claims it with a free account.
  */
 
-import { debugEnabled } from "./debug.js";
 import { el, MENU_OPEN_SUFFIX } from "./dom.js";
 import { VIEW_STATE_GLOBAL } from "./element.js";
 import { PREFIX, settingsDump } from "./settings.js";
-import { BUTTON, FONT, SPACE, WEIGHT } from "./style.js";
+import { BUTTON, FONT, SPACE } from "./style.js";
 import { T } from "./theme.js";
 
 /** The accounts layer, which is what mints a shareable `/j/<uuid>`. */
@@ -258,7 +257,7 @@ export function framejsModule(bundle: string, payload: unknown, state: UiState):
   const payloadJson = JSON.stringify(JSON.stringify(payload));
   return [
     ...restoreLines(state),
-    "// Built by gufe-viz's debug menu from a generated page. The bundle below is",
+    "// Built by gufe-viz's share button from a generated page. The bundle below is",
     "// that page's own script, unchanged; everything above it exists so the",
     "// bootstrap at the end of it finds the three elements it looks up.",
     'root.innerHTML = "";',
@@ -323,7 +322,12 @@ const frameApi = (slug: string): string => `${FRAMEJS_ORIGIN}/j/${slug}.json`;
  * still worth having - it is the offline case, which is the one a user of this
  * project is most likely to be in.
  */
-async function postFrame(slug: string, js: string, title: string): Promise<void> {
+async function postFrame(
+  slug: string,
+  js: string,
+  title: string,
+  description: string,
+): Promise<void> {
   await fetch(frameApi(slug), {
     method: "POST",
     mode: "no-cors",
@@ -333,35 +337,52 @@ async function postFrame(slug: string, js: string, title: string): Promise<void>
     headers: { "Content-Type": "text/plain;charset=UTF-8" },
     body: JSON.stringify({
       js,
-      og: { title, description: "Exported from gufe-viz's debug menu." },
+      og: { title, description },
     }),
   });
 }
 
 /**
- * Add the framejs row to an open menu panel, when the debug switch is on.
+ * The framejs mark, from `framejs.io`'s own `favicon.svg`: a rounded square
+ * inside a rounded square.
  *
- * A no-op otherwise, which is what keeps the call site in `chromeMenu` to one
- * line and free of any opinion about what this is.
+ * Inlined rather than fetched, for the same reason the OpenFE mark in `dom.ts`
+ * is: a page that has to reach a third party to draw its own menu is a page that
+ * shows a broken image offline, and this one is drawn on pages that never touch
+ * the network. The brand colours are fixed rather than theme values, because
+ * recolouring somebody's mark is not ours to do; the light pair is used in both
+ * themes, so the glyph reads as the same mark either way.
+ */
+function framejsIcon(): HTMLSpanElement {
+  const icon = el("span", "display:inline-flex;flex:0 0 auto;width:14px;height:14px;");
+  icon.innerHTML =
+    '<svg viewBox="0 0 32 32" width="14" height="14" aria-hidden="true" focusable="false">' +
+    '<rect width="32" height="32" rx="6" fill="#fbfaf7"/>' +
+    '<rect x="6.4" y="6.4" width="19.2" height="19.2" rx="3.6" fill="none" ' +
+    'stroke="#1f2edb" stroke-width="2.2"/>' +
+    "</svg>";
+  return icon;
+}
+
+/**
+ * Add the framejs row to an open menu panel.
+ *
+ * The last thing in the panel and behind a rule, because it is the one control
+ * in a menu that leaves the page rather than changing what is drawn on it.
  */
 export function framejsMenuItem(panel: HTMLElement): void {
-  if (!debugEnabled()) return;
-
   const box = el(
     "div",
     `display:flex;flex-direction:column;gap:${SPACE.md};padding-top:${SPACE.lg};` +
-      `border-top:1px dashed ${T.splitBorder};`,
-  );
-  box.appendChild(
-    el(
-      "div",
-      `font-size:${FONT.tiny};font-weight:${WEIGHT.bold};letter-spacing:.08em;` +
-        `text-transform:uppercase;color:${T.textMuted2};`,
-      "debug",
-    ),
+      `border-top:1px solid ${T.splitBorder};`,
   );
 
-  const button = el("button", `${BUTTON.base}width:100%;`, "Open in framejs");
+  const button = el(
+    "button",
+    `${BUTTON.base}width:100%;display:inline-flex;align-items:center;justify-content:center;gap:${SPACE.md};`,
+  );
+  button.appendChild(framejsIcon());
+  button.appendChild(el("span", "", "Share to the web"));
   button.title = "Upload this view as a framejs app and open it in a new tab";
   box.appendChild(button);
 
@@ -404,8 +425,12 @@ export function framejsMenuItem(panel: HTMLElement): void {
     // or two. It is pointed at the frame once there is a frame to point it at.
     const tab = window.open("", "_blank");
     const slug = uuidv7Slug();
-    const named = payload as { name?: unknown; type?: unknown };
-    const title = String(named.name || named.type || "gufe-viz");
+    // The type, not the name: what a reader wants from a shared link's preview
+    // is what kind of picture it is, and a payload's name is often a hash or a
+    // filename that says nothing.
+    const named = payload as { type?: unknown };
+    const title = String(named.type || "gufe-viz");
+    const description = `${title}. Shared from alchemy-viz`;
     const done = (): void => {
       button.disabled = false;
     };
@@ -424,7 +449,7 @@ export function framejsMenuItem(panel: HTMLElement): void {
           );
           return;
         }
-        return postFrame(slug, framejsModule(bundle.js, payload, state), title).then(() => {
+        return postFrame(slug, framejsModule(bundle.js, payload, state), title, description).then(() => {
           done();
           const url = framePage(slug);
           if (tab) tab.location.href = url;

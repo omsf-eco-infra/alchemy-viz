@@ -24,9 +24,13 @@ Run one vitest file with `npx vitest run ts/tests/<name>.test.ts`.
 They are large enough to cost more context than they can repay. Use `head`,
 `jq`, or `grep` if you need a fact from one.
 
-- `examples/alchemical_network_large.json` (1.9M), `ligand_network_large.json`
-  (1.4M), `alchemical_network_medium.json` (511K), `protein.json` (217K)
-- `scripts/data/tyk2_protein.pdb`, `scripts/data/large_network.sdf` (~400K each)
+- `examples/ligand_network_docked.json` (2.4M),
+  `alchemical_network_large.json` (1.9M), `ligand_network_large.json` (1.4M),
+  `alchemical_network_medium.json` (511K), `chemical_system_ensemble.json`
+  (433K), `chemical_system_complex.json` (398K), `protein.json` (217K)
+- `scripts/data/jak2_docked_poses.sdf` (1.4M), `jak2_protein.pdb` (389K),
+  `jak2_network_edges.json` (133K), `tyk2_protein.pdb`, `large_network.sdf`
+  (~400K each)
 - `python/gufe_viz/_assets/gufe-viz.js` (350K, generated)
 - `do-not-commit/` is scratch, not part of the project
 

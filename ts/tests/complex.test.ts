@@ -187,9 +187,12 @@ describe("<gufe-complex>", () => {
     // controls in one met a toolbar of them in the other. What the complex has
     // on top is the framing, which is the one thing a protein alone cannot be
     // asked about.
+    // The share row every menu ends with is not one of these view's controls.
     const controls = (node: HTMLElement): string[] => {
       openMenu(node);
-      return Array.from(node.querySelectorAll("button"), (b) => b.textContent ?? "").filter(Boolean);
+      return Array.from(node.querySelectorAll("button"), (b) => b.textContent ?? "").filter(
+        (label) => label && label !== "Share to the web",
+      );
     };
 
     const complex = controls(mount("gufe-complex", complexPayload()));

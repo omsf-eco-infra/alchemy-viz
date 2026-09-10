@@ -708,7 +708,7 @@ ts/         the custom elements, one file per view
 examples/   golden payloads, shared by pytest, vitest, the dropzone and the gallery
             notebooks/ - one demo covering every type and every delivery mode
 scripts/    the generators, and CI runs
-            data/ - the two fixture inputs gufe does not ship, read never rebuilt
+            data/ - the fixture inputs gufe does not ship, read never rebuilt
 ```
 
 ## Status

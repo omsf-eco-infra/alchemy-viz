@@ -829,9 +829,9 @@ export function chromeMenu(
     if (open && !built) {
       built = true;
       panel.appendChild(build());
-      // Developer-only, and a no-op unless the debug switch is on. Placed here
-      // rather than in each menu's own factory so there is one call site to
-      // delete when it goes. See `framejs.ts`.
+      // The share button, last in every menu. Placed here rather than in each
+      // menu's own factory so there is one call site to delete when it goes.
+      // See `framejs.ts`.
       framejsMenuItem(panel);
     }
     panel.style.display = open ? "flex" : "none";

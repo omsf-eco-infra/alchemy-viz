@@ -88,6 +88,14 @@ NOTES = {
         "brings them back. **The mappings are synthetic** - paired by atom index, scored by an "
         "arithmetic ramp - so this is a picture of the view under load, not of any chemistry."
     ),
+    "ligand_network_docked": (
+        "267 JAK2 inhibitors and 399 mappings: the same size as the load network above, and real. "
+        "They were docked into one frame of a molecular dynamics trajectory with their shared "
+        "aminopyrimidine core restrained, so unlike every other fixture here the ligands are "
+        "superposed on each other - which is what `3D Overlay` in the detail pane is drawing when "
+        "an edge is open. The **mappings are geometric**: atoms paired by where they sit in that "
+        "frame, not planned by a mapper."
+    ),
     "ligand_atom_mapping": (
         "One mapping on its own, in the same element the ligand network's detail pane mounts. "
         "Gufe's own first edge, ethanol to ethane: two atoms paired, which is the shape of a "
@@ -132,6 +140,13 @@ NOTES = {
         "component has on its own. That pose is the point of a binding campaign, and drawing the "
         "components one at a time is the only way to lose it - hence `Complex` first in the strip, "
         "opening framed on the site rather than on the whole kinase."
+    ),
+    "chemical_system_ensemble": (
+        "The `Complex` view with more than one ligand in it: six docked poses of the JAK2 series "
+        "from `ligand_network_docked`, in the site they were docked into. They are the busiest "
+        "ligand of that network and the five partners it overlaps best, so this is what an edge of "
+        "that graph looks like in three dimensions. Nothing here arranges them - the poses and the "
+        "kinase arrive in one frame and no coordinate is touched."
     ),
     "solvent": (
         "A solvent component is a specification rather than a structure, so its view is a settings "

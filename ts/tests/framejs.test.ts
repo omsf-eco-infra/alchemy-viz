@@ -1,12 +1,11 @@
 /**
- * The debug menu's framejs export.
+ * The menu's framejs share button.
  *
  * Two things are worth pinning down, and neither is "it made a request".
  *
- * The first is that it stays invisible. This is a developer's escape hatch that
- * uploads a page to a third-party service, and the promise made about it is that
- * an exported page never shows it - so the test that matters is the one where
- * the switch is off.
+ * The first is that it is there and costs nothing until it is pressed. It is in
+ * every menu now rather than behind a switch, and the promise made about it is
+ * that a page which never touches the network still draws it.
  *
  * The second is the composition. What is uploaded is the page's own script with
  * a preamble in front of it, and the preamble exists to hand that script the
@@ -21,8 +20,6 @@ import { framejsModule, type UiState } from "../src/shared/framejs.js";
 import { settings } from "../src/shared/settings.js";
 import type { NetworkViewState } from "../src/views/ligand-network.js";
 import { clearFakeEngines, flush, readExample, seedFakeEngines } from "./helpers.js";
-
-type DebugGlobal = { GUFE_VIZ_DEBUG?: unknown };
 
 /** A frame carrying no state: the view opens as a new reader would find it. */
 const EMPTY_STATE: UiState = { settings: {}, views: {} };
@@ -41,7 +38,7 @@ const hamburger = (node: HTMLElement): HTMLButtonElement =>
   node.querySelector<HTMLButtonElement>('button[aria-label="Search, filter and select ligands"]')!;
 
 const framejsButton = (node: HTMLElement): HTMLButtonElement | undefined =>
-  Array.from(node.querySelectorAll("button")).find((b) => b.textContent === "Open in framejs");
+  Array.from(node.querySelectorAll("button")).find((b) => b.textContent === "Share to the web");
 
 /**
  * A `localStorage` the generated code can be run against.
@@ -74,42 +71,31 @@ function inlineBundle(): HTMLScriptElement {
   return script;
 }
 
-describe("the framejs export", () => {
+describe("the framejs share button", () => {
   beforeEach(() => {
     seedFakeEngines();
   });
   afterEach(() => {
     clearFakeEngines();
-    delete (globalThis as DebugGlobal).GUFE_VIZ_DEBUG;
     document.head.querySelectorAll("script[type=module]").forEach((s) => s.remove());
     document.body.replaceChildren();
     vi.restoreAllMocks();
   });
 
-  it("is absent from an open menu when the debug switch is off", async () => {
-    const node = mountNetwork();
-    await flush();
-    hamburger(node).click();
-    await flush();
-    // The menu itself is open - this is the export, not the menu, that is gone.
-    expect(node.querySelector('input[type="search"]')).toBeTruthy();
-    expect(framejsButton(node)).toBeUndefined();
-  });
-
-  it("appears when the debug switch is on", async () => {
-    (globalThis as DebugGlobal).GUFE_VIZ_DEBUG = true;
+  it("is in an open menu, and uploads nothing until it is pressed", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
     const node = mountNetwork();
     await flush();
     hamburger(node).click();
     await flush();
     expect(framejsButton(node)).toBeTruthy();
+    expect(fetchSpy).not.toHaveBeenCalled();
   });
 
   it("falls back to the dev server when the page has no inlined bundle", async () => {
     // The vite pages import `src/**` rather than inlining anything, and they are
     // where this gets used most, so refusing there would be refusing in the one
     // place it is wanted.
-    (globalThis as DebugGlobal).GUFE_VIZ_DEBUG = true;
     const fetchSpy = vi.spyOn(globalThis, "fetch").mockImplementation((input) =>
       Promise.resolve(String(input).endsWith("/gufe-dev-bundle.js") ? new Response(FAKE_BUNDLE) : new Response(null)),
     );
@@ -133,7 +119,6 @@ describe("the framejs export", () => {
   });
 
   it("says so when neither the page nor the dev server has a bundle", async () => {
-    (globalThis as DebugGlobal).GUFE_VIZ_DEBUG = true;
     const fetchSpy = vi
       .spyOn(globalThis, "fetch")
       .mockResolvedValue(new Response("not found", { status: 404 }));
@@ -151,7 +136,6 @@ describe("the framejs export", () => {
   });
 
   it("uploads the page's own script, and opens the frame it just made", async () => {
-    (globalThis as DebugGlobal).GUFE_VIZ_DEBUG = true;
     inlineBundle();
     const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(null));
     const tab = { location: { href: "" }, close: () => {} };
@@ -211,7 +195,6 @@ describe("the framejs export", () => {
   });
 
   it("carries the network's camera, layout and selection off the live view", async () => {
-    (globalThis as DebugGlobal).GUFE_VIZ_DEBUG = true;
     inlineBundle();
     const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(null));
     vi.spyOn(window, "open").mockReturnValue(null);
@@ -247,7 +230,6 @@ describe("the framejs export", () => {
     // Opening the menu is what writes `menuOpen`, and opening it is also the
     // only way to reach this button - so without this the export could only ever
     // produce a frame with its menu open.
-    (globalThis as DebugGlobal).GUFE_VIZ_DEBUG = true;
     inlineBundle();
     const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(null));
     vi.spyOn(window, "open").mockReturnValue(null);
