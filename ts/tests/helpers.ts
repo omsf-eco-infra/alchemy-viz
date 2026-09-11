@@ -17,7 +17,7 @@ import {
   type ThreeDmolViewer,
 } from "../src/shared/engines.js";
 
-export const EXAMPLES_DIR = join(import.meta.dirname, "..", "..", "examples");
+const EXAMPLES_DIR = join(import.meta.dirname, "..", "..", "examples");
 
 export function exampleNames(): string[] {
   return readdirSync(EXAMPLES_DIR)

@@ -159,7 +159,7 @@ export class GufeComplex extends GufeElement<ChemicalSystemViz> {
     function restyle(): void {
       const viewer = scene.viewer();
       if (!viewer) return;
-      applyProteinStyles(viewer, scene.opts, stats, scene.showStatus, { model: proteinModels });
+      applyProteinStyles(viewer, scene.opts, stats, scene.showStatus, { model: proteinModels }, scene.stillWanted);
       applyLigandStyles(viewer, { model: ligandModels });
       viewer.render();
     }

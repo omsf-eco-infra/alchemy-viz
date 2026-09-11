@@ -23,7 +23,7 @@ import { dropdown } from "../shared/controls.js";
 import { centredMessage, floatingWarning, headerStrip, statChip } from "../shared/panels.js";
 import { chromeMenu, orientMenuPanel, splitter } from "../shared/chrome.js";
 import { framejsMenuItem } from "../shared/framejs.js";
-import { defineElement, GufeElement, seededViewState, type ViewHandle } from "../shared/element.js";
+import { defineElement, generations, GufeElement, seededViewState, type ViewHandle } from "../shared/element.js";
 import { choice, flag, num, type Setting } from "../shared/settings.js";
 import { svg } from "../shared/svg.js";
 import { resetControl } from "../shared/interact.js";
@@ -38,7 +38,6 @@ import {
   Depictions,
   detailPane,
   draggableNodes,
-  generations,
   visibleAt,
   type DetailPane,
 } from "../shared/network/canvas.js";
@@ -327,8 +326,14 @@ const EDGE_LABEL = { fontSize: 10 };
 /** The disc RDKit draws behind a matched atom, in its own units. */
 const MATCH_ATOM_RADIUS = 0.4;
 
-/** The match colour as RDKit wants it, converted once. */
-const MATCH_RGB = rgbTriple(T.netMatchAtom);
+/**
+ * The match colour as RDKit wants it.
+ *
+ * A function rather than a module-level constant: `T` follows `setTheme`, and a
+ * value read at import time is the one thing that cannot. Converted per view
+ * rather than per node - `levelOfDetail` asks once and closes over the answer.
+ */
+const matchRgb = (): [number, number, number] => rgbTriple(T.netMatchAtom);
 
 /** The selection halo, sized from the edge or the node it sits under. */
 const HALO = { padding: 4, opacity: 0.95 };
@@ -642,7 +647,6 @@ interface DetailParts {
  */
 function levelOfDetail(parts: DetailParts): {
   apply(scale: number, tx: number, ty: number): void;
-  drawn(): number;
   forget(): void;
 } {
   const depictions = new Depictions();
@@ -655,6 +659,7 @@ function levelOfDetail(parts: DetailParts): {
    * these are the dark ones, which is the page on which `PLATE` is dark.
    */
   const depictOptions = depictThemeOptions("cpk");
+  const matchColor = matchRgb();
 
   /** The match a structure was drawn against, so a new one knows what to redraw. */
   const marking = (index: number): string => (parts.matched().get(index) ?? []).join(",");
@@ -670,7 +675,7 @@ function levelOfDetail(parts: DetailParts): {
         node.sdf,
         DEPICT_SIZE,
         DEPICT_STYLE.layout,
-        atoms && { atoms, color: MATCH_RGB, radius: MATCH_ATOM_RADIUS },
+        atoms && { atoms, color: matchColor, radius: MATCH_ATOM_RADIUS },
         depictOptions,
       );
     if (!drawn) {
@@ -844,7 +849,7 @@ function levelOfDetail(parts: DetailParts): {
       .catch(() => undefined);
   };
 
-  return { apply, drawn: () => depictions.count(), forget };
+  return { apply, forget };
 }
 
 interface MenuParts {
@@ -955,9 +960,7 @@ interface NetworkScene {
   setSelected(selection: Selection): void;
   setEmphasis(nodeKeys: ReadonlySet<string> | null, edgeIndices: ReadonlySet<number> | null): void;
   setMatches(matched: ReadonlyMap<number, number[]>): void;
-  setDetail(scale: number, tx: number, ty: number): void;
   focusOn(index: number): void;
-  depictionsDrawn(): number;
   fit(): void;
   reset(): void;
   /** Where the canvas is now, and how to put it back there. */
@@ -1320,7 +1323,7 @@ export class GufeLigandNetwork extends GufeElement<LigandNetworkViz> {
   ): { bar: HTMLDivElement; picker: HTMLSelectElement } {
     const toolbar = el(
       "div",
-      TOOLBAR.bottom,
+      TOOLBAR,
     );
 
     const legend = el("div", `display:flex;align-items:center;gap:6px;font-size:${FONT.small};color:${V.textMuted};`);
@@ -1723,8 +1726,6 @@ export class GufeLigandNetwork extends GufeElement<LigandNetworkViz> {
         if (node) view.centreOn(node.x, node.y);
       },
 
-      setDetail: detail.apply,
-      depictionsDrawn: () => detail.drawn(),
       fit: view.fit,
       reset: view.reset,
       transform: view.transform,

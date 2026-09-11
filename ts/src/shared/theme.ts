@@ -90,11 +90,9 @@ export interface Theme {
   // status
   okBg: string;
   okFg: string;
-  okBorder: string;
   warnBg: string;
   warnFg: string;
   warnBorder: string;
-  loadingFg: string;
   errorFg: string;
 
   // 3D viewers (3Dmol wants 0x-prefixed colours)
@@ -176,10 +174,6 @@ export interface Theme {
    */
   netGroupFill: string[];
   netGroupStroke: string[];
-
-  // solvent schematic
-  boxFill: string;
-  boxStroke: string;
 }
 
 export const THEMES: { dark: Theme; light: Theme } = {
@@ -215,11 +209,9 @@ export const THEMES: { dark: Theme; light: Theme } = {
 
     okBg: "#14532d",
     okFg: "#86efac",
-    okBorder: "#166534",
     warnBg: "#3b1d1d",
     warnFg: "#ffb4b4",
     warnBorder: "#7f2a2a",
-    loadingFg: "#888",
     errorFg: "#ff8080",
 
     viewerBg: "0x2b2b40",
@@ -248,9 +240,6 @@ export const THEMES: { dark: Theme; light: Theme } = {
     netHaloColor: "#51cbee",
     netGroupFill: ["#1f3a63", "#12403c", "#3a1f37", "#4a3c22", "#243a5e"],
     netGroupStroke: ["#4182e4", "#00bdaa", "#c060b8", "#e69f00", "#8f93a6"],
-
-    boxFill: "#1f3a63",
-    boxStroke: "#45455e",
   },
   light: {
     appBg: "#ffffff",
@@ -284,11 +273,9 @@ export const THEMES: { dark: Theme; light: Theme } = {
 
     okBg: "#dcfce7",
     okFg: "#166534",
-    okBorder: "#bbf7d0",
     warnBg: "#fee2e2",
     warnFg: "#991b1b",
     warnBorder: "#fecaca",
-    loadingFg: "#888",
     errorFg: "#c33",
 
     viewerBg: "0xffffff",
@@ -317,9 +304,6 @@ export const THEMES: { dark: Theme; light: Theme } = {
     netHaloColor: "#51cbee",
     netGroupFill: ["#e6effc", "#d9f5f2", "#f6e7f4", "#fdf1d8", "#eef0f4"],
     netGroupStroke: ["#4182e4", "#009e8f", "#8a2283", "#c07d00", "#666666"],
-
-    boxFill: "#e6effc",
-    boxStroke: "#cccccc",
   },
 };
 
@@ -348,15 +332,10 @@ export const THEME_ATTRIBUTE = "data-gufe-theme";
 
 let choice: ThemeChoice = "system";
 
-/** Which of the two is actually in force. */
+/** Which of the two is in force, for the few places that have to know. */
 export function currentTheme(): "light" | "dark" {
   if (choice !== "system") return choice;
   return prefersDark() ? "dark" : "light";
-}
-
-/** Which of the two is in force, for the few places that have to know. */
-export function isDark(): boolean {
-  return currentTheme() === "dark";
 }
 
 /**

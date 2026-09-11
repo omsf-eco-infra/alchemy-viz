@@ -15,6 +15,7 @@
  */
 
 import { el, errText } from "./dom.js";
+import { FONT } from "./style.js";
 import { centredMessage } from "./panels.js";
 import { installTheme, V } from "./theme.js";
 
@@ -66,6 +67,37 @@ export function seededViewState(key: string): unknown {
   const found = store[key];
   delete store[key];
   return found ?? null;
+}
+
+/**
+ * A generation counter, for work that finishes after it may have been
+ * superseded.
+ *
+ * The same problem `GufeElement` solves for itself with `#generation`, in the
+ * form a view can use inside one render. Anything a view starts and then waits
+ * on - a force layout relaxed off the next turn, an engine behind a CDN fetch -
+ * can land after a resize, a mode switch or a teardown has moved on, and then
+ * paints into a stage that belongs to something else. Both graph views drew a
+ * stack of graphs down one canvas this way, and the mapping view could draw one
+ * mode's boxes into another mode's stage.
+ *
+ * `start()` hands back the question "is this still the current one", which is
+ * also false once `stop()` has been called - so a view being torn down needs no
+ * second flag beside the counter.
+ */
+export function generations(): { start(): () => boolean; stop(): void } {
+  let era = 0;
+  let running = true;
+  return {
+    start() {
+      const mine = ++era;
+      return () => running && mine === era;
+    },
+    stop() {
+      running = false;
+      era++;
+    },
+  };
 }
 
 /** Debounce for the resize observer: a graph view re-lays out its whole
@@ -148,7 +180,7 @@ export abstract class GufeElement<P> extends HTMLElement {
     }
     this.style.background = V.appBg;
     this.style.color = V.textPrimary;
-    this.style.fontFamily = "'Inter',system-ui,sans-serif";
+    this.style.fontFamily = FONT.family;
 
     // A host can resize the element without any event firing, so watch it.
     if (typeof ResizeObserver !== "undefined" && !this.#observer) {

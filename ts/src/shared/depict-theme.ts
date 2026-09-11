@@ -34,7 +34,7 @@
 
 import type { ElementColors } from "./depict-style.js";
 import { DARK_ATOM_PALETTE, DARK_DRAW_OPTIONS, DARK_MONO_PALETTE, MAPPING_BW_PALETTE } from "./atom-colors.js";
-import { isDark, THEMES } from "./theme.js";
+import { currentTheme, THEMES } from "./theme.js";
 
 /**
  * The override, when there is one. Null means "follow the page".
@@ -47,7 +47,7 @@ let forced: boolean | null = null;
 
 /** Whether depictions are currently drawn for a dark ground. */
 export function darkDepictions(): boolean {
-  return forced ?? isDark();
+  return forced ?? currentTheme() === "dark";
 }
 
 /** Override the switch. See the note above: dev pages and tests, nothing else. */

@@ -44,7 +44,7 @@ export class GufeProtein extends GufeElement<PdbPayload> {
     // controls during this call and they are wired to this.
     function restyle(): void {
       const viewer = scene.viewer();
-      if (viewer) applyProteinStyles(viewer, scene.opts, stats, scene.showStatus);
+      if (viewer) applyProteinStyles(viewer, scene.opts, stats, scene.showStatus, undefined, scene.stillWanted);
     }
 
     const scene = proteinScene({
@@ -84,7 +84,7 @@ export class GufeProtein extends GufeElement<PdbPayload> {
         viewer.addModel(pdb, "pdb");
         // applyProteinStyles clears the "Loading..." status (or replaces it with
         // the surface-computing message), so there is nothing to hide here.
-        applyProteinStyles(viewer, scene.opts, stats, scene.showStatus);
+        applyProteinStyles(viewer, scene.opts, stats, scene.showStatus, undefined, scene.stillWanted);
         // Where this structure was last being looked at, if anywhere: a reader
         // moving between views of one protein keeps the angle they found.
         if (!scene.restoreCamera()) viewer.zoomTo();

@@ -116,7 +116,7 @@ export function onWidth(host: HTMLElement, apply: (width: number) => void): () =
  * plus a picture, a column opened beside the picture leaves nothing to open it
  * against. Stacked, the two share the height instead.
  */
-export const STACK_BELOW = 460;
+const STACK_BELOW = 460;
 
 /**
  * Call `arrange` when `host` becomes narrow, and again when it stops being.

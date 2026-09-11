@@ -22,7 +22,7 @@
  * the browser actually get?", which is otherwise unreadable inside the page.
  */
 
-import { el, esc } from "./shared/dom.js";
+import { el } from "./shared/dom.js";
 import { centredMessage } from "./shared/panels.js";
 import { logPayload } from "./shared/debug.js";
 import {
@@ -189,12 +189,20 @@ function unsupportedPanel(
   return wrap;
 }
 
+/**
+ * The payload's own shape, as plain text.
+ *
+ * Deliberately not escaped: what this returns goes to `mono`, which puts it in
+ * an element's `textContent`. Escaping it there is one escape too many - a
+ * molecule called `2'-deoxy` comes out as `2&#39;-deoxy`, and the panel that
+ * exists to say what arrived says something that did not.
+ */
 function describePayload(payload: unknown): string | null {
   if (payload == null || typeof payload !== "object") return null;
   const p = payload as UnknownPayload;
   const bits: string[] = [];
-  if (typeof p.type === "string") bits.push(`type: ${esc(p.type)}`);
-  if (typeof p.name === "string" && p.name) bits.push(`name: ${esc(p.name)}`);
+  if (typeof p.type === "string") bits.push(`type: ${p.type}`);
+  if (typeof p.name === "string" && p.name) bits.push(`name: ${p.name}`);
   const keys = Object.keys(payload);
   if (keys.length)
     bits.push(

@@ -27,6 +27,17 @@ export interface ModelScope {
   model: number | number[];
 }
 
+/**
+ * Whether the scene that asked for a surface is still on screen.
+ *
+ * A surface is computed off a `setTimeout`, so the view can be torn down between
+ * the request and the work. Without this the work still happens - seconds of CPU
+ * on a kinase, for a viewer that has already been cleared - and its result is
+ * written into a status line nobody can see. Per-scene rather than module state,
+ * because two structures on one page are two independent answers.
+ */
+export type StillWanted = () => boolean;
+
 export const PROTEIN_CONFIG = {
   stick: { radius: 0.15 },
   sphere: { scale: 0.3 },
@@ -53,8 +64,6 @@ export interface PdbStats {
   atoms: number;
   hetatms: number;
   waters: number;
-  /** Non-water HETATM records - what the "hetero/ligands" toggle governs. */
-  heteroNonWater: number;
   resiMin: number;
   resiMax: number;
 }
@@ -117,7 +126,6 @@ export function parsePdbStats(pdbText: string): PdbStats {
     atoms,
     hetatms,
     waters,
-    heteroNonWater: hetatms - waters,
     resiMin: resiMin === Infinity ? 0 : resiMin,
     resiMax: resiMax === -Infinity ? 0 : resiMax,
   };
@@ -140,7 +148,7 @@ export function proteinStatsParts(stats: PdbStats): string[] {
 }
 
 /** Colour arguments for a scheme, valid for any representation. */
-export function proteinColorArgs(scheme: ProteinColorScheme, stats: PdbStats | null): { colorscheme: unknown } {
+function proteinColorArgs(scheme: ProteinColorScheme, stats: PdbStats | null): { colorscheme: unknown } {
   if (scheme === "chain") return { colorscheme: "chain" };
   if (scheme === "ss") return { colorscheme: "ssJmol" };
   if (scheme === "spectrum" && stats && stats.resiMax > stats.resiMin) {
@@ -170,6 +178,7 @@ export function applyProteinStyles(
   stats: PdbStats | null,
   onStatus?: StatusFn,
   scope?: ModelScope,
+  stillWanted: StillWanted = () => true,
 ): void {
   const status: StatusFn = onStatus || (() => {});
   const color = proteinColorArgs(opts.color, stats);
@@ -232,6 +241,9 @@ export function applyProteinStyles(
   );
   viewer.render();
   setTimeout(() => {
+    // The view may have gone in the 30ms since the surface was asked for. See
+    // `StillWanted`.
+    if (!stillWanted()) return;
     try {
       // 3Dmol v2 returns a promise; v1 returns a surface id.
       Promise.resolve(
@@ -242,6 +254,7 @@ export function applyProteinStyles(
         ),
       )
         .then(() => {
+          if (!stillWanted()) return;
           status(null);
           viewer.render();
         })

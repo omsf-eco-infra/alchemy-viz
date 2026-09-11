@@ -145,6 +145,14 @@ export interface ProteinScene {
    */
   setStats(parts: string[]): void;
   viewer(): ThreeDmolViewer | null;
+  /**
+   * Whether this scene is still on screen.
+   *
+   * Hand it to `applyProteinStyles`: a surface is computed off a timer, and a
+   * scene torn down in between should not spend seconds of CPU drawing one into
+   * a viewer that has been cleared.
+   */
+  stillWanted(): boolean;
   /** Hand the viewer over once it is built; the scene resizes and clears it. */
   setViewer(viewer: ThreeDmolViewer | null): void;
   /**
@@ -194,6 +202,8 @@ export function proteinScene(spec: ProteinSceneSpec): ProteinScene {
 
   let viewer: ThreeDmolViewer | null = null;
   let interaction: (BoundedZoom & Interaction) | null = null;
+  /** False once this scene is torn down. See `ProteinScene.stillWanted`. */
+  let live = true;
 
   // The menu column and the viewer share this row, so opening the menu takes
   // width from the picture rather than covering it: the point of a control is
@@ -392,6 +402,7 @@ export function proteinScene(spec: ProteinSceneSpec): ProteinScene {
       return true;
     },
     viewer: () => viewer,
+    stillWanted: () => live,
     setViewer: (next) => {
       viewer = next;
     },
@@ -406,6 +417,7 @@ export function proteinScene(spec: ProteinSceneSpec): ProteinScene {
         viewer.render();
       },
       cleanup() {
+        live = false;
         stopWatching();
         // Before anything is torn down: this is the whole point of the memory,
         // and a cleared viewer has no camera left to read.

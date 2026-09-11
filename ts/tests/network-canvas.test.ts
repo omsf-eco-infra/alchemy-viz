@@ -11,7 +11,8 @@
 
 import { describe, expect, it } from "vitest";
 
-import { Depictions, generations, visibleAt, CULL_MARGIN } from "../src/shared/network/canvas.js";
+import { Depictions, visibleAt, CULL_MARGIN } from "../src/shared/network/canvas.js";
+import { generations } from "../src/shared/element.js";
 
 describe("generations", () => {
   it("keeps only the newest work", () => {
@@ -46,14 +47,12 @@ describe("Depictions", () => {
     drawn.drew(0);
     expect(drawn.wants(0)).toBe(false);
     expect(drawn.has(0)).toBe(true);
-    expect(drawn.count()).toBe(1);
 
     // A molecule RDKit cannot read will not read on the next pan either, and a
     // node that keeps asking pays for the attempt every time the view moves.
     drawn.refused(1);
     expect(drawn.wants(1)).toBe(false);
     expect(drawn.has(1)).toBe(false);
-    expect(drawn.count()).toBe(1);
   });
 
   it("drops only the structures whose marking has changed", () => {

@@ -50,8 +50,6 @@ export interface ThreeDmolViewer {
   addSphere(spec: object): unknown;
   /** A cylinder, dashed when asked - the line drawn between a mapped pair. */
   addCylinder(spec: object): unknown;
-  /** Drop every sphere and cylinder, leaving the models alone. */
-  removeAllShapes(): void;
   /** Style a subset on top of what `setStyle` already applied. */
   addStyle(selection: object, style: object): void;
   /**

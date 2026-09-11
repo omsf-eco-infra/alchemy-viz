@@ -287,7 +287,16 @@ export function smartsBox(options: SmartsBoxOptions): { element: HTMLDivElement;
   input.oninput = () => {
     options.remember.set(input.value);
     window.clearTimeout(timer);
-    timer = window.setTimeout(() => run(input.value), MATCH_DEBOUNCE_MS);
+    timer = window.setTimeout(() => {
+      // A view torn down inside the debounce must not pay for the sweep. There
+      // is no teardown hook to clear the timer from - the menu is DOM the view
+      // drops whole - so the box asks whether it is still on the page, which is
+      // the same question and needs no plumbing. Without it, closing a
+      // nine-hundred-ligand network mid-keystroke starts a full RDKit sweep
+      // whose answer nobody will ever see.
+      if (!input.isConnected) return;
+      run(input.value);
+    }, MATCH_DEBOUNCE_MS);
   };
 
   return {

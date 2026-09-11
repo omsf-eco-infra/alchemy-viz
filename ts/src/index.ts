@@ -41,6 +41,19 @@ import "./views/transformation.js";
 import "./views/unknown-component.js";
 
 import { resetSettings, settings } from "./shared/settings.js";
+import { installTheme } from "./shared/theme.js";
+
+/**
+ * The palette, as soon as the bundle is evaluated.
+ *
+ * `GufeElement.connectedCallback` installs it too, which covers a host that
+ * builds an element without going through this file. This call is for everything
+ * *around* the elements: the dev pages build their own chrome out of `V` and may
+ * draw it before any `<gufe-*>` has connected - a dropzone with nothing dropped
+ * on it yet is the whole page - and a `var()` with nothing behind it is not a
+ * colour. Guarded for a document that does not exist, and idempotent by id.
+ */
+installTheme();
 
 /** The dispatch table, for a caller asking the bundle what it can draw. */
 export { VIEW_TAGS } from "./gufe-view.js";

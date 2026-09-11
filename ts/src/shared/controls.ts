@@ -35,7 +35,7 @@ export function button(extra = "", label?: string): HTMLButtonElement {
  * that is a disclosure rather than a toggle uses `aria-expanded`, which the same
  * rule covers.
  */
-export function setPressed(node: HTMLElement, on: boolean): void {
+function setPressed(node: HTMLElement, on: boolean): void {
   node.setAttribute("aria-pressed", String(on));
 }
 

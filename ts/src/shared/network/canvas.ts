@@ -7,17 +7,20 @@
  * parameterising by everything that differs. What is *not* different is the
  * machinery around the drawing, and that is what is here:
  *
- *   `generations`    which redraw is the current one
  *   `draggableNodes` dragging a node, and telling a drag from a click
  *   `Depictions`     which structures are drawn, which failed, which are stale
  *   `visibleAt`      the nodes on screen, plus a margin so panning does not tear
  *   `detailPane`     one `<gufe-view>`, re-pointed rather than rebuilt
  *
  * Each of those carries a rule that is invisible when it holds and expensive
- * when it does not: a paint whose era has passed must be dropped, a pinch must
- * abandon a drag in progress, a molecule RDKit cannot draw must not be retried
- * on every pan, a re-pointed detail view must not be re-parented. One copy of
- * each, so there is one place for each rule to be true.
+ * when it does not: a pinch must abandon a drag in progress, a molecule RDKit
+ * cannot draw must not be retried on every pan, a re-pointed detail view must
+ * not be re-parented. One copy of each, so there is one place for each rule to
+ * be true.
+ *
+ * The fourth rule of that kind - a paint whose era has passed must be dropped -
+ * is `generations` in `shared/element.ts`, because the mapping view needs it
+ * too and it is about a render rather than about a graph.
  *
  * This is the same line `protein-scene.ts` draws for the two 3D views: the
  * chrome and the lifecycle are shared, and what goes in the scene stays with the
@@ -27,39 +30,6 @@
 import { el } from "../dom.js";
 import { centredMessage } from "../panels.js";
 import { CLICK_SLOP, type Camera } from "../camera.js";
-
-// --- which redraw is the current one ---------------------------------------
-
-/**
- * A generation counter, for work that finishes after it may have been
- * superseded.
- *
- * Both graph views relax a force layout off the main thread's next turn, so a
- * second redraw - a resize, the menu opening - can start while the first is
- * still waiting to paint. Both would then append a scene, and the canvas would
- * end up holding a stack of them: the reader sees the oldest, while the halos
- * and the selection are wired to the newest, which is off the bottom of a pane
- * that does not scroll. That is not a hypothetical; it is what a network drawn
- * three times looked like.
- *
- * `start()` hands back the question "is this still the current one", which is
- * also false once `stop()` has been called - so a view being torn down needs no
- * second flag beside the counter.
- */
-export function generations(): { start(): () => boolean; stop(): void } {
-  let era = 0;
-  let running = true;
-  return {
-    start() {
-      const mine = ++era;
-      return () => running && mine === era;
-    },
-    stop() {
-      running = false;
-      era++;
-    },
-  };
-}
 
 // --- dragging a node -------------------------------------------------------
 
@@ -197,11 +167,6 @@ export class Depictions {
 
   refused(index: number): void {
     this.#failed.add(index);
-  }
-
-  /** How many are drawn - what a test asks to know a cull actually culled. */
-  count(): number {
-    return this.#drawn.size;
   }
 
   /**

@@ -37,7 +37,7 @@
 import { el, errText } from "../shared/dom.js";
 import { switcher } from "../shared/controls.js";
 import { centredMessage, nameWanted } from "../shared/panels.js";
-import { defineElement, GufeElement, type ViewHandle } from "../shared/element.js";
+import { defineElement, generations, GufeElement, type ViewHandle } from "../shared/element.js";
 import { choice } from "../shared/settings.js";
 import { load3Dmol } from "../shared/engines.js";
 import { kabsch, applyRT, type Vec3 } from "../shared/kabsch.js";
@@ -326,10 +326,15 @@ export interface MappedPair {
   to: SmallMoleculeComponentViz;
   nameA: string;
   nameB: string;
-  /** A's atom index to B's, as the payload gives it. */
+  /**
+   * A's atom index to B's, as the payload gives it.
+   *
+   * Only this direction. The reverse is built inside `preparePair`, because
+   * classifying B's atoms needs it, and it is not carried: nothing downstream
+   * reads B against A, and a field that is always derivable from `pairs` is one
+   * more thing that can be handed on stale.
+   */
   pairs: Map<number, number>;
-  /** The same, the other way round, for reading B against A. */
-  flipped: Map<number, number>;
   molA: Molecule;
   /** Already in `molA`'s frame - see `inFrameOf`. */
   molB: Molecule;
@@ -392,7 +397,6 @@ export function preparePair(payload: LigandAtomMappingViz, registry: RegistryInd
       nameA,
       nameB,
       pairs,
-      flipped,
       molA,
       molB,
       uniquesA: uniqueAtoms(pairs, molA.symbols, molB.symbols),
@@ -441,7 +445,17 @@ export class GufeAtomMapping extends GufeElement<LigandAtomMappingViz> {
     controls.appendChild(modes);
     wrapper.appendChild(controls);
 
-    let alive = true;
+    /**
+     * Which mode's render is the current one.
+     *
+     * A teardown is not the only thing that can supersede a 3D mode: so is
+     * another mode. `load3Dmol` resolves on a microtask once it is memoised, so
+     * two clicks along the switcher can leave the first mode's `.then` to run
+     * after the second has already cleared and refilled the stage - drawing the
+     * old mode's boxes into the new mode's stage. Guarding only teardown, which
+     * is what this did, catches neither half of that.
+     */
+    const renders = generations();
 
     /** The four modes that need 3Dmol, and what each one draws with it. */
     const IN_3D: Partial<Record<Mode, (stage: MappingStage, pair: MappedPair) => void>> = {
@@ -452,6 +466,7 @@ export class GufeAtomMapping extends GufeElement<LigandAtomMappingViz> {
     };
 
     const render = (): void => {
+      const current = renders.start();
       // Every mode rebuilds the stage, because the modes differ in how many
       // boxes they want. Releasing the old viewers first is what keeps the count
       // of live WebGL contexts bounded as someone clicks along the switcher.
@@ -464,11 +479,12 @@ export class GufeAtomMapping extends GufeElement<LigandAtomMappingViz> {
       stage.element.appendChild(centredMessage("Loading 3D viewer..."));
       load3Dmol()
         .then(() => {
-          if (!alive) return;
+          if (!current()) return;
           stage.element.replaceChildren();
           draw(stage, pair);
         })
         .catch((e: unknown) => {
+          if (!current()) return;
           stage.element.replaceChildren(centredMessage(`3D render failed: ${errText(e)}`, true));
         });
     };
@@ -478,7 +494,7 @@ export class GufeAtomMapping extends GufeElement<LigandAtomMappingViz> {
     return {
       onResize: () => stage.resize(),
       cleanup: () => {
-        alive = false;
+        renders.stop();
         modes.cleanup();
         stage.cleanup();
       },

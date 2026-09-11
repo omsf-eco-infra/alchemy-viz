@@ -45,7 +45,7 @@ import { dropdown } from "../shared/controls.js";
 import { centredMessage, floatingWarning, headerStrip, statChip } from "../shared/panels.js";
 import { chromeMenu, orientMenuPanel, splitter } from "../shared/chrome.js";
 import { framejsMenuItem } from "../shared/framejs.js";
-import { defineElement, GufeElement, type ViewHandle } from "../shared/element.js";
+import { defineElement, generations, GufeElement, type ViewHandle } from "../shared/element.js";
 import { extentOf, sceneCamera } from "../shared/camera.js";
 import { withoutLayout } from "../shared/layout.js";
 import { optionalRDKit, type RDKitModule } from "../shared/engines.js";
@@ -53,13 +53,7 @@ import { relax as relaxWith } from "../shared/network/force.js";
 import { resolveNetwork } from "../shared/network/resolve.js";
 import { networkMenu } from "../shared/network/menu.js";
 import { DIM, levelAt as levelIn } from "../shared/network/detail.js";
-import {
-  Depictions,
-  detailPane,
-  draggableNodes,
-  generations,
-  visibleAt,
-} from "../shared/network/canvas.js";
+import { Depictions, detailPane, draggableNodes, visibleAt } from "../shared/network/canvas.js";
 import { resetControl } from "../shared/interact.js";
 import { flag, num, text as textSetting } from "../shared/settings.js";
 import { createMatcher, type MatchOutcome } from "../shared/smarts.js";
@@ -1154,7 +1148,7 @@ export class GufeAlchemicalNetwork extends GufeElement<AlchemicalNetworkViz> {
     onReset: () => void,
     anyChargeChange: boolean,
   ): HTMLDivElement {
-    const bar = el("div", TOOLBAR.bottom);
+    const bar = el("div", TOOLBAR);
     bar.appendChild(resetControl(onReset, "Reset pan and zoom"));
     if (anyChargeChange) {
       const charge = el("div", "display:flex;align-items:center;gap:6px;min-width:0;");

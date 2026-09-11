@@ -35,14 +35,16 @@ describe("preparePair", () => {
     expect(out.pair.nameB).toBeTruthy();
   });
 
-  it("carries the correspondence both ways round", () => {
+  it("carries a correspondence that inverts cleanly", () => {
+    // The reverse is what classifying B needs, and `preparePair` builds it
+    // internally. What has to hold for that to be meaningful is that the
+    // forward map is injective: two of A's atoms mapping onto one of B's would
+    // silently lose one.
     const out = prepare(mapping());
     if (!("pair" in out)) throw new Error("expected a pair");
-    const { pairs, flipped } = out.pair;
+    const { pairs } = out.pair;
     expect(pairs.size).toBeGreaterThan(0);
-    expect(flipped.size).toBe(pairs.size);
-    // `flipped` is what reading B against A needs; the modes use both.
-    for (const [a, b] of pairs) expect(flipped.get(b)).toBe(a);
+    expect(new Set(pairs.values()).size).toBe(pairs.size);
   });
 
   it("puts B in A's frame without touching anything the mapping is read by", () => {
@@ -70,7 +72,8 @@ describe("preparePair", () => {
   it("classifies the unique atoms from each side's own point of view", () => {
     const out = prepare(mapping());
     if (!("pair" in out)) throw new Error("expected a pair");
-    const { pairs, flipped, molA, molB, uniquesA, uniquesB } = out.pair;
+    const { pairs, molA, molB, uniquesA, uniquesB } = out.pair;
+    const flipped = new Map(Array.from(pairs, ([a, b]) => [b, a] as [number, number]));
 
     // Every atom lands in exactly one of the three buckets, per side.
     const partition = (u: typeof uniquesA) => [...u.atoms, ...u.elements, ...u.mapped];

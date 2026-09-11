@@ -50,7 +50,6 @@ export const FONT = {
 
 export const WEIGHT = {
   normal: "400",
-  medium: "600",
   bold: "700",
 } as const;
 
@@ -78,17 +77,11 @@ export const TEXT = {
   muted: V.textMuted,
   faint: V.textMuted2,
   error: V.errorFg,
-  onLabel: V.labelFg,
 } as const;
 
 /** Surfaces, for anything that needs one directly. */
 export const SURFACE = {
-  app: V.appBg,
-  panel: V.panelBg,
   card: V.cardBg,
-  toolbar: V.toolbarBg,
-  border: V.toolbarBorder,
-  split: V.splitBorder,
   /**
    * Where a 3D engine draws. Interface, not chemistry: it is the paper.
    *
@@ -228,16 +221,10 @@ export const MENU_PANEL_STACKED_SHARE = "45%";
  */
 export const MENU_LIST = "flex:1 1 auto;min-height:84px;overflow:auto;display:flex;flex-direction:column;gap:3px;";
 
-/** A row of controls, under or over the thing they control. */
-export const TOOLBAR = {
-  top:
-    `display:flex;align-items:center;gap:${SPACE.xl};flex-wrap:wrap;padding:${SPACE.lg} ${SPACE.xxl};` +
-    `flex-shrink:0;font-size:${FONT.body};background:${V.toolbarBg};` +
-    `border-bottom:1px solid ${V.toolbarBorder};color:${V.textPrimary};`,
-  bottom:
-    `display:flex;align-items:center;gap:${SPACE.xl};flex-wrap:wrap;padding:${SPACE.lg} ${SPACE.xxl};` +
-    `flex-shrink:0;background:${V.toolbarBg};border-top:1px solid ${V.toolbarBorder};`,
-} as const;
+/** The row of controls under a canvas: both graph views carry one. */
+export const TOOLBAR =
+  `display:flex;align-items:center;gap:${SPACE.xl};flex-wrap:wrap;padding:${SPACE.lg} ${SPACE.xxl};` +
+  `flex-shrink:0;background:${V.toolbarBg};border-top:1px solid ${V.toolbarBorder};`;
 
 /** The bar naming a pane: "3D", "2D", a molecule's name. */
 export const PANE_LABEL =
