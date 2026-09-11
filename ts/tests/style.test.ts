@@ -8,9 +8,17 @@
 
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { BUTTON, FONT, MENU_LIST, MENU_PANEL, SELECT } from "../src/shared/style.js";
-import { THEMES } from "../src/shared/theme.js";
+import {
+  installTheme,
+  setTheme,
+  T,
+  THEME_ATTRIBUTE,
+  THEMES,
+  themeStyleSheet,
+  V,
+} from "../src/shared/theme.js";
 
 const SRC = join(import.meta.dirname, "..", "src");
 
@@ -44,8 +52,22 @@ describe("the views", () => {
     const chrome = ["btnBg", "btnFg", "btnBorder", "btnBgHover", "btnBgActive", "selectBg", "labelFg", "labelBg"];
     for (const { name, text } of VIEWS) {
       for (const key of chrome) {
+        // Both doors out of `theme.ts`: the literal table and the custom
+        // properties. Going around `style.ts` through either is going around it.
         expect(text, `${name} reads T.${key} instead of using style.ts`).not.toContain(`T.${key}`);
+        expect(text, `${name} reads V.${key} instead of using style.ts`).not.toContain(`V.${key}`);
       }
+    }
+  });
+
+  it("do not paint a button's state by hand", () => {
+    // Resting, hover and on are one stylesheet rule keyed off `aria-pressed`.
+    // A view assigning a background to a button is both a second answer to what
+    // a button looks like and a state a screen reader is never told about.
+    for (const { name, text } of VIEWS) {
+      expect(text, `${name} paints a button background itself`).not.toMatch(
+        /\.style\.background\s*=\s*[^;]*\b(BUTTON|SELECTABLE|PICK)\b/,
+      );
     }
   });
 });
@@ -133,5 +155,57 @@ describe("theme.ts", () => {
     for (const key of ["colorCore", "colorUnique", "linesMol", "overlayMol", "linesDash"]) {
       expect(text, `theme.ts still holds ${key}`).not.toContain(key);
     }
+  });
+});
+
+describe("the palette as custom properties", () => {
+  afterEach(() => {
+    setTheme("system");
+  });
+
+  it("offers every colour as a var, and nothing that is not a colour", () => {
+    // `viewerBg` is `0x`-prefixed for 3Dmol and the group palettes are indexed
+    // arrays. Neither is a thing CSS can resolve, so neither is on `V` - which
+    // is what makes reaching for one a type error rather than a blank element.
+    expect(V.cardBg).toBe("var(--gufe-cardBg)");
+    expect(V).not.toHaveProperty("viewerBg");
+    expect(V).not.toHaveProperty("netGroupFill");
+    for (const key of Object.keys(V)) {
+      expect(typeof THEMES.light[key as keyof typeof THEMES.light], `V.${key} is not a colour`).toBe("string");
+    }
+  });
+
+  it("declares both palettes, with the explicit choice beating the host", () => {
+    const sheet = themeStyleSheet();
+    expect(sheet).toContain(`--gufe-cardBg:${THEMES.light.cardBg}`);
+    expect(sheet).toContain(`--gufe-cardBg:${THEMES.dark.cardBg}`);
+    // Dark under the media query is guarded, so a page forcing light on a dark
+    // host gets light; dark under the attribute is not, so forcing dark wins too.
+    expect(sheet).toContain(`:root:not([${THEME_ATTRIBUTE}="light"])`);
+    expect(sheet).toContain(`:root[${THEME_ATTRIBUTE}="dark"]`);
+  });
+
+  it("installs one stylesheet however many times it is asked", () => {
+    // The bundle can legitimately be evaluated twice on one page, and every
+    // view calls this from `connectedCallback`.
+    installTheme();
+    installTheme();
+    expect(document.querySelectorAll("style#gufe-viz-theme")).toHaveLength(1);
+  });
+
+  it("switches the palette for the chrome and for what is drawn next", () => {
+    setTheme("dark");
+    expect(document.documentElement.getAttribute(THEME_ATTRIBUTE)).toBe("dark");
+    // The chrome follows through the custom properties, which is why `V` never
+    // changes; `T` is what a view about to draw an SVG attribute reads, and it
+    // has to follow too or the next render draws in the old palette.
+    expect(V.cardBg).toBe("var(--gufe-cardBg)");
+    expect(T.cardBg).toBe(THEMES.dark.cardBg);
+
+    setTheme("light");
+    expect(T.cardBg).toBe(THEMES.light.cardBg);
+
+    setTheme("system");
+    expect(document.documentElement.hasAttribute(THEME_ATTRIBUTE)).toBe(false);
   });
 });

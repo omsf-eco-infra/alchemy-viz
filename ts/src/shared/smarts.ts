@@ -35,7 +35,7 @@ import { el, errText } from "./dom.js";
 import type { RDKitModule, RDKitMol } from "./engines.js";
 import type { Setting } from "./settings.js";
 import { FONT, INPUT } from "./style.js";
-import { T } from "./theme.js";
+import { V } from "./theme.js";
 
 /**
  * How long a slice of matching may hold the thread before it yields, and how
@@ -253,7 +253,7 @@ export function smartsBox(options: SmartsBoxOptions): { element: HTMLDivElement;
   // every time a pattern is typed, matched or refused. Every message fits one
   // line at the panel width these sit in; a longer one would want the wording
   // shortened rather than the space here grown.
-  const note = el("div", `font-size:${FONT.tiny};line-height:1.5;min-height:1.5em;color:${T.textMuted2};`);
+  const note = el("div", `font-size:${FONT.tiny};line-height:1.5;min-height:1.5em;color:${V.textMuted2};`);
   element.appendChild(note);
 
   const describe = (outcome: MatchOutcome): string => {

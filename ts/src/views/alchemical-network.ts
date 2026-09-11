@@ -46,13 +46,20 @@ import { centredMessage, floatingWarning, headerStrip, statChip } from "../share
 import { chromeMenu, orientMenuPanel, splitter } from "../shared/chrome.js";
 import { framejsMenuItem } from "../shared/framejs.js";
 import { defineElement, GufeElement, type ViewHandle } from "../shared/element.js";
-import { CLICK_SLOP, extentOf, sceneCamera } from "../shared/camera.js";
+import { extentOf, sceneCamera } from "../shared/camera.js";
 import { withoutLayout } from "../shared/layout.js";
 import { optionalRDKit, type RDKitModule } from "../shared/engines.js";
 import { relax as relaxWith } from "../shared/network/force.js";
 import { resolveNetwork } from "../shared/network/resolve.js";
 import { networkMenu } from "../shared/network/menu.js";
-import { CULL_MARGIN, DIM, levelAt as levelIn } from "../shared/network/detail.js";
+import { DIM, levelAt as levelIn } from "../shared/network/detail.js";
+import {
+  Depictions,
+  detailPane,
+  draggableNodes,
+  generations,
+  visibleAt,
+} from "../shared/network/canvas.js";
 import { resetControl } from "../shared/interact.js";
 import { flag, num, text as textSetting } from "../shared/settings.js";
 import { createMatcher, type MatchOutcome } from "../shared/smarts.js";
@@ -63,7 +70,7 @@ import { chargeLabel } from "../shared/charge.js";
 import { DEPICT_STYLE } from "../shared/depict-style.js";
 import { mountDepiction } from "../shared/depict-node.js";
 import { FONT, RADIUS, SPACE, TOOLBAR, WEIGHT } from "../shared/style.js";
-import { T } from "../shared/theme.js";
+import { T, V } from "../shared/theme.js";
 import { buildRegistry, entryLabel, lookup, lookupOfType, type RegistryIndex } from "../schema/registry.js";
 import { systemPayloadFor } from "./chemical-system.js";
 import { transformationPayloadFor } from "./transformation.js";
@@ -473,9 +480,9 @@ interface CompositionGroups {
  * have stopped being a distinction and started being decoration.
  */
 function compositionGroups(nodes: readonly GraphNode[], registry: RegistryIndex): CompositionGroups {
-  // The canvas's own uncoloured node rather than a card's, which is what this
-  // used to borrow. A card sits on a panel and is bordered just enough to come
-  // away from it; a box sits on the graph canvas, and a card's border on a
+  // The canvas's own uncoloured node rather than a card's. A card sits on a
+  // panel and is bordered just enough to come away from it; a box sits on the
+  // graph canvas, and a card's border on a
   // canvas is a box held together by nothing but its text - white on white in
   // the light theme, and a shade off the ground in the dark one. `netNodeStroke`
   // is the shade the ligand network draws its own plain nodes in, and it is
@@ -693,7 +700,7 @@ function buildMenu(parts: MenuParts): HTMLDivElement {
     // same things has nothing here to choose between.
     filters: (rerender) => {
       if (parts.compositions.length <= 1) return [];
-      const row = el("div", `display:flex;align-items:center;gap:${SPACE.md};font-size:${FONT.small};color:${T.textMuted};`);
+      const row = el("div", `display:flex;align-items:center;gap:${SPACE.md};font-size:${FONT.small};color:${V.textMuted};`);
       row.appendChild(el("span", "flex-shrink:0;", "made of"));
       const picker = dropdown(
         [{ id: "", label: "anything" }, ...parts.compositions.map((signature) => ({ id: signature, label: signature }))],
@@ -867,8 +874,8 @@ export class GufeAlchemicalNetwork extends GufeElement<AlchemicalNetworkViz> {
     /**
      * The canvas as it is painted right now, or null before the first paint.
      *
-     * One handle rather than the five no-op callbacks this used to declare and
-     * reassign from inside `paint`. See `GraphScene`.
+     * One nullable handle rather than a set of callbacks reassigned from inside
+     * `paint`: no scene yet, nothing to ask. See `GraphScene`.
      */
     let scene: GraphScene | null = null;
 
@@ -998,9 +1005,9 @@ export class GufeAlchemicalNetwork extends GufeElement<AlchemicalNetworkViz> {
     // so the row the splitter divides is the graph against the detail pane and
     // nothing else: a selected system gets the pane's whole height for the view
     // that draws it.
-    const left = el("div", `min-width:0;min-height:0;display:flex;flex-direction:column;background:${T.netCanvasBg};`);
-    const right = el("div", `min-width:0;min-height:0;display:flex;flex-direction:column;background:${T.appBg};`);
-    const canvas = el("div", `flex:1;min-height:0;position:relative;overflow:hidden;background:${T.netCanvasBg};`);
+    const left = el("div", `min-width:0;min-height:0;display:flex;flex-direction:column;background:${V.netCanvasBg};`);
+    const right = el("div", `min-width:0;min-height:0;display:flex;flex-direction:column;background:${V.appBg};`);
+    const canvas = el("div", `flex:1;min-height:0;position:relative;overflow:hidden;background:${V.netCanvasBg};`);
     // The menu beside the canvas, both under the header: a column while there
     // is width for one, a band above the graph when there is not, which is the
     // arrangement `orientMenuPanel` styles the panel for.
@@ -1059,19 +1066,10 @@ export class GufeAlchemicalNetwork extends GufeElement<AlchemicalNetworkViz> {
       );
     }
 
-    let alive = true;
     let forceUnavailable = false;
     let selectedItem: { kind: "node" | "edge"; index: number } | null = null;
-    /**
-     * Which draw is the current one.
-     *
-     * A draw waits on the force layout, so two of them - the first paint and a
-     * resize, or two resizes - are in flight at once, and without this both
-     * finish and both append a graph. Which is what happened: a network drawn
-     * three times was three graphs stacked down the canvas, the top one
-     * covering the rest.
-     */
-    let era = 0;
+    /** Which draw is the current one, and whether the view is still alive. */
+    const eras = generations();
 
     // Whether any transformation changes the charge, which decides whether the
     // strip below explains the dashes. Read off the same ligands the boxes show.
@@ -1088,13 +1086,13 @@ export class GufeAlchemicalNetwork extends GufeElement<AlchemicalNetworkViz> {
     };
 
     const draw = (): void => {
-      const mine = ++era;
+      const current = eras.start();
       const width = canvas.clientWidth || 800;
       const height = canvas.clientHeight || 600;
       seedPositions(nodes, width, height);
 
       const paint = () => {
-        if (!alive || mine !== era) return;
+        if (!current()) return;
         // The outgoing scene owns wheel and pointer listeners on an SVG that is
         // about to be thrown away. Every one of them, not the first: an earlier
         // draw may have appended one before this guard existed to stop it.
@@ -1115,7 +1113,7 @@ export class GufeAlchemicalNetwork extends GufeElement<AlchemicalNetworkViz> {
         return;
       }
       relax(nodes, edges, width, height).then((relaxed) => {
-        if (!alive || mine !== era) return;
+        if (!current()) return;
         if (!relaxed) {
           forceUnavailable = true;
           floatingWarning(canvas, "d3 could not be loaded - showing the circular layout instead");
@@ -1134,7 +1132,7 @@ export class GufeAlchemicalNetwork extends GufeElement<AlchemicalNetworkViz> {
     return {
       onResize: () => draw(),
       cleanup: () => {
-        alive = false;
+        eras.stop();
         scene?.cleanup();
         scene = null;
         detail.cleanup();
@@ -1160,12 +1158,12 @@ export class GufeAlchemicalNetwork extends GufeElement<AlchemicalNetworkViz> {
     bar.appendChild(resetControl(onReset, "Reset pan and zoom"));
     if (anyChargeChange) {
       const charge = el("div", "display:flex;align-items:center;gap:6px;min-width:0;");
-      charge.appendChild(el("span", `width:24px;height:0;border-top:2px dashed ${T.netEdgeLine};flex-shrink:0;`));
-      charge.appendChild(el("span", `font-size:${FONT.small};color:${T.textMuted};`, "net charge change"));
+      charge.appendChild(el("span", `width:24px;height:0;border-top:2px dashed ${V.netEdgeLine};flex-shrink:0;`));
+      charge.appendChild(el("span", `font-size:${FONT.small};color:${V.textMuted};`, "net charge change"));
       bar.appendChild(charge);
     }
     if (!entries.length) return bar;
-    bar.appendChild(el("span", `font-size:${FONT.small};color:${T.textMuted};`, "systems made of"));
+    bar.appendChild(el("span", `font-size:${FONT.small};color:${V.textMuted};`, "systems made of"));
     for (const [signature, colors] of entries) {
       const item = el("div", "display:flex;align-items:center;gap:6px;min-width:0;");
       item.appendChild(
@@ -1176,7 +1174,7 @@ export class GufeAlchemicalNetwork extends GufeElement<AlchemicalNetworkViz> {
         ),
       );
       item.appendChild(
-        el("span", `font-size:${FONT.small};color:${T.textPrimary};overflow-wrap:anywhere;`, signature),
+        el("span", `font-size:${FONT.small};color:${V.textPrimary};overflow-wrap:anywhere;`, signature),
       );
       bar.appendChild(item);
     }
@@ -1184,54 +1182,38 @@ export class GufeAlchemicalNetwork extends GufeElement<AlchemicalNetworkViz> {
   }
 
   /**
-   * The right-hand pane: the selected system or transformation, drawn by the
-   * view that already draws it.
+   * The right-hand pane, and what this view puts in it.
    *
-   * One `<gufe-view>`, re-pointed rather than rebuilt, which is the same
-   * create/update/destroy contract the top level uses: the payload setter tears
-   * the outgoing view down, so a protein's 3Dmol context is released before the
-   * next selection asks for another one.
+   * The pane itself is `detailPane`, shared with the ligand network. What is
+   * here is this view's own half: a node is a whole `ChemicalSystemViz` and an
+   * edge a whole `TransformationViz`, and both have to be cut loose from the
+   * network before they are handed on - the graph staples its own fields onto
+   * the payload's objects (what the layout leaves on a node, an index and two
+   * endpoints on an edge), and the schema allows none of them. A node's are
+   * `withoutLayout`'s to know: d3 writes more of them than this file does.
    */
   #detailPane(
     host: HTMLDivElement,
     registry: RegistryIndex,
-  ): {
-    show(item: GraphNode | GraphEdge, kind: "node" | "edge"): void;
-    message(text: string): void;
-    cleanup(): void;
-  } {
-    const body = el("div", "flex:1;min-height:0;display:flex;flex-direction:column;");
-    host.appendChild(body);
-
-    const child = document.createElement("gufe-view") as HTMLElement & { payload: unknown; resize?(): void };
-    child.style.cssText = "flex:1;min-width:0;min-height:0;";
-
-    const message = (text: string) => body.replaceChildren(centredMessage(text));
-
-    const show = (item: GraphNode | GraphEdge, kind: "node" | "edge") => {
-      // The graph adds fields of its own to the payload's objects - what the
-      // layout leaves on a node, an index and two endpoints on an edge - and the
-      // schema allows none of them, so what is handed on is everything except
-      // those. A node's are `withoutLayout`'s to know: d3 writes more of them
-      // than this file does.
-      let cut: ChemicalSystemViz | TransformationViz | null;
-      if (kind === "node") {
-        cut = systemPayloadFor(withoutLayout(item as GraphNode), registry);
-      } else {
-        const { index: _index, from: _from, to: _to, ...edge } = item as GraphEdge;
-        cut = transformationPayloadFor(edge, registry);
-      }
-      if (!cut) {
-        message("This transformation names two chemical systems, and its registry does not hold them.");
-        return;
-      }
-      child.payload = cut;
-      if (child.parentNode !== body) body.replaceChildren(child);
+  ): { show(item: GraphNode | GraphEdge, kind: "node" | "edge"): void; message(text: string): void; cleanup(): void } {
+    const pane = detailPane(host);
+    return {
+      ...pane,
+      show(item, kind) {
+        let cut: ChemicalSystemViz | TransformationViz | null;
+        if (kind === "node") {
+          cut = systemPayloadFor(withoutLayout(item as GraphNode), registry);
+        } else {
+          const { index: _index, from: _from, to: _to, ...edge } = item as GraphEdge;
+          cut = transformationPayloadFor(edge, registry);
+        }
+        if (!cut) {
+          pane.message("This transformation names two chemical systems, and its registry does not hold them.");
+          return;
+        }
+        pane.show(cut);
+      },
     };
-
-    // Removing the nested view fires its own `disconnectedCallback`, which is
-    // where whatever it mounted releases its viewers.
-    return { show, message, cleanup: () => child.remove() };
   }
 
   /** Build the SVG for the current positions, and hand back the selection hook. */
@@ -1362,7 +1344,7 @@ export class GufeAlchemicalNetwork extends GufeElement<AlchemicalNetworkViz> {
     // the plate moves: which of the three box heights is in force decides where
     // the top of the box is, and the plate is measured down from it.
     const holders: (SVGGElement | null)[] = [];
-    const depictions: (SVGGElement | null)[] = [];
+    const depictionGroups: (SVGGElement | null)[] = [];
 
     nodes.forEach((node, index) => {
       const face = faces[index];
@@ -1438,11 +1420,11 @@ export class GufeAlchemicalNetwork extends GufeElement<AlchemicalNetworkViz> {
         holder.appendChild(depiction);
         group.appendChild(holder);
         holders.push(holder);
-        depictions.push(depiction);
+        depictionGroups.push(depiction);
       } else {
         plates.push(null);
         holders.push(null);
-        depictions.push(null);
+        depictionGroups.push(null);
         badges.push(null);
       }
 
@@ -1505,9 +1487,8 @@ export class GufeAlchemicalNetwork extends GufeElement<AlchemicalNetworkViz> {
 
     // --- the ligands, drawn as the zoom asks for them ----------------------
 
-    /** Nodes whose ligand is drawn, and nodes whose ligand RDKit could not draw. */
-    const drawn = new Set<number>();
-    const failed = new Set<number>();
+    /** Which ligands are drawn, and which RDKit refused. See `Depictions`. */
+    const depictions = new Depictions();
 
     /**
      * The palette every ligand here is drawn in, asked for once per view.
@@ -1519,8 +1500,8 @@ export class GufeAlchemicalNetwork extends GufeElement<AlchemicalNetworkViz> {
     const depictOptions = depictThemeOptions("cpk");
 
     const inject = (RDKit: RDKitModule, index: number): void => {
-      if (drawn.has(index) || failed.has(index)) return;
-      const target = depictions[index];
+      if (!depictions.wants(index)) return;
+      const target = depictionGroups[index];
       const sdf = faces[index].sdf;
       if (!target || !sdf) return;
       const markup = depictSVG(RDKit, sdf, DEPICT_SIZE, DEPICT_STYLE.layout, undefined, depictOptions);
@@ -1528,10 +1509,10 @@ export class GufeAlchemicalNetwork extends GufeElement<AlchemicalNetworkViz> {
       // cannot draw now will not draw on the next pan either, and a node that
       // keeps asking pays for the attempt every time the view moves.
       if (!markup || !mountDepiction(target, markup, DEPICT_SIZE, PLATE.size - PLATE.inset * 2)) {
-        failed.add(index);
+        depictions.refused(index);
         return;
       }
-      drawn.add(index);
+      depictions.drew(index);
     };
 
     /**
@@ -1551,14 +1532,14 @@ export class GufeAlchemicalNetwork extends GufeElement<AlchemicalNetworkViz> {
      */
     const show = (index: number, structures: boolean, scale: number): void => {
       const face = faces[index];
-      const showing = structures && drawn.has(index);
+      const showing = structures && depictions.has(index);
       const legible = (size: number): boolean => size * scale >= LABEL_MIN_PX;
       const named = legible(CAPTION.nameSize);
       const described = legible(CAPTION.subSize);
       labels[index].setAttribute("display", named ? "inline" : "none");
       subs[index].setAttribute("display", described ? "inline" : "none");
       plates[index]?.setAttribute("display", showing ? "inline" : "none");
-      depictions[index]?.setAttribute("display", showing ? "inline" : "none");
+      depictionGroups[index]?.setAttribute("display", showing ? "inline" : "none");
       const boxHeight = boxHeightOf(face.sdf);
       const top = -boxHeight / 2 + PLATE.pad;
       // Drawn at every zoom, because a charge is a fact about the system rather
@@ -1607,8 +1588,8 @@ export class GufeAlchemicalNetwork extends GufeElement<AlchemicalNetworkViz> {
      * A box's border and an edge each say two things at once - what it is, in
      * its colour, and whether it is the selected one - while how heavily it says
      * them is the zoom's business. Both writers go through here so that neither
-     * can put back a weight the other has just chosen: selecting used to write a
-     * fixed width, which at any zoom but one was the wrong one.
+     * can put back a weight the other has just chosen: a selection that wrote a
+     * fixed width would be wrong at every zoom but one.
      */
     let zoomScale = 1;
     let selectedBox: number | null = null;
@@ -1638,17 +1619,13 @@ export class GufeAlchemicalNetwork extends GufeElement<AlchemicalNetworkViz> {
       for (let i = 0; i < nodes.length; i++) show(i, level.structure, scale);
       if (!level.structure) return;
 
-      // Only the nodes on screen, plus a margin so panning does not tear. This
-      // and the once-each rule above are what a two-hundred-system campaign
-      // costs instead of two hundred RDKit calls before the first frame.
-      const wanted: number[] = [];
-      nodes.forEach((node, index) => {
-        if (!faces[index].sdf || drawn.has(index) || failed.has(index)) return;
-        const x = node.x * scale + tx;
-        const y = node.y * scale + ty;
-        if (x < -CULL_MARGIN || y < -CULL_MARGIN || x > width + CULL_MARGIN || y > height + CULL_MARGIN) return;
-        wanted.push(index);
-      });
+      // Only the nodes on screen, plus a margin so panning does not tear.
+      const wanted = visibleAt(
+        nodes,
+        { scale, tx, ty },
+        { width, height },
+        (index) => Boolean(faces[index].sdf) && depictions.wants(index),
+      );
       if (!wanted.length) return;
 
       rdkit()
@@ -1663,59 +1640,10 @@ export class GufeAlchemicalNetwork extends GufeElement<AlchemicalNetworkViz> {
     };
     onZoom = applyLevel;
 
-    /**
-     * Dragging a system, and telling a drag from a click.
-     *
-     * A campaign graph is laid out by a force simulation, which packs systems
-     * as tightly as the forces allow: edges end up crossing and running
-     * alongside each other, and the one a reader wants is under two others.
-     * Pulling a system aside is how you get at it - so the same press has to be
-     * able to mean "select this" and "move this", and only the distance the
-     * pointer travelled says which.
-     *
-     * The click is decided here rather than by the camera's `wasPan`. A node
-     * swallows its own `pointerdown` so the background does not pan under it,
-     * and a camera that never saw the press cannot answer for it.
-     */
-    nodeGroups.forEach((group, index) => {
-      let dragging: { x: number; y: number } | null = null;
-      let moved = false;
-      group.addEventListener("pointerdown", (event: PointerEvent) => {
-        event.stopPropagation();
-        const { scale } = camera.transform();
-        dragging = { x: event.clientX - nodes[index].x * scale, y: event.clientY - nodes[index].y * scale };
-        moved = false;
-        group.setPointerCapture(event.pointerId);
-      });
-      group.addEventListener("pointermove", (event: PointerEvent) => {
-        if (!dragging) return;
-        // A second finger turns the press into a pinch, and a system that
-        // follows one of the two fingers through a zoom is not what either hand
-        // meant. The drag is abandoned rather than paused: the gesture owns the
-        // canvas from here, and the node keeps where it had got to.
-        if (camera.gesturing()) {
-          dragging = null;
-          moved = true;
-          return;
-        }
-        const { scale } = camera.transform();
-        const x = (event.clientX - dragging.x) / scale;
-        const y = (event.clientY - dragging.y) / scale;
-        if (Math.hypot(x - nodes[index].x, y - nodes[index].y) * scale > CLICK_SLOP) moved = true;
-        nodes[index].x = nodes[index].fx = x;
-        nodes[index].y = nodes[index].fy = y;
-        place(index);
-      });
-      const release = (): void => {
-        dragging = null;
-      };
-      group.addEventListener("pointerup", release);
-      group.addEventListener("pointercancel", release);
-      group.addEventListener("click", (event: MouseEvent) => {
-        event.stopPropagation();
-        if (!moved) onSelect("node", index);
-      });
-    });
+    // Dragging a system, and telling a drag from a click: `draggableNodes`,
+    // shared with the ligand network. What is this view's is `place`, which
+    // rewrites only the edges incident on the node that moved.
+    draggableNodes(nodeGroups, nodes, camera, { moved: place, clicked: (index) => onSelect("node", index) });
 
     // Framed rather than left at the identity transform: the force layout puts
     // a twenty-system network well outside an eight-hundred-pixel box, and an

@@ -1,17 +1,58 @@
 /**
  * The controls a reader operates: buttons, a switcher, a dropdown, a toggle.
  *
- * Split out of `dom.ts`. What they have in common, and the reason they are
- * together rather than one per view, is `Setting`: every one of them can be
- * handed a place to keep its choice, and then it both starts from what was
- * stored and writes back on every change. A view gets remembering for free
- * instead of doing it by hand and doing it slightly differently each time -
- * which is what four hand-written toggles in four views had already become.
+ * What they have in common, and the reason they are together rather than one per
+ * view, is `Setting`: every one of them can be handed a place to keep its
+ * choice, and then it both starts from what was stored and writes back on every
+ * change. A view gets remembering for free rather than doing it by hand, and
+ * doing it slightly differently each time.
  */
 
 import { el, onWidth } from "./dom.js";
 import type { Setting } from "./settings.js";
-import { BUTTON, SELECT, SPACE } from "./style.js";
+import { BUTTON, PICK, SELECT, SPACE } from "./style.js";
+
+/**
+ * A button, styled and classed.
+ *
+ * The class is what carries hover and the pressed state, from the stylesheet in
+ * `theme.ts`. Every button in the codebase comes through here so that none of
+ * them can be the one that forgot, and so that "what does a button look like
+ * when you hover it" is a rule rather than four pairs of pointer handlers.
+ */
+export function button(extra = "", label?: string): HTMLButtonElement {
+  const node = el("button", BUTTON.base + extra, label);
+  node.className = BUTTON.className;
+  node.type = "button";
+  return node;
+}
+
+/**
+ * Mark a button as on or off.
+ *
+ * `aria-pressed` rather than a background: it is the accessible fact, the
+ * stylesheet paints from it, and the two therefore cannot drift apart. Anything
+ * that is a disclosure rather than a toggle uses `aria-expanded`, which the same
+ * rule covers.
+ */
+export function setPressed(node: HTMLElement, on: boolean): void {
+  node.setAttribute("aria-pressed", String(on));
+}
+
+/**
+ * The same, for anything else whose picked state is `aria-pressed`: a card, a
+ * row of a network menu, a chip that selects what it counts.
+ *
+ * `className` says which stylesheet rule paints it - `PICK.className` for a card
+ * or a row, `CHIP.className` for a chip - and defaults to the first.
+ */
+export function pickable(css: string, className: string = PICK.className): HTMLButtonElement {
+  const node = el("button", css);
+  node.className = className;
+  node.type = "button";
+  node.setAttribute("aria-pressed", "false");
+  return node;
+}
 
 export interface ButtonGroupItem {
   id: string;
@@ -49,14 +90,8 @@ export function buttonGroup(
   // in another, and a row that cannot wrap puts its last button off the edge.
   const group = el("div", "display:flex;flex-wrap:wrap;gap:4px;min-width:0;") as ButtonGroup;
   const buttons = items.map((item) => {
-    const btn = el("button", BUTTON.base, item.label);
+    const btn = button("", item.label);
     btn.title = item.title || item.label;
-    btn.onmouseover = () => {
-      btn.style.background = BUTTON.bgHover;
-    };
-    btn.onmouseout = () => {
-      btn.style.background = active === item.id ? BUTTON.bgActive : BUTTON.bg;
-    };
     btn.onclick = () => {
       group.setActive(item.id);
       remember?.set(item.id);
@@ -67,9 +102,7 @@ export function buttonGroup(
   });
   group.setActive = (id: string) => {
     active = id;
-    buttons.forEach((b) => {
-      b.btn.style.background = b.id === active ? BUTTON.bgActive : BUTTON.bg;
-    });
+    for (const b of buttons) setPressed(b.btn, b.id === active);
   };
   group.setActive(active);
   return group;
@@ -190,9 +223,8 @@ export interface DropdownItem {
 /**
  * A dropdown, with the same remembering as `buttonGroup`.
  *
- * Views built these by hand, four times, each slightly different. One helper
- * means one place to restyle them and one place that knows how a choice is
- * stored.
+ * One helper, so there is one place to restyle a dropdown and one place that
+ * knows how a choice is stored.
  */
 export function dropdown(
   items: readonly DropdownItem[],
@@ -224,8 +256,8 @@ export function dropdown(
 /**
  * An on/off button that shows its state, and remembers it if asked.
  *
- * The views had four of these written out longhand - spin, waters, hetero,
- * lines - each repeating the same three lines of background juggling.
+ * Spin, waters, hetero, lines: four toggles across the views, one definition of
+ * what a toggle is and how its state is said.
  */
 export function toggleButton(
   label: string,
@@ -234,20 +266,14 @@ export function toggleButton(
   options: { title?: string; remember?: Setting<boolean> } = {},
 ): HTMLButtonElement {
   let on = options.remember ? options.remember.get() : initial;
-  const button = el("button", BUTTON.base, label);
-  button.title = options.title || label;
-  button.setAttribute("aria-pressed", String(on));
-
-  const paint = () => {
-    button.style.background = on ? BUTTON.bgActive : BUTTON.bg;
-    button.setAttribute("aria-pressed", String(on));
-  };
-  button.onclick = () => {
+  const node = button("", label);
+  node.title = options.title || label;
+  setPressed(node, on);
+  node.onclick = () => {
     on = !on;
-    paint();
+    setPressed(node, on);
     options.remember?.set(on);
     onChange(on);
   };
-  paint();
-  return button;
+  return node;
 }

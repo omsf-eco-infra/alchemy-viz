@@ -23,7 +23,7 @@ import { withDebugFlag } from "../shared/debug.js";
 import { errText } from "../shared/dom.js";
 import { MAPPING_COLORS } from "../shared/atom-colors.js";
 import { depictGround, setDarkDepictions } from "../shared/depict-theme.js";
-import { T } from "../shared/theme.js";
+import { V } from "../shared/theme.js";
 
 /** gufe's drawings, if they have been generated. */
 const REFERENCE = import.meta.glob<string>("../../../do-not-commit/parity-reference/*.svg", {
@@ -39,14 +39,14 @@ const STAGE_HEIGHT = "620px";
 function panel(title: string, note: string): { wrap: HTMLElement; body: HTMLElement } {
   const wrap = document.createElement("section");
   wrap.style.cssText =
-    `flex:1 1 50%;min-width:0;border:1px solid ${T.cardBorder};border-radius:10px;overflow:hidden;` +
-    `background:${T.cardBg};display:flex;flex-direction:column;`;
+    `flex:1 1 50%;min-width:0;border:1px solid ${V.cardBorder};border-radius:10px;overflow:hidden;` +
+    `background:${V.cardBg};display:flex;flex-direction:column;`;
 
   const bar = document.createElement("div");
   bar.style.cssText =
     "display:flex;align-items:baseline;gap:10px;padding:8px 14px;font:12px ui-sans-serif,system-ui,sans-serif;" +
-    `background:${T.panelBg};border-bottom:1px solid ${T.cardBorder};color:${T.textMuted};`;
-  bar.innerHTML = `<b style="color:${T.textPrimary};">${title}</b><span>${note}</span>`;
+    `background:${V.panelBg};border-bottom:1px solid ${V.cardBorder};color:${V.textMuted};`;
+  bar.innerHTML = `<b style="color:${V.textPrimary};">${title}</b><span>${note}</span>`;
   wrap.appendChild(bar);
 
   const body = document.createElement("div");
@@ -63,11 +63,11 @@ export async function buildParity(host: HTMLElement): Promise<void> {
 
   const header = document.createElement("header");
   header.style.cssText =
-    "padding:16px 20px 4px;font:13px/1.6 ui-sans-serif,system-ui,sans-serif;" + `color:${T.textMuted};`;
+    "padding:16px 20px 4px;font:13px/1.6 ui-sans-serif,system-ui,sans-serif;" + `color:${V.textMuted};`;
   header.innerHTML =
-    `<h1 style="margin:0 0 4px;font-size:18px;color:${T.titleColor};">mapping parity</h1>` +
+    `<h1 style="margin:0 0 4px;font-size:18px;color:${V.titleColor};">mapping parity</h1>` +
     "<div>Ours on the left, gufe's own drawing on the right, same mapping. " +
-    `<a href="${withDebugFlag("./gallery.html")}" style="color:${T.titleColor};">back to the gallery -&gt;</a></div>` +
+    `<a href="${withDebugFlag("./gallery.html")}" style="color:${V.titleColor};">back to the gallery -&gt;</a></div>` +
     "<div style=\"margin-top:8px;\">What has to match, and what to look at:</div>" +
     "<ul style=\"margin:4px 0 0;padding-left:20px;\">" +
     `<li><b style="color:${MAPPING_COLORS.elementChange};">${MAPPING_COLORS.elementChange}</b> ` +
@@ -116,12 +116,12 @@ export async function buildParity(host: HTMLElement): Promise<void> {
   const pair = reference.find(([path]) => path.endsWith("mapping_0_pair.svg"));
 
   if (!pair) {
-    theirs.body.style.color = T.textMuted2;
+    theirs.body.style.color = V.textMuted2;
     theirs.body.style.fontFamily = "ui-sans-serif,system-ui,sans-serif";
     theirs.body.innerHTML =
       "<div style=\"text-align:center;padding:24px;font-size:13px;line-height:1.7;\">" +
       "gufe's drawings have not been generated yet.<br />" +
-      `<code style="color:${T.textPrimary};">pixi run parity-reference</code><br />` +
+      `<code style="color:${V.textPrimary};">pixi run parity-reference</code><br />` +
       "<span style=\"font-size:11px;\">Not committed on purpose: the bytes depend on the installed RDKit.</span>" +
       "</div>";
     return;

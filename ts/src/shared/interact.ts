@@ -26,8 +26,8 @@
  * the guard; the 3D views want both.
  */
 
+import { button } from "./controls.js";
 import { el } from "./dom.js";
-import { BUTTON } from "./style.js";
 import type { ThreeDmolViewer } from "./engines.js";
 
 /** What every helper here hands back so a view can release it. */
@@ -297,9 +297,9 @@ export function viewerInteraction(
 
 /** The standard reset-view button. Views place it; this decides what it looks like. */
 export function resetControl(onReset: () => void, label = "Reset view"): HTMLButtonElement {
-  const button = el("button", BUTTON.base, "Reset");
-  button.title = label;
-  button.setAttribute("aria-label", label);
-  button.onclick = onReset;
-  return button;
+  const node = button("", "Reset");
+  node.title = label;
+  node.setAttribute("aria-label", label);
+  node.onclick = onReset;
+  return node;
 }

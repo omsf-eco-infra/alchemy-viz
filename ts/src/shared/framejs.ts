@@ -17,9 +17,9 @@
  * It is the only thing in this codebase that knows framejs exists at runtime.
  * It reaches a menu as that menu's `extras` callback rather than by `chromeMenu`
  * importing this file, so the arrow points one way: this file knows about the
- * DOM vocabulary, and the DOM vocabulary knows nothing about uploading. The
- * other direction used to exist as well, which made the two a value cycle that
- * happened to work only because nothing here reads an import at module scope.
+ * DOM vocabulary, and the DOM vocabulary knows nothing about uploading. Pointed
+ * the other way as well, the two would be a value cycle - live only because
+ * nothing here reads an import at module scope.
  *
  * Deleting it is `rm` plus `grep framejsMenuItem`: the three views that carry a
  * menu each name it once.
@@ -75,12 +75,13 @@
  * it and claims it with a free account.
  */
 
+import { button } from "./controls.js";
 import { el } from "./dom.js";
 import { MENU_OPEN_SUFFIX } from "./chrome.js";
 import { VIEW_STATE_GLOBAL } from "./element.js";
 import { PREFIX, settingsDump } from "./settings.js";
-import { BUTTON, FONT, SPACE } from "./style.js";
-import { T } from "./theme.js";
+import { FONT, SPACE } from "./style.js";
+import { V } from "./theme.js";
 
 /** The accounts layer, which is what mints a shareable `/j/<uuid>`. */
 const FRAMEJS_ORIGIN = "https://framejs.app";
@@ -381,28 +382,25 @@ export function framejsMenuItem(panel: HTMLElement): void {
   const box = el(
     "div",
     `display:flex;flex-direction:column;gap:${SPACE.md};padding-top:${SPACE.lg};` +
-      `border-top:1px solid ${T.splitBorder};`,
+      `border-top:1px solid ${V.splitBorder};`,
   );
 
-  const button = el(
-    "button",
-    `${BUTTON.base}width:100%;display:inline-flex;align-items:center;justify-content:center;gap:${SPACE.md};`,
-  );
-  button.appendChild(framejsIcon());
-  button.appendChild(el("span", "", "Share to the web"));
-  button.title = "Upload this view as a framejs app and open it in a new tab";
-  box.appendChild(button);
+  const share = button(`width:100%;display:inline-flex;align-items:center;justify-content:center;gap:${SPACE.md};`);
+  share.appendChild(framejsIcon());
+  share.appendChild(el("span", "", "Share to the web"));
+  share.title = "Upload this view as a framejs app and open it in a new tab";
+  box.appendChild(share);
 
-  const status = el("div", `font-size:${FONT.tiny};line-height:1.5;color:${T.textMuted2};overflow-wrap:anywhere;`);
+  const status = el("div", `font-size:${FONT.tiny};line-height:1.5;color:${V.textMuted2};overflow-wrap:anywhere;`);
   box.appendChild(status);
 
   const say = (text: string, isError = false): void => {
     status.replaceChildren(text);
-    status.style.color = isError ? T.errorFg : T.textMuted2;
+    status.style.color = isError ? V.errorFg : V.textMuted2;
   };
 
   const showLink = (url: string, note: string): void => {
-    const link = el("a", `color:${T.textPrimary};`, url) as HTMLAnchorElement;
+    const link = el("a", `color:${V.textPrimary};`, url) as HTMLAnchorElement;
     link.href = url;
     link.target = "_blank";
     link.rel = "noreferrer";
@@ -411,10 +409,10 @@ export function framejsMenuItem(panel: HTMLElement): void {
     // here rather than before the click, because it is only true of a frame
     // that now exists.
     if (note) status.appendChild(el("div", `padding-top:${SPACE.sm};`, note));
-    status.style.color = T.textMuted2;
+    status.style.color = V.textMuted2;
   };
 
-  button.onclick = () => {
+  share.onclick = () => {
     const view = nearestView(panel);
     if (!view || view.payload == null) {
       say("Could not find the payload for this view.", true);
@@ -439,10 +437,10 @@ export function framejsMenuItem(panel: HTMLElement): void {
     const title = String(named.type || "gufe-viz");
     const description = `${title}. Shared from alchemy-viz`;
     const done = (): void => {
-      button.disabled = false;
+      share.disabled = false;
     };
 
-    button.disabled = true;
+    share.disabled = true;
     say("Uploading...");
     findBundle()
       .then((bundle) => {
@@ -473,7 +471,7 @@ export function framejsMenuItem(panel: HTMLElement): void {
   box.appendChild(
     el(
       "div",
-      `font-size:${FONT.tiny};line-height:1.5;color:${T.textMuted2};`,
+      `font-size:${FONT.tiny};line-height:1.5;color:${V.textMuted2};`,
       "Uploads the page to framejs.app. Unclaimed frames expire.",
     ),
   );

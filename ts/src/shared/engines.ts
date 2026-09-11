@@ -68,8 +68,21 @@ export interface ThreeDmolViewer {
   clear(): void;
 }
 
+/**
+ * What a viewer is opened with.
+ *
+ * Spelled out rather than left as `object`, which is what it was: a `config` of
+ * `object` accepts anything at all, so handing 3Dmol a *function* where its
+ * background colour belongs typechecked cleanly and turned every 3D pane's
+ * ground into whatever `String(fn)` renders as.
+ */
+export interface ViewerConfig {
+  /** `0x`-prefixed, which is the one colour form 3Dmol takes. */
+  backgroundColor?: string;
+}
+
 export interface ThreeDmolModule {
-  createViewer(element: HTMLElement, config: object): ThreeDmolViewer;
+  createViewer(element: HTMLElement, config: ViewerConfig): ThreeDmolViewer;
   SurfaceType: { VDW: unknown };
 }
 
@@ -230,9 +243,7 @@ export function loadRDKit(): Promise<RDKitModule> {
  *
  * For a view that draws something either way. The two network views fall back to
  * initials in a node when there is no RDKit, which is a coarser picture rather
- * than no picture, so a rejected promise is the wrong shape for them: they each
- * used to wrap `loadRDKit` in their own `catch`, and each memoised the result a
- * second time even though the loader above already does.
+ * than no picture, so a rejected promise is the wrong shape for them.
  *
  * A view with nothing to draw without RDKit - `small-molecule`, `atom-mapping` -
  * deliberately does not use this. It wants the error, because it has a panel to
@@ -266,6 +277,29 @@ export function loadD3(): Promise<unknown> {
     d3Promise = preseeded<unknown>("d3") ?? import(/* @vite-ignore */ url);
   }
   return d3Promise;
+}
+
+/**
+ * Stop a viewer and let go of its WebGL context.
+ *
+ * Both calls are wrapped because both can throw at teardown and neither failure
+ * is worth propagating: `spin` is missing on 3Dmol v1, and `clear` throws on a
+ * viewer whose context the browser has already taken back. A teardown that
+ * throws is a teardown that stops halfway, which is how a page ends up holding
+ * contexts nothing can release.
+ */
+export function releaseViewer(viewer: ThreeDmolViewer | null): void {
+  if (!viewer) return;
+  try {
+    viewer.spin(false);
+  } catch {
+    /* 3Dmol v1 quirk */
+  }
+  try {
+    viewer.clear();
+  } catch {
+    /* already gone */
+  }
 }
 
 /** Test hook: forget every memoised loader so a fresh mock can be seeded. */

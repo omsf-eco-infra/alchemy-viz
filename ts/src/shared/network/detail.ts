@@ -39,17 +39,6 @@ export function levelUnder<T extends ZoomLevel>(levels: readonly T[], level: T):
 }
 
 /**
- * How far outside the viewport a structure is still built, in screen pixels.
- *
- * Structures are the expensive part of either canvas - an RDKit call and an SVG
- * subtree each - so they are built only for what is on screen. Built to the
- * viewport exactly, a pan would tear: the node entering from the edge has no
- * depiction until the frame after it is already visible. This is the band that
- * is kept ready.
- */
-export const CULL_MARGIN = 200;
-
-/**
  * How far what a filter, a search or a selection left out is faded, rather than
  * removed.
  *

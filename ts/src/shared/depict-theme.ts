@@ -34,18 +34,25 @@
 
 import type { ElementColors } from "./depict-style.js";
 import { DARK_ATOM_PALETTE, DARK_DRAW_OPTIONS, DARK_MONO_PALETTE, MAPPING_BW_PALETTE } from "./atom-colors.js";
-import { IS_DARK, THEMES } from "./theme.js";
+import { isDark, THEMES } from "./theme.js";
 
-let dark = IS_DARK;
+/**
+ * The override, when there is one. Null means "follow the page".
+ *
+ * Asked each time rather than captured at load, so that a depiction drawn after
+ * `setTheme` is drawn for the theme now in force rather than the one this module
+ * happened to be imported under.
+ */
+let forced: boolean | null = null;
 
 /** Whether depictions are currently drawn for a dark ground. */
 export function darkDepictions(): boolean {
-  return dark;
+  return forced ?? isDark();
 }
 
 /** Override the switch. See the note above: dev pages and tests, nothing else. */
 export function setDarkDepictions(on: boolean): void {
-  dark = on;
+  forced = on;
 }
 
 /**
@@ -56,7 +63,7 @@ export function setDarkDepictions(on: boolean): void {
  * it on whatever the page theme is, and the other way round.
  */
 export function depictGround(): string {
-  return (dark ? THEMES.dark : THEMES.light).canvas2DBg;
+  return THEMES[darkDepictions() ? "dark" : "light"].canvas2DBg;
 }
 
 /**
@@ -65,11 +72,11 @@ export function depictGround(): string {
  * cover the styled disc and whatever edge passes beneath.
  */
 export function nodeCardGround(): string {
-  return (dark ? THEMES.dark : THEMES.light).netDepictBg;
+  return THEMES[darkDepictions() ? "dark" : "light"].netDepictBg;
 }
 
 export function nodeCardCaption(): string {
-  return (dark ? THEMES.dark : THEMES.light).netDepictCaption;
+  return THEMES[darkDepictions() ? "dark" : "light"].netDepictCaption;
 }
 
 /**
@@ -81,7 +88,7 @@ export function nodeCardCaption(): string {
  * always drawn, which is why light `cpk` is empty rather than explicit.
  */
 export function depictThemeOptions(elementColors: ElementColors): Record<string, unknown> {
-  if (!dark) return elementColors === "mono" ? { atomColourPalette: MAPPING_BW_PALETTE } : {};
+  if (!darkDepictions()) return elementColors === "mono" ? { atomColourPalette: MAPPING_BW_PALETTE } : {};
   return {
     ...DARK_DRAW_OPTIONS,
     atomColourPalette: elementColors === "mono" ? DARK_MONO_PALETTE : DARK_ATOM_PALETTE,

@@ -16,7 +16,7 @@
 
 import { el, errText } from "./dom.js";
 import { centredMessage } from "./panels.js";
-import { T } from "./theme.js";
+import { installTheme, V } from "./theme.js";
 
 /**
  * What a view hands back so the element can drive it afterwards.
@@ -118,6 +118,11 @@ export abstract class GufeElement<P> extends HTMLElement {
   }
 
   connectedCallback(): void {
+    // The palette, once per document. Here rather than at module scope because
+    // it writes to `document.head`, and the bundle is evaluated in places that
+    // have no document yet; every view goes through this, so no host has to know
+    // the stylesheet exists.
+    installTheme();
     // A flex column rather than a block, so the shell inside is an item this
     // element can shrink. That is what makes the ceiling below bite.
     this.style.display = "flex";
@@ -141,8 +146,8 @@ export abstract class GufeElement<P> extends HTMLElement {
     if (!ownHeight && !this.parentElement?.closest(`[${SHELL_ATTRIBUTE}]`) && this.#noMaxHeight()) {
       this.style.maxHeight = "100vh";
     }
-    this.style.background = T.appBg;
-    this.style.color = T.textPrimary;
+    this.style.background = V.appBg;
+    this.style.color = V.textPrimary;
     this.style.fontFamily = "'Inter',system-ui,sans-serif";
 
     // A host can resize the element without any event firing, so watch it.
@@ -200,7 +205,7 @@ export abstract class GufeElement<P> extends HTMLElement {
       // `flex:1;min-height:0` and not height alone: inside a host clamped by the
       // ceiling above, the shell has to be shrinkable or it overflows it.
       `width:100%;height:100%;flex:1 1 auto;min-height:0;display:flex;flex-direction:column;` +
-        `overflow:hidden;background:${T.appBg};`,
+        `overflow:hidden;background:${V.appBg};`,
     );
     // What tells a nested view that its parent has a height already. See the
     // ceiling in `connectedCallback`.

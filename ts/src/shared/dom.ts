@@ -4,11 +4,9 @@
  * No framework, no virtual DOM: elements are created once and mutated in place,
  * which is what keeps the create/update/destroy lifecycle honest.
  *
- * This file used to be all of `dom.ts`, 880 lines of it, holding four unrelated
- * things at once: this vocabulary, the controls a reader operates, the pieces a
- * view is assembled from, and the machinery that arranges them. They are now
- * `controls.ts`, `panels.ts` and `chrome.ts`, and this is what all three are
- * built out of. Nothing here knows what a view looks like.
+ * `controls.ts`, `panels.ts` and `chrome.ts` are built out of this, and nothing
+ * here knows what a view looks like: this is the vocabulary, they are the
+ * sentences.
  */
 
 export function el<K extends keyof HTMLElementTagNameMap>(
@@ -22,11 +20,23 @@ export function el<K extends keyof HTMLElementTagNameMap>(
   return n;
 }
 
+/**
+ * `s` as HTML text, safe in an attribute as well as in a body.
+ *
+ * The quotes are escaped, which they were not. Every call site today
+ * interpolates into a body, where they do not matter - but the call sites are
+ * lines of `innerHTML` with a `style="..."` in them a few characters away, so
+ * the distance between "correct" and "a payload name closes an attribute" is one
+ * edit nobody would think twice about. Escaping four characters instead of three
+ * costs nothing and removes the question.
+ */
 export function esc(s: unknown): string {
   return String(s == null ? "" : s)
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
 
 /**
@@ -90,4 +100,47 @@ export function onWidth(host: HTMLElement, apply: (width: number) => void): () =
   const observer = new ResizeObserver(() => apply(host.clientWidth));
   observer.observe(host);
   return () => observer.disconnect();
+}
+
+/**
+ * How narrow a pane has to be before a column beside a picture becomes a band
+ * above it.
+ *
+ * One number for the three places that ask - the chemical system's component
+ * strip, the transformation's diff, and the controls panel of a 3D scene -
+ * because they are all answering the same question about the same kind of pane,
+ * and three copies of it would drift into three different ideas of "narrow" in
+ * views a reader clicks between.
+ *
+ * What it is measured against is `MENU_PANEL_WIDTH`: below the panel's own floor
+ * plus a picture, a column opened beside the picture leaves nothing to open it
+ * against. Stacked, the two share the height instead.
+ */
+export const STACK_BELOW = 460;
+
+/**
+ * Call `arrange` when `host` becomes narrow, and again when it stops being.
+ *
+ * The latch is the point. All three callers watch a width, compare it against
+ * one threshold, and then rewrite half a dozen styles - and all three have to
+ * not do that on every observed pixel, because on the far side of two of them is
+ * a 3D viewer that resizes its canvas. Each had its own `let stacked` and its
+ * own early return.
+ *
+ * A host that lays nothing out measures 0 and counts as wide, which is the
+ * arrangement every desktop reader sees. The first call is synchronous, so a
+ * caller needs no separate set-up pass.
+ */
+export function onNarrow(
+  host: HTMLElement,
+  arrange: (narrow: boolean) => void,
+  below: number = STACK_BELOW,
+): () => void {
+  let narrow: boolean | null = null;
+  return onWidth(host, (width) => {
+    const next = width > 0 && width < below;
+    if (next === narrow) return;
+    narrow = next;
+    arrange(next);
+  });
 }

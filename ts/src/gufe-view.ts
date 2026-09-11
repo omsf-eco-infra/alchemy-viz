@@ -30,7 +30,7 @@ import {
   GufeElement,
   type ViewHandle,
 } from "./shared/element.js";
-import { T } from "./shared/theme.js";
+import { V } from "./shared/theme.js";
 import { formatIssues, validatePayload } from "./schema/validate.js";
 import type { PayloadType } from "./schema/types.js";
 
@@ -68,7 +68,12 @@ export interface DispatchProblem {
   detail?: string;
 }
 
-function describeProblem(payload: unknown): DispatchProblem | null {
+/**
+ * Why `payload` cannot be drawn, or null when it can.
+ *
+ * Exported for the dispatch test, which is the only caller outside this file.
+ */
+export function describeProblem(payload: unknown): DispatchProblem | null {
   if (
     payload == null ||
     typeof payload !== "object" ||
@@ -109,11 +114,6 @@ function noVisualization(type: string): DispatchProblem {
   return {
     message: `Sorry, there is no visualization for ${type} yet. This build can draw: ${known}.`,
   };
-}
-
-/** Back-compat shim for callers that only want the sentence. */
-export function dispatchProblem(payload: unknown): string | null {
-  return describeProblem(payload)?.message ?? null;
 }
 
 export class GufeView extends GufeElement<unknown> {
@@ -176,8 +176,8 @@ function unsupportedPanel(
       "max-width:640px;padding:8px 12px;border-radius:6px;font-size:11px;white-space:pre-wrap;" +
         "font-family:ui-monospace,SFMono-Regular,Menlo,monospace;overflow-wrap:anywhere;" +
         (isError
-          ? `background:${T.warnBg};color:${T.warnFg};border:1px solid ${T.warnBorder};`
-          : `background:${T.panelBg};color:${T.textMuted2};border:1px solid ${T.cardBorder};`),
+          ? `background:${V.warnBg};color:${V.warnFg};border:1px solid ${V.warnBorder};`
+          : `background:${V.panelBg};color:${V.textMuted2};border:1px solid ${V.cardBorder};`),
       text,
     );
 

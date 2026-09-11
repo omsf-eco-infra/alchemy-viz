@@ -15,7 +15,7 @@
  * nobody can draw never stops the rest of the system from drawing.
  */
 
-import { el, onWidth } from "../shared/dom.js";
+import { el, onNarrow } from "../shared/dom.js";
 import { centredMessage, floatingWarning, HIDE_NAME_ATTRIBUTE, typeBadge } from "../shared/panels.js";
 import {
   defineElement,
@@ -23,8 +23,9 @@ import {
   type ViewHandle,
 } from "../shared/element.js";
 import { text } from "../shared/settings.js";
-import { FONT, SELECTABLE, WEIGHT } from "../shared/style.js";
-import { T } from "../shared/theme.js";
+import { pickable } from "../shared/controls.js";
+import { FONT, PICK, WEIGHT } from "../shared/style.js";
+import { V } from "../shared/theme.js";
 import {
   buildRegistry,
   entriesFor,
@@ -66,7 +67,7 @@ export function systemPayloadFor(
  * handful of labels as each other. So a reader who opened the protein of one
  * system and then clicked the next system, or an edge and then a system, is
  * asking for that one's protein - not for whichever component its dictionary
- * happens to sort first, which is what they used to get, once per selection.
+ * happens to sort first.
  *
  * That is the distinction `shared/settings.ts` draws when it says a selection
  * is not a preference: what is stored here is not which component but which
@@ -74,17 +75,6 @@ export function systemPayloadFor(
  * to the first, so the pane is never left empty by a label from somewhere else.
  */
 const OPEN_LABEL = "chemical-system.component";
-
-/**
- * The width below which the strip stops being a column beside the drawing and
- * becomes a band of buttons above it.
- *
- * This view is mounted in places that are nothing like a page: the detail pane
- * of an alchemical network is a few hundred pixels wide, and a fixed column in
- * one of those leaves the picture a slit. Below this the strip goes above,
- * where it costs height it can share rather than width there is none of.
- */
-const STACK_BELOW = 460;
 
 /** How wide the strip is where there is room for it beside the drawing. */
 const STRIP_WIDTH = 200;
@@ -127,7 +117,7 @@ function systemTitle(name: string): HTMLDivElement {
   return el(
     "div",
     `padding:10px 10px 16px;font-weight:${WEIGHT.bold};font-size:${FONT.title};` +
-      `color:${T.titleColor};letter-spacing:.02em;line-height:1.3;` +
+      `color:${V.titleColor};letter-spacing:.02em;line-height:1.3;` +
       "overflow-wrap:anywhere;flex-shrink:0;",
     name,
   );
@@ -198,7 +188,7 @@ export class GufeChemicalSystem extends GufeElement<ChemicalSystemViz> {
     const aside = el(
       "div",
       "min-width:0;min-height:0;display:flex;flex-direction:column;" +
-        `background:${T.panelBg};`,
+        `background:${V.panelBg};`,
     );
     split.appendChild(aside);
     aside.appendChild(systemTitle(name));
@@ -331,11 +321,9 @@ export class GufeChemicalSystem extends GufeElement<ChemicalSystemViz> {
 
     const buttons: HTMLButtonElement[] = [];
     const select = (index: number): void => {
-      buttons.forEach((button, i) => {
-        const active = i === index;
-        button.style.background = active ? SELECTABLE.bgActive : SELECTABLE.bg;
-        button.style.borderColor = active ? SELECTABLE.borderActive : SELECTABLE.border;
-      });
+      // Which one is open is `aria-pressed`, and the stylesheet paints from it.
+      // See `PICK`.
+      buttons.forEach((button, i) => button.setAttribute("aria-pressed", String(i === index)));
       panes[index].point();
       mount(panes[index].element);
     };
@@ -356,23 +344,20 @@ export class GufeChemicalSystem extends GufeElement<ChemicalSystemViz> {
     };
 
     panes.forEach((pane, index) => {
-      // `SELECTABLE` is the card. What is overridden here is what this strip
+      // `PICK.card` is the card. What is overridden here is what this strip
       // needs of it: the card fills the list it is in, and this list is a column
       // only while there is room for one. Below `STACK_BELOW` it is a wrapping
       // row, where `width:100%` would give every button its own line and there
       // would be no band left to wrap. `width:auto` is the column's own stretch
       // in one orientation and the button's content width in the other.
-      const button = el(
-        "button",
-        `${SELECTABLE.base}width:auto;flex-shrink:0;max-width:100%;box-sizing:border-box;`,
-      );
+      const button = pickable(`${PICK.card}width:auto;flex-shrink:0;max-width:100%;box-sizing:border-box;`);
       button.appendChild(
-        el("span", `font-weight:700;color:${T.textPrimary};`, pane.title),
+        el("span", `font-weight:700;color:${V.textPrimary};`, pane.title),
       );
       button.appendChild(
         el(
           "span",
-          `font-size:${FONT.small};color:${T.textMuted};`,
+          `font-size:${FONT.small};color:${V.textMuted};`,
           pane.subtitle,
         ),
       );
@@ -390,16 +375,17 @@ export class GufeChemicalSystem extends GufeElement<ChemicalSystemViz> {
     // wrapping buttons above it when there is not. The strip is what gives,
     // because it is the half that still reads at any width: a picture in a slit
     // is not a smaller picture, it is no picture.
-    let stacked: boolean | null = null;
-    const stopWatching = onWidth(split, (width) => {
-      const narrow = width > 0 && width < STACK_BELOW;
-      if (narrow === stacked) return;
-      stacked = narrow;
+    // This view is mounted in places that are nothing like a page: the detail
+    // pane of an alchemical network is a few hundred pixels wide, and a fixed
+    // column in one of those leaves the picture a slit. The strip is what gives,
+    // because it is the half that still reads at any width: a picture in a slit
+    // is not a smaller picture, it is no picture.
+    const stopWatching = onNarrow(split, (narrow) => {
       split.style.flexDirection = narrow ? "column" : "row";
       aside.style.flex = narrow ? "0 0 auto" : `0 0 ${STRIP_WIDTH}px`;
       aside.style.maxHeight = narrow ? STRIP_MAX_HEIGHT : "none";
-      aside.style.borderRight = narrow ? "none" : `1px solid ${T.splitBorder}`;
-      aside.style.borderBottom = narrow ? `1px solid ${T.splitBorder}` : "none";
+      aside.style.borderRight = narrow ? "none" : `1px solid ${V.splitBorder}`;
+      aside.style.borderBottom = narrow ? `1px solid ${V.splitBorder}` : "none";
       list.style.flexDirection = narrow ? "row" : "column";
       list.style.flexWrap = narrow ? "wrap" : "nowrap";
       // What is mounted was drawn to the old shape, and a 3D viewer sizes its

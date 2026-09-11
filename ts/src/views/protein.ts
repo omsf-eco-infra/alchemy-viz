@@ -79,7 +79,7 @@ export class GufeProtein extends GufeElement<PdbPayload> {
     scene.showStatus("Loading 3D viewer...");
     load3Dmol()
       .then(() => {
-        const viewer = ThreeDmol!.createViewer(scene.pane.container, { backgroundColor: SURFACE.viewer });
+        const viewer = ThreeDmol!.createViewer(scene.pane.container, { backgroundColor: SURFACE.viewer() });
         scene.setViewer(viewer);
         viewer.addModel(pdb, "pdb");
         // applyProteinStyles clears the "Loading..." status (or replaces it with

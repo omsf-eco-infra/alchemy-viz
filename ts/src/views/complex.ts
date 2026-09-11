@@ -215,7 +215,7 @@ export class GufeComplex extends GufeElement<ChemicalSystemViz> {
     scene.showStatus("Loading 3D viewer...");
     load3Dmol()
       .then(() => {
-        const viewer = ThreeDmol!.createViewer(scene.pane.container, { backgroundColor: SURFACE.viewer });
+        const viewer = ThreeDmol!.createViewer(scene.pane.container, { backgroundColor: SURFACE.viewer() });
         scene.setViewer(viewer);
         // Structures first, then ligands: this is what `proteinModels` and
         // `ligandModels` above are indices into.

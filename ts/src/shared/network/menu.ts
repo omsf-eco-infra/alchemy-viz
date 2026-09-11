@@ -4,19 +4,17 @@
  *
  * ## Why it is one function
  *
- * The two views wrote this out twice, ~200 lines each, and the copies agreed on
- * everything except four things: what a row looks like, what narrows the list,
- * what the things in it are called, and one extra control. Everything else - the
- * order the controls sit in, that the search writes to a `Setting`, that the
- * count line says "n of m", that the list is `MENU_LIST` so it is the part that
- * gives when the panel is short, that the hint sits under the list rather than
- * over it, that a plain click replaces the selection and a modifier-click adds
- * to it, that the export note is cleared whenever the selection moves - was
- * duplicated, and drifted: the ligand list ended up rebuilding the same row
- * markup with a different variable name for the same condition.
+ * A ligand network's menu and an alchemical network's differ in four things:
+ * what a row looks like, what narrows the list, what the things in it are
+ * called, and one extra control. Those are `spec`.
  *
- * So the skeleton is here and the four differences are `spec`. A view now says
- * what its menu *is* rather than how to build one.
+ * Everything else is the same for both and is here - the order the controls sit
+ * in, that the search writes to a `Setting`, that the count line says "n of m",
+ * that the list is `MENU_LIST` so it is the part that gives when the panel is
+ * short, that the hint sits under the list rather than over it, that a plain
+ * click replaces the selection and a modifier-click adds to it, that the export
+ * note is cleared whenever the selection moves. A view says what its menu *is*
+ * rather than how to build one.
  *
  * ## Lazily built
  *
@@ -33,9 +31,10 @@
  * different one would restore nonsense.
  */
 
+import { button, pickable } from "../controls.js";
 import { el } from "../dom.js";
-import { BUTTON, FONT, INPUT, MENU_LIST, MENU_PANEL, SPACE } from "../style.js";
-import { T } from "../theme.js";
+import { FONT, INPUT, MENU_LIST, MENU_PANEL, PICK, SPACE } from "../style.js";
+import { V } from "../theme.js";
 import { text as textSetting } from "../settings.js";
 import { smartsBox, type MatchOutcome, type MatchSummary } from "../smarts.js";
 import {
@@ -114,11 +113,6 @@ export interface NetworkMenuSpec<N extends SelectableNode> {
   mounted?(rerender: () => void): void;
 }
 
-/** The compact, pickable row the list is made of. Not `SELECTABLE`, which is a card. */
-const ROW_CSS =
-  `display:flex;align-items:center;gap:${SPACE.md};padding:5px ${SPACE.lg};` +
-  `border-radius:${SPACE.md};text-align:left;font-family:inherit;font-size:${FONT.small};` +
-  `cursor:pointer;width:100%;min-width:0;color:${T.textPrimary};`;
 
 export function networkMenu<N extends SelectableNode>(spec: NetworkMenuSpec<N>): HTMLDivElement {
   const querySetting = textSetting(`${spec.namespace}.query`);
@@ -138,7 +132,7 @@ export function networkMenu<N extends SelectableNode>(spec: NetworkMenuSpec<N>):
 
   for (const control of spec.filters?.(() => render()) ?? []) panel.appendChild(control);
 
-  const count = el("div", `font-size:${FONT.small};color:${T.textMuted2};`);
+  const count = el("div", `font-size:${FONT.small};color:${V.textMuted2};`);
   panel.appendChild(count);
 
   const list = el("div", MENU_LIST);
@@ -149,7 +143,7 @@ export function networkMenu<N extends SelectableNode>(spec: NetworkMenuSpec<N>):
   // the selection, so without knowing this a reader can never have two nodes
   // selected - and the edge export, which needs both ends of one, could never
   // copy anything at all.
-  panel.appendChild(el("div", `font-size:${FONT.tiny};line-height:1.5;color:${T.textMuted2};`, MULTI_SELECT_HINT));
+  panel.appendChild(el("div", `font-size:${FONT.tiny};line-height:1.5;color:${V.textMuted2};`, MULTI_SELECT_HINT));
 
   const exporter = exportBlock({
     nodes: spec.nodes,
@@ -160,7 +154,7 @@ export function networkMenu<N extends SelectableNode>(spec: NetworkMenuSpec<N>):
   });
   panel.appendChild(exporter.box);
 
-  const clear = el("button", `${BUTTON.base}width:100%;`, "Clear selection");
+  const clear = button("width:100%;", "Clear selection");
   clear.onclick = () => {
     spec.selected.clear();
     render();
@@ -182,12 +176,10 @@ export function networkMenu<N extends SelectableNode>(spec: NetworkMenuSpec<N>):
 
     for (const { node, index } of shown) {
       const key = node["gufe-key"];
-      const picked = spec.selected.has(key);
-      const row = el(
-        "button",
-        `${ROW_CSS}border:1px solid ${picked ? T.cardBorderActive : T.cardBorder};` +
-          `background:${picked ? T.cardBgActive : T.cardBg};`,
-      );
+      const row = pickable(PICK.row);
+      // Picked is `aria-pressed`: both what the stylesheet paints from and what
+      // a screen reader is told, so the two cannot drift apart. See `PICK`.
+      row.setAttribute("aria-pressed", String(spec.selected.has(key)));
 
       const parts = spec.row(node, index);
       if (parts.before) row.appendChild(parts.before);
@@ -216,7 +208,7 @@ export function networkMenu<N extends SelectableNode>(spec: NetworkMenuSpec<N>):
     }
 
     if (!shown.length) {
-      list.appendChild(el("div", `font-size:${FONT.small};padding:${SPACE.lg};color:${T.textMuted2};`, "Nothing matches."));
+      list.appendChild(el("div", `font-size:${FONT.small};padding:${SPACE.lg};color:${V.textMuted2};`, "Nothing matches."));
     }
   }
 

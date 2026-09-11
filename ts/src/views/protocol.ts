@@ -16,7 +16,7 @@ import { el } from "../shared/dom.js";
 import { card, fieldRow, headerStrip, typeBadge } from "../shared/panels.js";
 import { defineElement, GufeElement, type ViewHandle } from "../shared/element.js";
 import { FONT } from "../shared/style.js";
-import { T } from "../shared/theme.js";
+import { V } from "../shared/theme.js";
 import type { ProtocolViz } from "../schema/types.js";
 
 export class GufeProtocol extends GufeElement<ProtocolViz> {
@@ -44,7 +44,7 @@ export class GufeProtocol extends GufeElement<ProtocolViz> {
     panel.appendChild(
       el(
         "div",
-        `padding-top:10px;font-size:${FONT.small};line-height:1.6;color:${T.textMuted2};`,
+        `padding-top:10px;font-size:${FONT.small};line-height:1.6;color:${V.textMuted2};`,
         "A Protocol's settings are not carried in this payload: they are large, " +
           "deeply nested, and nothing draws them yet.",
       ),

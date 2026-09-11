@@ -12,7 +12,7 @@
 import "../index.js";
 import { mount } from "./mount.js";
 import { errText } from "../shared/dom.js";
-import { T } from "../shared/theme.js";
+import { V } from "../shared/theme.js";
 
 const DROP_HINT = "Drop a payload JSON anywhere on this page";
 
@@ -26,7 +26,7 @@ export function installDropzone(host: HTMLElement): void {
     "position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:1000;cursor:pointer;" +
     "padding:6px 14px;border-radius:999px;font:12px/1.4 ui-sans-serif,system-ui,sans-serif;" +
     "transition:opacity .25s ease;" +
-    `background:${T.toolbarBg};color:${T.textMuted};border:1px solid ${T.toolbarBorder};`;
+    `background:${V.toolbarBg};color:${V.textMuted};border:1px solid ${V.toolbarBorder};`;
   banner.textContent = DROP_HINT;
   banner.title = "Click to dismiss";
   document.body.appendChild(banner);
@@ -54,8 +54,8 @@ export function installDropzone(host: HTMLElement): void {
   const say = (text: string, isError = false): void => {
     if (hideTimer) clearTimeout(hideTimer);
     banner.textContent = text;
-    banner.style.color = isError ? T.warnFg : T.textMuted;
-    banner.style.background = isError ? T.warnBg : T.toolbarBg;
+    banner.style.color = isError ? V.warnFg : V.textMuted;
+    banner.style.background = isError ? V.warnBg : V.toolbarBg;
     banner.style.opacity = "1";
     banner.style.pointerEvents = "auto";
     hideTimer = isError ? null : setTimeout(hide, BANNER_MS);
@@ -64,7 +64,7 @@ export function installDropzone(host: HTMLElement): void {
   const overlay = document.createElement("div");
   overlay.style.cssText =
     "position:fixed;inset:0;z-index:999;display:none;pointer-events:none;" +
-    `background:${T.cardBgActive};opacity:.25;`;
+    `background:${V.cardBgActive};opacity:.25;`;
   document.body.appendChild(overlay);
 
   // `dragenter`/`dragleave` fire per child element, so count depth rather than

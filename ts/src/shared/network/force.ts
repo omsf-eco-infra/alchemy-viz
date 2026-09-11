@@ -3,18 +3,15 @@
  *
  * ## What is shared and what is not
  *
- * The two network views used to each carry their own copy of this, with a note
- * on one of them saying sharing was impossible because "the two configure
- * different forces at different scales, and a shared wrapper would have to be
- * parameterized by everything that differs, which is all of it."
+ * The two views configure different forces at different scales, so the *forces*
+ * cannot be shared: `spec.forces` is where that difference lives, and it stays
+ * with the view that knows what its nodes are shaped like.
  *
- * That is true of the *forces* and false of everything around them. What the two
- * copies had identical, to the line, was: the typings for a module that ships
- * none we can rely on; the guard that turns an unreachable d3 into `false`
- * rather than a throw; the tick count derived from d3's own alpha schedule; and
- * the decision to run the simulation to completion and draw once. So that is
- * what lives here, and the force set stays in the view that knows what its nodes
- * are shaped like - `spec.forces` is where "all of it" still differs.
+ * Everything around the forces is the same for both, and is here: the typings
+ * for a module that ships none we can rely on; the guard that turns an
+ * unreachable d3 into `false` rather than a throw; the tick count derived from
+ * d3's own alpha schedule; and the decision to run the simulation to completion
+ * and draw once.
  *
  * ## Why the typings are generic
  *

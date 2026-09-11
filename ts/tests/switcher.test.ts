@@ -100,11 +100,15 @@ describe("the switcher", () => {
     select.onchange!(new Event("change"));
     expect(setting.get()).toBe("b");
 
-    // And a switcher built next opens on it, in both forms.
+    // And a switcher built next opens on it, in both forms. Which button is on
+    // is `aria-pressed`, which is what the stylesheet paints from and what a
+    // screen reader is told - this used to compare two inline backgrounds, and
+    // so asserted the styling rather than the state.
     const again = switcher(ITEMS, "a", () => {}, { remember: setting });
     expect(again.querySelector("select")!.value).toBe("b");
-    expect(again.buttons.querySelectorAll("button")[1].style.background).not.toBe(
-      again.buttons.querySelectorAll("button")[0].style.background,
+    const pressed = Array.from(again.buttons.querySelectorAll("button")).map((b) =>
+      b.getAttribute("aria-pressed"),
     );
+    expect(pressed).toEqual(["false", "true", "false"]);
   });
 });

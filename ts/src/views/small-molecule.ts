@@ -30,14 +30,14 @@ import { switcher, toggleButton } from "../shared/controls.js";
 import { centredMessage, nameWanted, viewerHost } from "../shared/panels.js";
 import { defineElement, GufeElement, type ViewHandle } from "../shared/element.js";
 import { choice, flag } from "../shared/settings.js";
-import { load3Dmol, loadRDKit, ThreeDmol, type ThreeDmolViewer } from "../shared/engines.js";
+import { load3Dmol, loadRDKit, releaseViewer, ThreeDmol, type ThreeDmolViewer } from "../shared/engines.js";
 import { viewerInteraction, type BoundedZoom, type Interaction } from "../shared/interact.js";
 import { rememberLigandPose, restoreLigandPose } from "../shared/ligand-camera.js";
 import { DEPICT_STYLE } from "../shared/depict-style.js";
 import { depictSVG, ensureSDFTerminator, parseCounts, placeDepiction } from "../shared/sdf.js";
 import { depictGround, depictThemeOptions } from "../shared/depict-theme.js";
 import { FONT, OVERLAY_CONTROLS, PANE_LABEL_OVERLAY, SPACE, SURFACE } from "../shared/style.js";
-import { T } from "../shared/theme.js";
+import { V } from "../shared/theme.js";
 import type { SmallMoleculeComponentViz } from "../schema/types.js";
 
 const MODES = [
@@ -93,7 +93,7 @@ export class GufeSmallMolecule extends GufeElement<SmallMoleculeComponentViz> {
 
     const infoPane = el(
       "div",
-      `${PANE}overflow:auto;padding:16px 20px;background:${T.panelBg};color:${T.textPrimary};` +
+      `${PANE}overflow:auto;padding:16px 20px;background:${V.panelBg};color:${V.textPrimary};` +
         `font-size:${FONT.body};`,
     );
     stage.appendChild(infoPane);
@@ -113,13 +113,13 @@ export class GufeSmallMolecule extends GufeElement<SmallMoleculeComponentViz> {
         el(
           "div",
           `font-size:${FONT.tiny};font-weight:700;letter-spacing:.08em;text-transform:uppercase;white-space:nowrap;` +
-            `color:${T.textMuted2};`,
+            `color:${V.textMuted2};`,
           label,
         ),
       );
       const cell = el(
         "div",
-        `user-select:text;cursor:text;overflow-wrap:anywhere;color:${T.textPrimary}` +
+        `user-select:text;cursor:text;overflow-wrap:anywhere;color:${V.textPrimary}` +
           (mono ? `;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:${FONT.small};` : ""),
         value,
       );
@@ -242,7 +242,7 @@ export class GufeSmallMolecule extends GufeElement<SmallMoleculeComponentViz> {
     load3Dmol()
       .then(() => {
         host3D.container.replaceChildren();
-        viewer = ThreeDmol!.createViewer(host3D.container, { backgroundColor: SURFACE.viewer });
+        viewer = ThreeDmol!.createViewer(host3D.container, { backgroundColor: SURFACE.viewer() });
         viewer.addModel(ensureSDFTerminator(sdf), "sdf");
         viewer.setStyle({}, SMALL_MOL_SPECS[is3D(mode) ? mode : "stick"]);
         viewer.zoomTo();
@@ -274,17 +274,7 @@ export class GufeSmallMolecule extends GufeElement<SmallMoleculeComponentViz> {
         rememberLigandPose(viewer, interaction);
         interaction?.cleanup();
         interaction = null;
-        if (!viewer) return;
-        try {
-          viewer.spin(false);
-        } catch {
-          /* 3Dmol v1 quirk */
-        }
-        try {
-          viewer.clear();
-        } catch {
-          /* already gone */
-        }
+        releaseViewer(viewer);
         viewer = null;
       },
     };

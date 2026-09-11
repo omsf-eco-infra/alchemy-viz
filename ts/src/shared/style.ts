@@ -18,7 +18,7 @@
  * on.
  */
 
-import { T } from "./theme.js";
+import { T, V } from "./theme.js";
 
 // --- tokens ----------------------------------------------------------------
 //
@@ -73,24 +73,31 @@ export const RADIUS = {
 
 /** Text colours, by what the text is for. */
 export const TEXT = {
-  title: T.titleColor,
-  primary: T.textPrimary,
-  muted: T.textMuted,
-  faint: T.textMuted2,
-  error: T.errorFg,
-  onLabel: T.labelFg,
+  title: V.titleColor,
+  primary: V.textPrimary,
+  muted: V.textMuted,
+  faint: V.textMuted2,
+  error: V.errorFg,
+  onLabel: V.labelFg,
 } as const;
 
 /** Surfaces, for anything that needs one directly. */
 export const SURFACE = {
-  app: T.appBg,
-  panel: T.panelBg,
-  card: T.cardBg,
-  toolbar: T.toolbarBg,
-  border: T.toolbarBorder,
-  split: T.splitBorder,
-  /** Where a 3D engine draws. Interface, not chemistry: it is the paper. */
-  viewer: T.viewerBg,
+  app: V.appBg,
+  panel: V.panelBg,
+  card: V.cardBg,
+  toolbar: V.toolbarBg,
+  border: V.toolbarBorder,
+  split: V.splitBorder,
+  /**
+   * Where a 3D engine draws. Interface, not chemistry: it is the paper.
+   *
+   * The one literal here, and a function so it is read when a viewer is built
+   * rather than when this module loads. 3Dmol wants `0x2b2b40`, which is not a
+   * colour CSS has ever heard of, so this is the one surface a custom property
+   * cannot carry.
+   */
+  viewer: (): string => T.viewerBg,
 } as const;
 
 // The 2D depiction ground is deliberately absent. It has to be decided with the
@@ -99,25 +106,35 @@ export const SURFACE = {
 
 // --- controls --------------------------------------------------------------
 
-/** A button, in its three states. `buttonGroup` and the menu toggle use these. */
+/**
+ * A button.
+ *
+ * `base` deliberately sets no `background`. The three states - resting, hover,
+ * and on - are a stylesheet rule keyed off `BUTTON.className` and the button's
+ * own `aria-pressed` / `aria-expanded`, which is why they are not here: an
+ * inline background would beat the rule, and every button would be back to
+ * carrying a pair of pointer handlers to do what `:hover` does.
+ *
+ * Use `button()` in `controls.ts` rather than this directly; it is what puts the
+ * class on.
+ */
 export const BUTTON = {
   // `max-width` and `box-sizing` are what keep a button inside whatever holds
   // it. A label wider than the menu column would otherwise run out over the
   // picture, and `width:100%` on a padded, bordered button means 100% plus the
   // padding and the border - twenty pixels past the edge of the panel.
   base:
-    `background:${T.btnBg};color:${T.btnFg};border:1px solid ${T.btnBorder};` +
+    `color:${V.btnFg};border:1px solid ${V.btnBorder};` +
     `padding:${SPACE.sm} 9px;font-size:${FONT.small};font-weight:${WEIGHT.bold};` +
     `border-radius:${RADIUS.sm};cursor:pointer;font-family:inherit;` +
     "max-width:100%;box-sizing:border-box;",
-  bg: T.btnBg,
-  bgHover: T.btnBgHover,
-  bgActive: T.btnBgActive,
+  /** What the stylesheet in `theme.ts` paints. */
+  className: "gufe-btn",
 } as const;
 
 /** A dropdown. */
 export const SELECT =
-  `background:${T.selectBg};color:${T.textPrimary};border:1px solid ${T.selectBorder};` +
+  `background:${V.selectBg};color:${V.textPrimary};border:1px solid ${V.selectBorder};` +
   `border-radius:${RADIUS.md};padding:${SPACE.sm} ${SPACE.lg};font-size:${FONT.body};` +
   "cursor:pointer;font-family:inherit;";
 
@@ -148,7 +165,7 @@ export const HEADER_LINE = "24px";
  */
 export const HEADER =
   `display:flex;align-items:flex-start;gap:12px;padding:9px ${SPACE.xxl};flex-shrink:0;` +
-  `line-height:${HEADER_LINE};background:${T.toolbarBg};border-bottom:1px solid ${T.toolbarBorder};`;
+  `line-height:${HEADER_LINE};background:${V.toolbarBg};border-bottom:1px solid ${V.toolbarBorder};`;
 
 /** How wide the menu is allowed to be when it is a column beside the panes. */
 export const MENU_PANEL_WIDTH = { min: "236px", max: "340px" };
@@ -186,8 +203,8 @@ export const MENU_VAR = {
 export const MENU_PANEL =
   `display:flex;flex-direction:column;gap:${SPACE.lg};flex:1;` +
   `min-width:var(${MENU_VAR.min},${MENU_PANEL_WIDTH.min});max-width:var(${MENU_VAR.max},${MENU_PANEL_WIDTH.max});` +
-  `box-sizing:border-box;padding:${SPACE.xl};min-height:0;overflow-y:auto;background:${T.panelBg};` +
-  `border:0 solid ${T.splitBorder};` +
+  `box-sizing:border-box;padding:${SPACE.xl};min-height:0;overflow-y:auto;background:${V.panelBg};` +
+  `border:0 solid ${V.splitBorder};` +
   `border-right-width:var(${MENU_VAR.ruleX},1px);border-bottom-width:var(${MENU_VAR.ruleY},0);`;
 
 /** The most of a stacked view the menu may take, leaving the rest to the panes. */
@@ -215,17 +232,17 @@ export const MENU_LIST = "flex:1 1 auto;min-height:84px;overflow:auto;display:fl
 export const TOOLBAR = {
   top:
     `display:flex;align-items:center;gap:${SPACE.xl};flex-wrap:wrap;padding:${SPACE.lg} ${SPACE.xxl};` +
-    `flex-shrink:0;font-size:${FONT.body};background:${T.toolbarBg};` +
-    `border-bottom:1px solid ${T.toolbarBorder};color:${T.textPrimary};`,
+    `flex-shrink:0;font-size:${FONT.body};background:${V.toolbarBg};` +
+    `border-bottom:1px solid ${V.toolbarBorder};color:${V.textPrimary};`,
   bottom:
     `display:flex;align-items:center;gap:${SPACE.xl};flex-wrap:wrap;padding:${SPACE.lg} ${SPACE.xxl};` +
-    `flex-shrink:0;background:${T.toolbarBg};border-top:1px solid ${T.toolbarBorder};`,
+    `flex-shrink:0;background:${V.toolbarBg};border-top:1px solid ${V.toolbarBorder};`,
 } as const;
 
 /** The bar naming a pane: "3D", "2D", a molecule's name. */
 export const PANE_LABEL =
   `flex-shrink:0;padding:${SPACE.sm} ${SPACE.xl};font-size:${FONT.heading};` +
-  `font-weight:${WEIGHT.bold};color:${T.labelFg};background:${T.labelBg};`;
+  `font-weight:${WEIGHT.bold};color:${V.labelFg};background:${V.labelBg};`;
 
 /**
  * The same name, floating over the top left of a pane rather than in a bar
@@ -241,7 +258,7 @@ export const PANE_LABEL_OVERLAY =
   `position:absolute;top:${SPACE.md};left:${SPACE.md};z-index:10;pointer-events:none;` +
   `max-width:calc(100% - ${SPACE.xxl} - ${SPACE.xxl});white-space:nowrap;overflow:hidden;` +
   `text-overflow:ellipsis;padding:${SPACE.xs} ${SPACE.lg};border-radius:${RADIUS.md};` +
-  `font-size:${FONT.heading};font-weight:${WEIGHT.bold};color:${T.labelFg};background:${T.labelBg};`;
+  `font-size:${FONT.heading};font-weight:${WEIGHT.bold};color:${V.labelFg};background:${V.labelBg};`;
 
 /**
  * The pill a floating name or readout is drawn in.
@@ -251,7 +268,7 @@ export const PANE_LABEL_OVERLAY =
  */
 export const PANE_CHIP =
   `padding:${SPACE.xs} ${SPACE.lg};border-radius:${RADIUS.md};white-space:nowrap;overflow:hidden;` +
-  `text-overflow:ellipsis;color:${T.labelFg};background:${T.labelBg};`;
+  `text-overflow:ellipsis;color:${V.labelFg};background:${V.labelBg};`;
 
 /**
  * The chrome of a 3D pane, floating over its top left: the menu button, and
@@ -275,43 +292,52 @@ export const PANE_CHROME_CLEARANCE = "42px";
 /** A bordered box: the standard container for anything that is not a viewer. */
 export const CARD =
   `display:flex;flex-direction:column;gap:${SPACE.xs};padding:${SPACE.xxl} 18px;` +
-  `border-radius:${RADIUS.xl};background:${T.cardBg};border:1px solid ${T.cardBorder};`;
+  `border-radius:${RADIUS.xl};background:${V.cardBg};border:1px solid ${V.cardBorder};`;
 
-/** A card that can be picked, as in a list of components or ligands. */
-export const SELECTABLE = {
-  base:
+/**
+ * A card or a row that can be picked, as in a list of components or ligands.
+ *
+ * Like `BUTTON`, it sets neither `background` nor `border-color`: which of the
+ * two states it is in is `aria-pressed` on the element, and `PICK.className` is
+ * what the stylesheet paints from. One fact, read by the reader through a
+ * screen reader and by the eye through a colour, rather than two that can
+ * disagree.
+ */
+export const PICK = {
+  card:
     `display:flex;flex-direction:column;align-items:flex-start;gap:${SPACE.sm};` +
     `padding:${SPACE.lg} ${SPACE.xl};text-align:left;border-radius:${RADIUS.lg};` +
-    `border:1px solid ${T.cardBorder};background:${T.cardBg};cursor:pointer;` +
-    `font-family:inherit;font-size:${FONT.body};width:100%;`,
-  border: T.cardBorder,
-  borderActive: T.cardBorderActive,
-  bg: T.cardBg,
-  bgActive: T.cardBgActive,
+    `border:1px solid;cursor:pointer;font-family:inherit;font-size:${FONT.body};width:100%;`,
+  /** The compact form: one line in a network menu's list rather than a card. */
+  row:
+    `display:flex;align-items:center;gap:${SPACE.md};padding:5px ${SPACE.lg};` +
+    `border:1px solid;border-radius:${SPACE.md};text-align:left;font-family:inherit;` +
+    `font-size:${FONT.small};cursor:pointer;width:100%;min-width:0;color:${V.textPrimary};`,
+  className: "gufe-pick",
 } as const;
 
 /** A floating readout that follows the pointer. */
 export const TOOLTIP =
   `position:absolute;z-index:30;pointer-events:none;opacity:0;transition:opacity .12s ease;` +
   `padding:7px ${SPACE.xl};border-radius:${RADIUS.md};font-size:${FONT.small};line-height:1.5;` +
-  `max-width:260px;background:${T.tooltipBg};border:1px solid ${T.tooltipBorder};` +
-  `color:${T.textPrimary};box-shadow:0 4px 14px rgba(0,0,0,0.28);`;
+  `max-width:260px;background:${V.tooltipBg};border:1px solid ${V.tooltipBorder};` +
+  `color:${V.textPrimary};box-shadow:0 4px 14px rgba(0,0,0,0.28);`;
 
 /** The floating cluster of controls a 3D pane carries, bottom right. */
 export const OVERLAY_CONTROLS =
   `position:absolute;bottom:${SPACE.xl};right:${SPACE.xl};display:flex;gap:${SPACE.sm};` +
-  `padding:${SPACE.sm};border-radius:${RADIUS.md};z-index:10;background:${T.switcherBg};` +
+  `padding:${SPACE.sm};border-radius:${RADIUS.md};z-index:10;background:${V.switcherBg};` +
   "box-shadow:0 2px 8px rgba(0,0,0,0.25);";
 
 // --- text ------------------------------------------------------------------
 
 /** A block of monospaced detail: keys, correspondences, annotations. */
-export const MONO = `font-family:${FONT.mono};font-size:${FONT.small};line-height:1.7;color:${T.textMuted};`;
+export const MONO = `font-family:${FONT.mono};font-size:${FONT.small};line-height:1.7;color:${V.textMuted};`;
 
 /** A small uppercase heading over a list or a block. */
 export const SECTION_LABEL =
   `font-size:${FONT.small};font-weight:${WEIGHT.bold};letter-spacing:.08em;` +
-  `text-transform:uppercase;color:${T.textMuted2};`;
+  `text-transform:uppercase;color:${V.textMuted2};`;
 
 /**
  * A chip in a row of them, and the row itself.
@@ -326,16 +352,23 @@ export const CHIP = {
   plain:
     `display:inline-flex;align-items:center;padding:${SPACE.xs} ${SPACE.md};` +
     `border:1px solid transparent;border-radius:${RADIUS.pill};` +
-    `font-family:inherit;font-size:${FONT.small};color:${T.textMuted};`,
-  button: `cursor:pointer;background:none;border-color:${T.btnBorder};`,
+    `font-family:inherit;font-size:${FONT.small};color:${V.textMuted};`,
+  /**
+   * A chip that selects what it counts.
+   *
+   * Deliberately sets no `background`: like `BUTTON` and `PICK`, resting, hover
+   * and picked are one stylesheet rule keyed off `aria-pressed`, and an inline
+   * background would beat it. Pair it with `CHIP.className`.
+   */
+  button: `cursor:pointer;border-color:${V.btnBorder};`,
   /**
    * A chip that is read rather than clicked: a value the card is quoting, in a
    * box that says so. Drawn like a button and deliberately not one, so it does
    * not invite the click a `button` chip answers.
    */
-  outline: `background:${T.btnBg};border-color:${T.btnBorder};color:${T.textPrimary};`,
-  active: `cursor:pointer;background:${T.cardBgActive};border-color:${T.btnBorder};color:${T.textPrimary};`,
+  outline: `background:${V.btnBg};border-color:${V.btnBorder};color:${V.textPrimary};`,
+  className: "gufe-chip",
 } as const;
 
 /** A note under something, explaining or qualifying it. */
-export const NOTE = `font-size:${FONT.small};line-height:1.6;color:${T.textMuted2};`;
+export const NOTE = `font-size:${FONT.small};line-height:1.6;color:${V.textMuted2};`;

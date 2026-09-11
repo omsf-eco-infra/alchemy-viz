@@ -13,10 +13,10 @@
  */
 
 import { el } from "./dom.js";
-import { dropdown } from "./controls.js";
+import { button, dropdown } from "./controls.js";
 import { choice } from "./settings.js";
-import { BUTTON, FONT } from "./style.js";
-import { T } from "./theme.js";
+import { FONT } from "./style.js";
+import { V } from "./theme.js";
 import { entryLabel } from "../schema/registry.js";
 
 /** Whether a copied selection names things the way people do, or the way gufe does. */
@@ -125,8 +125,8 @@ export interface ExportBlockOptions<N extends SelectableNode> {
 /**
  * The copy-out block: what to copy it as, the two buttons, and what they did.
  *
- * The note is its own line because the alternative was what this used to do:
- * return on an empty selection and leave the button looking broken. Copying is
+ * The note is its own line because the alternative is to return on an empty
+ * selection and leave the button looking broken. Copying is
  * invisible by nature - the result is on a clipboard, somewhere else - so a
  * button here has nothing to show for itself either way unless it says so.
  *
@@ -141,7 +141,7 @@ export function exportBlock<N extends SelectableNode>(
   const exportAsSetting = choice<ExportAs>(options.setting, "names", ["names", "keys"]);
 
   const box = el("div", "display:flex;flex-direction:column;gap:6px;");
-  const asRow = el("div", `display:flex;align-items:center;gap:6px;font-size:${FONT.small};color:${T.textMuted};`);
+  const asRow = el("div", `display:flex;align-items:center;gap:6px;font-size:${FONT.small};color:${V.textMuted};`);
   asRow.appendChild(el("span", "", "copy as"));
   const asPicker = dropdown(
     [
@@ -156,7 +156,7 @@ export function exportBlock<N extends SelectableNode>(
   asRow.appendChild(asPicker);
   box.appendChild(asRow);
 
-  const exportNote = el("div", `font-size:${FONT.tiny};line-height:1.5;color:${T.textMuted2};`);
+  const exportNote = el("div", `font-size:${FONT.tiny};line-height:1.5;color:${V.textMuted2};`);
   const note = (text: string): void => {
     exportNote.textContent = text;
   };
@@ -167,9 +167,9 @@ export function exportBlock<N extends SelectableNode>(
     ["edges", words.edges, `Copy the ${words.edges.plural} between the selected ${words.nodes.plural}, one pair per line`],
   ];
   for (const [what, word, title] of buttons) {
-    const button = el("button", `${BUTTON.base}flex:1;`, word.button);
-    button.title = title;
-    button.onclick = (event) => {
+    const copy = button("flex:1;", word.button);
+    copy.title = title;
+    copy.onclick = (event) => {
       const as = asPicker.value as ExportAs;
       const content = selectionText(options.nodes, options.edges, options.selected, what, as);
       if (!content) {
@@ -198,11 +198,11 @@ export function exportBlock<N extends SelectableNode>(
         );
       }
     };
-    row.appendChild(button);
+    row.appendChild(copy);
   }
   box.appendChild(row);
   box.appendChild(exportNote);
-  box.appendChild(el("div", `font-size:${FONT.tiny};color:${T.textMuted2};`, "Shift-click to save as a file instead."));
+  box.appendChild(el("div", `font-size:${FONT.tiny};color:${V.textMuted2};`, "Shift-click to save as a file instead."));
 
   return { box, clearNote: () => note("") };
 }

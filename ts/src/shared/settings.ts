@@ -186,6 +186,28 @@ export function text(key: string, fallback = ""): Setting<string> {
 // --- looking at the whole store --------------------------------------------
 
 /**
+ * Every stored setting, as the store holds it: prefixed key, unparsed value.
+ *
+ * The one place that knows how to walk the store, because there are two ways to
+ * walk it - a real `Storage` is indexed by position, the memory fallback is a
+ * `Map` - and both readers below want the same answer.
+ */
+function stored(): [string, string][] {
+  const backing = store();
+  const keys = backing
+    ? Array.from({ length: backing.length }, (_, i) => backing.key(i)).filter((k): k is string => typeof k === "string")
+    : Array.from(memory.keys());
+
+  const found: [string, string][] = [];
+  for (const key of keys) {
+    if (!key.startsWith(PREFIX)) continue;
+    const raw = backing ? backing.getItem(key) : (memory.get(key) ?? null);
+    if (raw !== null) found.push([key, raw]);
+  }
+  return found;
+}
+
+/**
  * Every setting currently stored, as plain values.
  *
  * The debugging half of why this exists: one call answers "what state was this
@@ -194,21 +216,12 @@ export function text(key: string, fallback = ""): Setting<string> {
  */
 export function settings(): Record<string, unknown> {
   const out: Record<string, unknown> = {};
-  const backing = store();
-  const keys = backing
-    ? Array.from({ length: backing.length }, (_, i) => backing.key(i)).filter(
-        (k): k is string => typeof k === "string",
-      )
-    : Array.from(memory.keys());
-
-  for (const full of keys) {
-    if (!full.startsWith(PREFIX)) continue;
-    const raw = backing ? backing.getItem(full) : (memory.get(full) ?? null);
-    if (raw === null) continue;
+  for (const [key, raw] of stored()) {
+    const name = key.slice(PREFIX.length);
     try {
-      out[full.slice(PREFIX.length)] = JSON.parse(raw);
+      out[name] = JSON.parse(raw);
     } catch {
-      out[full.slice(PREFIX.length)] = raw;
+      out[name] = raw;
     }
   }
   return out;
@@ -224,29 +237,16 @@ export function settings(): Record<string, unknown> {
  * is that those opinions are version-specific.
  */
 export function settingsDump(): Record<string, string> {
-  const out: Record<string, string> = {};
-  const backing = store();
-  const keys = backing
-    ? Array.from({ length: backing.length }, (_, i) => backing.key(i)).filter(
-        (k): k is string => typeof k === "string",
-      )
-    : Array.from(memory.keys());
-
-  for (const full of keys) {
-    if (!full.startsWith(PREFIX)) continue;
-    const raw = backing ? backing.getItem(full) : (memory.get(full) ?? null);
-    if (raw !== null) out[full] = raw;
-  }
-  return out;
+  return Object.fromEntries(stored());
 }
 
 /** Forget everything, putting every view back to how a new reader would find it. */
 export function resetSettings(): void {
   const backing = store();
   if (backing) {
-    for (const full of Object.keys(settings())) {
+    for (const [key] of stored()) {
       try {
-        backing.removeItem(PREFIX + full);
+        backing.removeItem(key);
       } catch {
         /* nothing to do about a store that will not delete */
       }

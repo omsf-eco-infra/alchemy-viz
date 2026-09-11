@@ -1,7 +1,7 @@
 /**
  * How a view is arranged: watching its width, dividing it, and the menu.
  *
- * Split out of `dom.ts`. These are the three things that answer "a view is as
+ * These are the three things that answer "a view is as
  * wide as whoever mounted it made it, and it does not know who that was": a
  * width watcher, because there is no window to ask; a splitter, because two
  * panes side by side in a phone-shaped box are two panes too narrow to read; and
@@ -9,11 +9,12 @@
  * toolbar.
  */
 
+import { button } from "./controls.js";
 import { el } from "./dom.js";
 import type { HeaderStrip } from "./panels.js";
 import type { Setting } from "./settings.js";
-import { BUTTON, MENU_PANEL_STACKED_SHARE, MENU_PANEL_WIDTH, MENU_VAR, SPACE } from "./style.js";
-import { T } from "./theme.js";
+import { MENU_PANEL_STACKED_SHARE, MENU_PANEL_WIDTH, MENU_VAR, SPACE } from "./style.js";
+import { V } from "./theme.js";
 
 /** How a `splitter` may be dragged, as fractions of the row it divides. */
 export interface SplitterOptions {
@@ -80,7 +81,7 @@ export function splitter(
   // axis the row is running, and `align-self:stretch` is across it.
   const handle = el(
     "div",
-    `flex:0 0 ${SPLITTER_WIDTH}px;align-self:stretch;touch-action:none;background:${T.splitBorder};`,
+    `flex:0 0 ${SPLITTER_WIDTH}px;align-self:stretch;touch-action:none;background:${V.splitBorder};`,
   );
   handle.setAttribute("role", "separator");
   handle.setAttribute("aria-label", "Resize the panes");
@@ -246,13 +247,11 @@ export interface ChromeMenuOptions {
    * Appended below whatever `build` returned, on the same first open.
    *
    * This is how the share button gets into every menu without this file knowing
-   * that framejs exists. It used to call `framejsMenuItem` directly, which made
-   * the generic DOM vocabulary depend on a feature that uploads to a third
-   * party - and, because `framejs.ts` needs `el` from here, a real
-   * import cycle: two modules each holding a value the other evaluates. It
-   * survived only because nothing in `framejs.ts` touched an import at module
-   * scope, so one `const` there would have turned it into a load-time crash in
-   * the shipped bundle.
+   * that framejs exists. Calling `framejsMenuItem` directly would make the
+   * generic DOM vocabulary depend on a feature that uploads to a third party,
+   * and - because `framejs.ts` needs `el` from here - would close an import
+   * cycle: two modules each holding a value the other evaluates, which is a
+   * load-time crash the moment either touches an import at module scope.
    *
    * Every view that carries a menu passes `extras: framejsMenuItem`. Three call
    * sites rather than one, which is the price of the arrow pointing the right
@@ -291,7 +290,7 @@ function openFreeEnergyIcon(): HTMLSpanElement {
 function hamburgerIcon(): HTMLSpanElement {
   const icon = el("span", `display:inline-flex;flex-direction:column;gap:${SPACE.xs};justify-content:center;`);
   for (let i = 0; i < 3; i++) {
-    icon.appendChild(el("span", `display:block;width:11px;height:1.5px;border-radius:1px;background:${T.btnFg};`));
+    icon.appendChild(el("span", `display:block;width:11px;height:1.5px;border-radius:1px;background:${V.btnFg};`));
   }
   return icon;
 }
@@ -346,9 +345,9 @@ export function chromeMenu(
    * the first toggle and the panel silently goes back to running off the bottom.
    */
   const panel = el("div", "flex-shrink:0;display:flex;flex-direction:column;min-height:0;");
-  const button = el("button", `${BUTTON.base}display:inline-flex;align-items:center;gap:${SPACE.md};padding:${SPACE.sm} ${SPACE.lg};`);
-  button.appendChild(MENU_ICON());
-  button.setAttribute("aria-label", options.label || "Toggle menu");
+  const toggle = button(`display:inline-flex;align-items:center;gap:${SPACE.md};padding:${SPACE.sm} ${SPACE.lg};`);
+  toggle.appendChild(MENU_ICON());
+  toggle.setAttribute("aria-label", options.label || "Toggle menu");
 
   const apply = (): void => {
     // Build once, on the first open, and never again. `replaceChildren` is
@@ -363,8 +362,9 @@ export function chromeMenu(
       options.extras?.(panel);
     }
     panel.style.display = open ? "flex" : "none";
-    button.style.background = open ? BUTTON.bgActive : BUTTON.bg;
-    button.setAttribute("aria-expanded", String(open));
+    // The stylesheet paints the open state from this, so saying it is the whole
+    // of saying it. See `BUTTON`.
+    toggle.setAttribute("aria-expanded", String(open));
   };
 
   const setOpen = (next: boolean): void => {
@@ -375,18 +375,12 @@ export function chromeMenu(
     options.onToggle?.(open);
   };
 
-  button.onclick = () => setOpen(!open);
-  button.onmouseover = () => {
-    button.style.background = open ? BUTTON.bgActive : BUTTON.bgHover;
-  };
-  button.onmouseout = () => {
-    button.style.background = open ? BUTTON.bgActive : BUTTON.bg;
-  };
+  toggle.onclick = () => setOpen(!open);
 
   const strip = "toggleEl" in into ? into : null;
   // Only now does the slot take any room: an empty one must not indent the title.
   if (strip) strip.toggleEl.style.marginRight = "2px";
-  (strip ? strip.toggleEl : into).appendChild(button);
+  (strip ? strip.toggleEl : into).appendChild(toggle);
   apply();
 
   return {

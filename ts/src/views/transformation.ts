@@ -30,12 +30,12 @@
  * anything, the same blocks become a band above the molecules instead.
  */
 
-import { el, NO_VALUE, onWidth } from "../shared/dom.js";
+import { el, NO_VALUE, onNarrow } from "../shared/dom.js";
 import { buttonGroup } from "../shared/controls.js";
 import { centredMessage, statChip, typeBadge } from "../shared/panels.js";
 import { defineElement, GufeElement, type ViewHandle } from "../shared/element.js";
 import { FONT, PANE_LABEL, RADIUS, SPACE, WEIGHT } from "../shared/style.js";
-import { T } from "../shared/theme.js";
+import { V } from "../shared/theme.js";
 import { buildRegistry, entriesFor, entryLabel, lookup, lookupOfType, type RegistryIndex } from "../schema/registry.js";
 import { mappingPayloadFor } from "./atom-mapping.js";
 import type {
@@ -48,16 +48,6 @@ import type {
 } from "../schema/types.js";
 
 export type DiffStatus = "unchanged" | "changed" | "added" | "removed";
-
-/**
- * The width below which the diff stops being a column beside the molecules and
- * becomes a band above them.
- *
- * Below this, taking a column's worth of width off the picture leaves it too
- * little to draw two molecules in, and the diff is the one of the two that
- * still reads at any width.
- */
-const STACK_BELOW = 460;
 
 /** How wide that column is, where there is room for one. */
 const STATES_WIDTH = 210;
@@ -98,10 +88,10 @@ export function transformationPayloadFor(
 }
 
 const STATUS_COLOR: Record<DiffStatus, string> = {
-  unchanged: T.diffUnchanged,
-  changed: T.diffChanged,
-  added: T.diffAdded,
-  removed: T.diffRemoved,
+  unchanged: V.diffUnchanged,
+  changed: V.diffChanged,
+  added: V.diffAdded,
+  removed: V.diffRemoved,
 };
 
 /**
@@ -154,13 +144,13 @@ function componentLine(
   const line = el(
     "div",
     `min-width:0;display:flex;align-items:baseline;gap:${SPACE.md};padding:5px ${SPACE.lg};` +
-      `border-radius:${RADIUS.md};background:${T.cardBg};border:1px solid ${T.cardBorder};`,
+      `border-radius:${RADIUS.md};background:${V.cardBg};border:1px solid ${V.cardBorder};`,
   );
   if (side) {
     line.appendChild(
       el(
         "span",
-        `flex:0 0 auto;font-size:${FONT.tiny};font-weight:${WEIGHT.bold};letter-spacing:.08em;color:${T.textMuted2};`,
+        `flex:0 0 auto;font-size:${FONT.tiny};font-weight:${WEIGHT.bold};letter-spacing:.08em;color:${V.textMuted2};`,
         side,
       ),
     );
@@ -169,13 +159,13 @@ function componentLine(
   if (!described) {
     line.style.background = "transparent";
     line.style.borderStyle = "dashed";
-    line.appendChild(el("span", `font-size:${FONT.body};color:${T.textMuted2};`, "absent"));
+    line.appendChild(el("span", `font-size:${FONT.body};color:${V.textMuted2};`, "absent"));
     return line;
   }
-  line.style.borderColor = status === "unchanged" ? T.cardBorder : STATUS_COLOR[status];
+  line.style.borderColor = status === "unchanged" ? V.cardBorder : STATUS_COLOR[status];
   const name = el(
     "span",
-    `min-width:0;font-size:${FONT.body};font-weight:600;color:${T.textPrimary};overflow-wrap:anywhere;`,
+    `min-width:0;font-size:${FONT.body};font-weight:600;color:${V.textPrimary};overflow-wrap:anywhere;`,
     described.name,
   );
   name.title = described.name;
@@ -205,7 +195,7 @@ function diffBlock(
   );
   const name = el(
     "span",
-    `min-width:0;font-size:${FONT.body};font-weight:${WEIGHT.bold};color:${T.textPrimary};overflow-wrap:anywhere;`,
+    `min-width:0;font-size:${FONT.body};font-weight:${WEIGHT.bold};color:${V.textPrimary};overflow-wrap:anywhere;`,
     label,
   );
   name.title = status;
@@ -239,7 +229,7 @@ function mappingLabelFor(mapping: { componentA: string; componentB: string }, re
 function transformationTitle(name: string): HTMLDivElement {
   return el(
     "div",
-    `font-weight:${WEIGHT.bold};font-size:${FONT.heading};color:${T.titleColor};` +
+    `font-weight:${WEIGHT.bold};font-size:${FONT.heading};color:${V.titleColor};` +
       `letter-spacing:.02em;line-height:1.35;overflow-wrap:anywhere;flex-shrink:0;`,
     name,
   );
@@ -253,9 +243,9 @@ function transformationTitle(name: string): HTMLDivElement {
  */
 function metaLine(label: string, value: string): HTMLDivElement {
   const row = el("div", `display:flex;align-items:baseline;gap:${SPACE.md};min-width:0;font-size:${FONT.small};`);
-  row.appendChild(el("span", `flex:0 0 auto;color:${T.textMuted};`, label));
+  row.appendChild(el("span", `flex:0 0 auto;color:${V.textMuted};`, label));
   row.appendChild(
-    el("span", `min-width:0;font-weight:${WEIGHT.bold};color:${T.textPrimary};overflow-wrap:anywhere;`, value),
+    el("span", `min-width:0;font-weight:${WEIGHT.bold};color:${V.textPrimary};overflow-wrap:anywhere;`, value),
   );
   return row;
 }
@@ -298,7 +288,7 @@ export class GufeTransformation extends GufeElement<TransformationViz> {
     const diff = el(
       "div",
       `min-width:0;min-height:0;overflow:auto;padding:12px 14px;display:flex;flex-direction:column;` +
-        `gap:12px;background:${T.panelBg};`,
+        `gap:12px;background:${V.panelBg};`,
     );
     body.appendChild(diff);
 
@@ -330,7 +320,7 @@ export class GufeTransformation extends GufeElement<TransformationViz> {
         el(
           "div",
           `min-width:0;font-size:${FONT.small};font-weight:${WEIGHT.bold};letter-spacing:.06em;` +
-            `text-transform:uppercase;color:${T.textMuted2};overflow-wrap:anywhere;`,
+            `text-transform:uppercase;color:${V.textMuted2};overflow-wrap:anywhere;`,
           `${side}${state.name ? ` - ${state.name}` : ""}`,
         ),
       );
@@ -360,7 +350,7 @@ export class GufeTransformation extends GufeElement<TransformationViz> {
       const legend = el(
         "div",
         `display:flex;flex-wrap:wrap;gap:${SPACE.lg} 12px;padding-top:${SPACE.sm};` +
-          `font-size:${FONT.small};color:${T.textMuted};`,
+          `font-size:${FONT.small};color:${V.textMuted};`,
       );
       for (const status of ["unchanged", "changed", "added", "removed"] as DiffStatus[]) {
         if (present.has(status)) legend.appendChild(statChip(status, "", STATUS_COLOR[status]));
@@ -378,17 +368,16 @@ export class GufeTransformation extends GufeElement<TransformationViz> {
 
     // A column beside the molecules while there is room for one, a band above
     // them when there is not.
-    let stacked: boolean | null = null;
-    const stopWatching = onWidth(host, (width) => {
-      const narrow = width > 0 && width < STACK_BELOW;
-      if (narrow === stacked) return;
-      stacked = narrow;
+    // Below the threshold, taking a column's worth of width off the picture
+    // leaves it too little to draw two molecules in, and the diff is the one of
+    // the two that still reads at any width.
+    const stopWatching = onNarrow(host, (narrow) => {
       body.style.flexDirection = narrow ? "column" : "row";
       diff.style.flex = narrow ? "0 0 auto" : `0 0 ${STATES_WIDTH}px`;
       diff.style.maxWidth = narrow ? "none" : STATES_MAX_SHARE;
       diff.style.maxHeight = narrow ? "45%" : "none";
-      diff.style.borderRight = narrow ? "none" : `1px solid ${T.splitBorder}`;
-      diff.style.borderBottom = narrow ? `1px solid ${T.splitBorder}` : "none";
+      diff.style.borderRight = narrow ? "none" : `1px solid ${V.splitBorder}`;
+      diff.style.borderBottom = narrow ? `1px solid ${V.splitBorder}` : "none";
       mappingLabel.style.display = narrow ? "block" : "none";
     });
 
@@ -419,7 +408,7 @@ export class GufeTransformation extends GufeElement<TransformationViz> {
       const picker = el(
         "div",
         `display:flex;align-items:center;gap:8px;padding:6px 10px;flex-shrink:0;font-size:${FONT.small};` +
-          `background:${T.toolbarBg};border-bottom:1px solid ${T.toolbarBorder};color:${T.textMuted};`,
+          `background:${V.toolbarBg};border-bottom:1px solid ${V.toolbarBorder};color:${V.textMuted};`,
       );
       picker.appendChild(
         buttonGroup(

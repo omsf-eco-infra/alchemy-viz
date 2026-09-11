@@ -7,22 +7,21 @@
  * representations, the same colour schemes, the same water and hetero toggles,
  * reading and writing the same stored settings, over the same statistics line.
  *
- * They used to say all of that twice, once per file, and the copies drifted -
- * one grew a collapsible menu and the other kept a toolbar, so the two panes of
- * one chemical system looked like two different programs. Anything a reader
- * touches now lives here, once; what differs between the two views is the
- * models they load and how they frame them, and that is all they are left to
- * say for themselves.
+ * Anything a reader touches lives here, once. Said twice the two drift - one
+ * grows a collapsible menu while the other keeps a toolbar - and then the two
+ * panes of one chemical system look like two different programs. What differs
+ * between the views is the models they load and how they frame them, and that is
+ * all they are left to say for themselves.
  */
 
-import { el, onWidth } from "./dom.js";
+import { el, onNarrow } from "./dom.js";
 import { buttonGroup, dropdown, toggleButton } from "./controls.js";
 import { nameWanted, viewerHost } from "./panels.js";
 import { chromeMenu, type ChromeMenu, MENU_OPEN_SUFFIX, orientMenuPanel } from "./chrome.js";
 import { framejsMenuItem } from "./framejs.js";
 import type { ViewHandle } from "./element.js";
 import { choice, flag, type Setting } from "./settings.js";
-import type { ThreeDmolViewer } from "./engines.js";
+import { releaseViewer, type ThreeDmolViewer } from "./engines.js";
 import { resetControl, type BoundedZoom, type Interaction } from "./interact.js";
 import type { ProteinColorScheme, ProteinOptions, ProteinRepresentation, StatusFn } from "./pdb.js";
 import {
@@ -33,7 +32,7 @@ import {
   PANE_CHROME_OVERLAY,
   WEIGHT,
 } from "./style.js";
-import { T } from "./theme.js";
+import { V } from "./theme.js";
 
 /** The representations both views offer, in the order both offer them. */
 const PROTEIN_REPS = [
@@ -50,16 +49,6 @@ const PROTEIN_COLOR_SCHEMES = [
   { id: "ss", label: "Secondary structure" },
   { id: "element", label: "Element" },
 ] as const;
-
-/**
- * The width below which the controls stop being a column beside the picture and
- * become a band above it.
- *
- * The panel has a floor of its own - see `MENU_PANEL_WIDTH` - and in a pane
- * narrower than that floor plus a picture, a panel opened beside the structure
- * leaves nothing to open it against. Stacked, the two share the height instead.
- */
-const STACK_BELOW = 460;
 
 /**
  * Where each structure was last being looked at, for the length of a sitting.
@@ -229,7 +218,7 @@ export function proteinScene(spec: ProteinSceneSpec): ProteinScene {
       el(
         "span",
         `font-size:${FONT.tiny};font-weight:${WEIGHT.bold};letter-spacing:.08em;text-transform:uppercase;` +
-        `color:${T.textMuted};`,
+        `color:${V.textMuted};`,
         label,
       ),
     );
@@ -240,7 +229,7 @@ export function proteinScene(spec: ProteinSceneSpec): ProteinScene {
   // Built here rather than in `buildControls`, because a view sets its counts
   // as soon as it has parsed a structure and the panel is not built until the
   // menu is first opened, which may be never.
-  const statsEl = el("div", `display:flex;flex-direction:column;gap:2px;font-size:${FONT.small};color:${T.textMuted};`);
+  const statsEl = el("div", `display:flex;flex-direction:column;gap:2px;font-size:${FONT.small};color:${V.textMuted};`);
   const statsSection = section({ label: "Contents", controls: [statsEl] });
   statsSection.style.display = "none";
 
@@ -342,11 +331,7 @@ export function proteinScene(spec: ProteinSceneSpec): ProteinScene {
   // when there is not. `orientMenuPanel` is what tells the panel which it is:
   // its width floor is what would otherwise squeeze the viewer to a slit in a
   // detail pane a few hundred pixels wide.
-  let stacked: boolean | null = null;
-  const stopWatching = onWidth(split, (width) => {
-    const narrow = width > 0 && width < STACK_BELOW;
-    if (narrow === stacked) return;
-    stacked = narrow;
+  const stopWatching = onNarrow(split, (narrow) => {
     split.style.flexDirection = narrow ? "column" : "row";
     orientMenuPanel(menu.panel, narrow);
     // 3Dmol sizes its canvas once, so a pane that changed shape is a picture
@@ -370,9 +355,9 @@ export function proteinScene(spec: ProteinSceneSpec): ProteinScene {
     statusEl.textContent = msg;
     statusEl.style.display = "block";
     const isError = kind === "error";
-    statusEl.style.background = isError ? T.warnBg : T.toolbarBg;
-    statusEl.style.color = isError ? T.warnFg : T.textMuted;
-    statusEl.style.border = `1px solid ${isError ? T.warnBorder : T.toolbarBorder}`;
+    statusEl.style.background = isError ? V.warnBg : V.toolbarBg;
+    statusEl.style.color = isError ? V.warnFg : V.textMuted;
+    statusEl.style.border = `1px solid ${isError ? V.warnBorder : V.toolbarBorder}`;
   };
 
   /**
@@ -427,17 +412,7 @@ export function proteinScene(spec: ProteinSceneSpec): ProteinScene {
         rememberCamera();
         interaction?.cleanup();
         interaction = null;
-        if (!viewer) return;
-        try {
-          viewer.spin(false);
-        } catch {
-          /* 3Dmol v1 quirk */
-        }
-        try {
-          viewer.clear();
-        } catch {
-          /* already gone */
-        }
+        releaseViewer(viewer);
         viewer = null;
       },
     },

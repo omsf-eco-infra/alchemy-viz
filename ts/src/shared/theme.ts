@@ -29,6 +29,27 @@
  *
  * 3Dmol wants `0x`-prefixed colour strings and CSS wants `#`-prefixed ones, so
  * both forms are carried deliberately rather than converted at each call site.
+ *
+ * ## Two ways out of here, and which to use
+ *
+ * `V` is the one to reach for: every colour as `var(--gufe-<key>)`, for anything
+ * that ends up in CSS. The values behind those names are written once into a
+ * stylesheet by `installTheme`, so which theme is in force is a fact about the
+ * document rather than a value baked into a few hundred strings, and `setTheme`
+ * can change it.
+ *
+ * `T` is the literal table, for the three kinds of caller that cannot take a
+ * `var()`:
+ *
+ *   engines       3Dmol wants `0x2b2b40`, and RDKit wants three integers
+ *   SVG attributes `<circle fill="...">` is an attribute, not a declaration, and
+ *                 attributes do not resolve custom properties
+ *   arithmetic    the score ramp interpolates between two colours
+ *
+ * `T` follows `setTheme` as well, so a view re-rendered after a switch draws in
+ * the new palette. It cannot follow it *without* a re-render, which is the whole
+ * difference between the two: the chrome changes under the reader, and the
+ * drawings change the next time they are drawn.
  */
 
 export interface Theme {
@@ -303,10 +324,8 @@ export const THEMES: { dark: Theme; light: Theme } = {
 };
 
 /**
- * The choice is made once at load from the host's colour-scheme preference,
- * falling back to light where `matchMedia` is unavailable (jsdom, older
- * embedders). Views read `T` when they build their DOM, so this is fixed for
- * the lifetime of the page; a live theme switch is a later concern.
+ * The host's own colour-scheme preference, falling back to light where
+ * `matchMedia` is unavailable (jsdom, older embedders).
  */
 function prefersDark(): boolean {
   try {
@@ -316,7 +335,143 @@ function prefersDark(): boolean {
   }
 }
 
-/** Which of the two is in force, for the few places that have to know. */
-export const IS_DARK: boolean = prefersDark();
+/** Which palette to use: either one by name, or whatever the host prefers. */
+export type ThemeChoice = "light" | "dark" | "system";
 
-export const T: Theme = IS_DARK ? THEMES.dark : THEMES.light;
+/**
+ * The attribute `setTheme` stamps on the document element.
+ *
+ * The stylesheet is written so that this attribute wins over the media query in
+ * both directions, which is what lets a page force light on a dark host.
+ */
+export const THEME_ATTRIBUTE = "data-gufe-theme";
+
+let choice: ThemeChoice = "system";
+
+/** Which of the two is actually in force. */
+export function currentTheme(): "light" | "dark" {
+  if (choice !== "system") return choice;
+  return prefersDark() ? "dark" : "light";
+}
+
+/** Which of the two is in force, for the few places that have to know. */
+export function isDark(): boolean {
+  return currentTheme() === "dark";
+}
+
+/**
+ * The palette in force, as literal colours.
+ *
+ * A `let` rather than a `const` on purpose: ESM exports are live bindings, so
+ * `setTheme` reassigning this is seen by every importer without anyone having to
+ * subscribe to anything. Read it inside a function rather than capturing it at
+ * module scope, or the capture is the one thing that will not follow a switch.
+ */
+export let T: Theme = THEMES[currentTheme()];
+
+// --- the stylesheet --------------------------------------------------------
+
+/** Every custom property this writes is named for its `Theme` key. */
+const VAR_PREFIX = "--gufe-";
+
+/**
+ * The keys that carry one CSS colour.
+ *
+ * `viewerBg` is excluded because it is `0x`-prefixed for 3Dmol and means nothing
+ * to CSS, and the array-valued keys because an indexed palette is not a colour.
+ * What is left is exactly the set `V` can offer, which is why the type is
+ * derived rather than listed.
+ */
+type ColorKey = Exclude<
+  { [K in keyof Theme]: Theme[K] extends string ? K : never }[keyof Theme],
+  "viewerBg"
+>;
+
+const COLOR_KEYS = (Object.keys(THEMES.light) as (keyof Theme)[]).filter(
+  (key): key is ColorKey => key !== "viewerBg" && typeof THEMES.light[key] === "string",
+);
+
+/** `var(--gufe-cardBg)` and the rest: what everything that writes CSS uses. */
+export const V = Object.fromEntries(COLOR_KEYS.map((key) => [key, `var(${VAR_PREFIX}${key})`])) as Record<
+  ColorKey,
+  string
+>;
+
+const declarations = (theme: Theme): string =>
+  COLOR_KEYS.map((key) => `${VAR_PREFIX}${key}:${theme[key]};`).join("");
+
+/**
+ * The whole stylesheet: the palette, and the handful of rules that are better
+ * said once in CSS than wired up per element in JavaScript.
+ *
+ * Light is the bare `:root` so that it is also the fallback for a host with no
+ * `prefers-color-scheme` at all. Dark arrives twice: under the media query,
+ * guarded so an explicit `light` beats the host, and under the explicit `dark`
+ * attribute, so the switch wins in both directions.
+ */
+export function themeStyleSheet(): string {
+  return [
+    `:root{color-scheme:light dark;${declarations(THEMES.light)}}`,
+    `@media (prefers-color-scheme:dark){:root:not([${THEME_ATTRIBUTE}="light"]){${declarations(THEMES.dark)}}}`,
+    `:root[${THEME_ATTRIBUTE}="dark"]{${declarations(THEMES.dark)}}`,
+    // A button's three states, in one place. Every button in the codebase is
+    // built from `BUTTON.base`, which deliberately sets no background: these do,
+    // so that hovering is a stylesheet rule rather than a pair of handlers on
+    // every button, written slightly differently each time.
+    `.gufe-btn{background:${V.btnBg};}`,
+    `.gufe-btn:hover:not(:disabled){background:${V.btnBgHover};}`,
+    `.gufe-btn[aria-pressed="true"],.gufe-btn[aria-expanded="true"],.gufe-btn[data-gufe-on="1"]` +
+      `{background:${V.btnBgActive};}`,
+    `.gufe-btn:disabled{opacity:.5;cursor:default;}`,
+    // The same for a pickable card or row, whose selected state is `aria-pressed`
+    // for the same reason: it is the accessible fact, so styling from it cannot
+    // drift out of step with what a screen reader is told.
+    `.gufe-pick{background:${V.cardBg};border-color:${V.cardBorder};}`,
+    `.gufe-pick:hover{background:${V.cardBgHover};}`,
+    `.gufe-pick[aria-pressed="true"]{background:${V.cardBgActive};border-color:${V.cardBorderActive};}`,
+    // A chip that selects what it counts. Its resting state is no background at
+    // all - it is a count in a row of counts, not a control asking to be pressed
+    // - so it is its own rule rather than a `gufe-pick` with the ground removed.
+    `.gufe-chip{background:none;}`,
+    `.gufe-chip:hover{background:${V.cardBgHover};}`,
+    `.gufe-chip[aria-pressed="true"]{background:${V.cardBgActive};color:${V.textPrimary};}`,
+  ].join("\n");
+}
+
+/** Where the sheet goes, so a second evaluation of the bundle finds it. */
+const STYLE_ELEMENT_ID = "gufe-viz-theme";
+
+/**
+ * Put the palette in the document, once.
+ *
+ * Called from `GufeElement.connectedCallback`, which every view goes through, so
+ * no host has to know this exists. Idempotent by id: the bundle can legitimately
+ * be evaluated twice on one page, exactly as `defineElement` allows for.
+ */
+export function installTheme(): void {
+  if (typeof document === "undefined") return;
+  if (document.getElementById(STYLE_ELEMENT_ID)) return;
+  const style = document.createElement("style");
+  style.id = STYLE_ELEMENT_ID;
+  style.textContent = themeStyleSheet();
+  document.head.appendChild(style);
+}
+
+/**
+ * Switch the palette.
+ *
+ * The chrome follows immediately, because all of it is `var()`. What a view has
+ * already *drawn* does not: an SVG node's `fill` is an attribute and a 3Dmol
+ * scene's background belongs to a WebGL context, and neither resolves a custom
+ * property. Both follow on the next render, which for a `<gufe-*>` element is
+ * setting `.payload` again.
+ */
+export function setTheme(next: ThemeChoice): void {
+  choice = next;
+  T = THEMES[currentTheme()];
+  if (typeof document === "undefined") return;
+  installTheme();
+  const root = document.documentElement;
+  if (next === "system") root.removeAttribute(THEME_ATTRIBUTE);
+  else root.setAttribute(THEME_ATTRIBUTE, next);
+}

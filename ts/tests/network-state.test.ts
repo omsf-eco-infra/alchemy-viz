@@ -118,6 +118,38 @@ describe("a ligand network's view state", () => {
     expect((await mountNetwork()).viewState().scale).not.toBe(0.375);
   });
 
+  it("still lays the network out again when a layout is chosen", async () => {
+    // The restored positions are what every redraw uses, so that a resize or the
+    // menu opening does not undo where the reader left the network. Choosing a
+    // layout is the one redraw that *is* asking for a new arrangement, and it
+    // used to be answered with the old one: the seed was overwritten by the
+    // positions it was meant to replace, and the picker was dead for good.
+    seed({
+      nodes: [
+        [11, 12],
+        [21, 22],
+        [31, 32],
+      ],
+      scale: 1,
+      tx: 0,
+      ty: 0,
+      selected: 0,
+    });
+    const node = await mountNetwork();
+    expect(node.querySelector("g.gufe-node")!.getAttribute("transform")).toBe("translate(11,12)");
+
+    const picker = node.querySelector<HTMLSelectElement>("select")!;
+    picker.value = "Circular";
+    picker.dispatchEvent(new Event("change"));
+    await flush();
+
+    const placed = Array.from(node.querySelectorAll<SVGGElement>("g.gufe-node")).map((g) =>
+      g.getAttribute("transform"),
+    );
+    expect(placed[0]).not.toBe("translate(11,12)");
+    expect(new Set(placed).size).toBe(3);
+  });
+
   it("ignores state that does not match the network on screen", async () => {
     // Positions are matched to the payload by position, so a state from a
     // different network would place every ligand wrongly rather than fail. It is

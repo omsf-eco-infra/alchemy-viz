@@ -2,11 +2,10 @@
  * `<gufe-solvent>` - the conditions card for a SolventComponent.
  *
  * A SolventComponent has no structure: it is bulk conditions, and gufe carries
- * it as a handful of flat fields. So there is no picture here. There used to be
- * a box of dots beside the fields, which looked like a simulation box but was
- * placed by a seeded generator and counted nothing - a picture that has to
- * caption itself "not quantitative" is telling a reader less than the row it
- * sits next to.
+ * it as a handful of flat fields. So there is no picture here: a box of dots
+ * beside the fields would look like a simulation box while counting nothing, and
+ * a picture that has to caption itself "not quantitative" tells a reader less
+ * than the row it sits next to.
  *
  * What the fields *can* have is a shape. As six equal rows they read as a
  * dump: the solvent, the salt and the one real number in it all cost the same
@@ -29,7 +28,7 @@ import { el } from "../shared/dom.js";
 import { card } from "../shared/panels.js";
 import { defineElement, GufeElement, type ViewHandle } from "../shared/element.js";
 import { CHIP, FONT, NOTE, SECTION_LABEL, SPACE, WEIGHT } from "../shared/style.js";
-import { T } from "../shared/theme.js";
+import { V } from "../shared/theme.js";
 import type { SolventComponentViz } from "../schema/types.js";
 
 /**
@@ -52,7 +51,7 @@ function section(title: string, first = false): HTMLDivElement {
   const box = el(
     "div",
     `display:flex;flex-direction:column;gap:${SPACE.xl};padding:${SPACE.xxl} 0;` +
-      (first ? "padding-top:0;" : `border-top:1px solid ${T.splitBorder};`),
+      (first ? "padding-top:0;" : `border-top:1px solid ${V.splitBorder};`),
   );
   box.appendChild(el("div", SECTION_LABEL, title));
   return box;
@@ -63,7 +62,7 @@ function caption(text: string): HTMLDivElement {
   return el(
     "div",
     `font-size:${FONT.tiny};font-weight:${WEIGHT.bold};letter-spacing:.08em;` +
-      `text-transform:uppercase;color:${T.textMuted2};`,
+      `text-transform:uppercase;color:${V.textMuted2};`,
     text,
   );
 }
@@ -109,7 +108,7 @@ export class GufeSolvent extends GufeElement<SolventComponentViz> {
     const formula = el(
       "div",
       `font-family:${FONT.mono};font-size:${FONT.display};font-weight:${WEIGHT.bold};` +
-        `line-height:1.1;color:${T.textPrimary};user-select:text;cursor:text;overflow-wrap:anywhere;`,
+        `line-height:1.1;color:${V.textPrimary};user-select:text;cursor:text;overflow-wrap:anywhere;`,
       payload.smiles,
     );
     smiles.appendChild(formula);
@@ -126,7 +125,7 @@ export class GufeSolvent extends GufeElement<SolventComponentViz> {
       named.appendChild(
         el(
           "div",
-          `font-size:${FONT.body};color:${T.textPrimary};user-select:text;cursor:text;overflow-wrap:anywhere;`,
+          `font-size:${FONT.body};color:${V.textPrimary};user-select:text;cursor:text;overflow-wrap:anywhere;`,
           name,
         ),
       );
@@ -153,7 +152,7 @@ export class GufeSolvent extends GufeElement<SolventComponentViz> {
     quantity.appendChild(
       el(
         "div",
-        `font-size:${FONT.display};font-weight:${WEIGHT.bold};line-height:1;color:${T.titleColor};`,
+        `font-size:${FONT.display};font-weight:${WEIGHT.bold};line-height:1;color:${V.titleColor};`,
         value,
       ),
     );
@@ -161,7 +160,7 @@ export class GufeSolvent extends GufeElement<SolventComponentViz> {
       // A text node between the two, so the pair still reads as the one string
       // the payload carried when it is copied out of the page.
       quantity.appendChild(document.createTextNode(" "));
-      quantity.appendChild(el("div", `font-size:${FONT.body};color:${T.textMuted};`, unit));
+      quantity.appendChild(el("div", `font-size:${FONT.body};color:${V.textMuted};`, unit));
     }
     amount.appendChild(quantity);
     amount.appendChild(caption("Ion concentration"));
@@ -178,7 +177,7 @@ export class GufeSolvent extends GufeElement<SolventComponentViz> {
       el(
         "span",
         `${CHIP.plain}align-self:flex-start;font-weight:${WEIGHT.bold};` +
-          (on ? `background:${T.okBg};color:${T.okFg};` : `${CHIP.outline}color:${T.textMuted};`),
+          (on ? `background:${V.okBg};color:${V.okFg};` : `${CHIP.outline}color:${V.textMuted};`),
         on ? "Neutralized" : "Not neutralized",
       ),
     );

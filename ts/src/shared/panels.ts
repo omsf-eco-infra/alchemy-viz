@@ -2,7 +2,7 @@
  * The pieces a view is assembled from: a card, a header strip, a labelled row, a
  * chip, a message, a viewer host.
  *
- * Split out of `dom.ts`. These display rather than accept input - that is
+ * These display rather than accept input - that is
  * `controls.ts` - and they are deliberately small and unopinionated about
  * arrangement, which is `chrome.ts`. Every one of them takes its styling from
  * `style.ts`, so a view that writes its own padding here is a bug.
@@ -10,7 +10,7 @@
 
 import { el, esc } from "./dom.js";
 import { CARD, FONT, HEADER, HEADER_LINE, RADIUS, SPACE, TEXT, WEIGHT } from "./style.js";
-import { T } from "./theme.js";
+import { V } from "./theme.js";
 
 /** "label <b>value</b>" with an optional colour dot - the stats readouts. */
 export function statChip(label: string, value: string, dotColor?: string): HTMLSpanElement {
@@ -32,7 +32,7 @@ export function floatingWarning(host: HTMLElement, message: string): HTMLDivElem
   warn.style.cssText =
     `position:absolute;top:${SPACE.xl};left:50%;transform:translateX(-50%);max-width:90%;z-index:20;` +
     `padding:${SPACE.md} ${SPACE.xxl};border-radius:${RADIUS.md};font-size:${FONT.body};` +
-    `background:${T.warnBg};color:${T.warnFg};border:1px solid ${T.warnBorder};`;
+    `background:${V.warnBg};color:${V.warnFg};border:1px solid ${V.warnBorder};`;
   host.appendChild(warn);
   return warn;
 }
@@ -66,10 +66,9 @@ export interface HeaderStrip extends HTMLDivElement {
 /**
  * The standard header strip: a menu slot, a bold title, right-aligned stats.
  *
- * Deliberately no subtitle. It used to carry the gufe class name beside the
- * title, which said the same thing twice in two fonts - "Ligand network
- * LigandNetwork" - and told a reader nothing the title had not. What a payload
- * is belongs in the payload's own name; what type it is, the view already is.
+ * Deliberately no subtitle. What a payload is belongs in the payload's own name;
+ * what type it is, the view already is - a gufe class name beside the title
+ * reads as "Ligand network LigandNetwork", which says one thing in two fonts.
  */
 export function headerStrip(title: string): HeaderStrip {
   const bar = el("div", HEADER) as HeaderStrip;
@@ -130,7 +129,7 @@ export function typeBadge(text: string): HTMLSpanElement {
   return el(
     "span",
     `padding:1px 7px;border-radius:${RADIUS.xl};font-size:${FONT.tiny};font-weight:${WEIGHT.bold};` +
-      `letter-spacing:.04em;white-space:nowrap;background:${T.badgeBg};color:${T.badgeFg};`,
+      `letter-spacing:.04em;white-space:nowrap;background:${V.badgeBg};color:${V.badgeFg};`,
     text,
   );
 }

@@ -27,13 +27,21 @@ import { defineElement, GufeElement, seededViewState, type ViewHandle } from "..
 import { choice, flag, num, type Setting } from "../shared/settings.js";
 import { svg } from "../shared/svg.js";
 import { resetControl } from "../shared/interact.js";
-import { CLICK_SLOP, extentOf, sceneCamera, type Camera } from "../shared/camera.js";
+import { extentOf, sceneCamera, type Camera } from "../shared/camera.js";
 import { withoutLayout } from "../shared/layout.js";
 import { optionalRDKit, type RDKitModule } from "../shared/engines.js";
 import { relax as relaxWith } from "../shared/network/force.js";
 import { resolveNetwork } from "../shared/network/resolve.js";
 import { networkMenu } from "../shared/network/menu.js";
-import { CULL_MARGIN, DIM, levelAt as levelIn, levelUnder as levelBelow } from "../shared/network/detail.js";
+import { DIM, levelAt as levelIn, levelUnder as levelBelow } from "../shared/network/detail.js";
+import {
+  Depictions,
+  detailPane,
+  draggableNodes,
+  generations,
+  visibleAt,
+  type DetailPane,
+} from "../shared/network/canvas.js";
 import { DEPICT_STYLE, rgbTriple } from "../shared/depict-style.js";
 import { depictSVG } from "../shared/sdf.js";
 import { chargeChange, chargeLabel } from "../shared/charge.js";
@@ -41,7 +49,7 @@ import { depictThemeOptions, nodeCardCaption, nodeCardGround } from "../shared/d
 import { mountDepiction } from "../shared/depict-node.js";
 import { createMatcher, type MatchOutcome } from "../shared/smarts.js";
 import { FONT, SPACE, TOOLBAR, TOOLTIP, WEIGHT } from "../shared/style.js";
-import { T } from "../shared/theme.js";
+import { T, V } from "../shared/theme.js";
 import { buildRegistry, entryLabel, type RegistryIndex } from "../schema/registry.js";
 import { mappingPayloadFor } from "./atom-mapping.js";
 import type { LigandAtomMappingViz, LigandNetworkViz, SmallMoleculeComponentViz } from "../schema/types.js";
@@ -637,8 +645,7 @@ function levelOfDetail(parts: DetailParts): {
   drawn(): number;
   forget(): void;
 } {
-  const injected = new Set<number>();
-  let failed = new Set<number>();
+  const depictions = new Depictions();
 
   /**
    * The palette every structure here is drawn in, asked for once per view.
@@ -650,11 +657,10 @@ function levelOfDetail(parts: DetailParts): {
   const depictOptions = depictThemeOptions("cpk");
 
   /** The match a structure was drawn against, so a new one knows what to redraw. */
-  const drawnAgainst: string[] = [];
   const marking = (index: number): string => (parts.matched().get(index) ?? []).join(",");
 
   const inject = (RDKit: RDKitModule, index: number): void => {
-    if (injected.has(index) || failed.has(index)) return;
+    if (!depictions.wants(index)) return;
     const node = parts.nodes[index];
     const atoms = parts.matched().get(index);
     const drawn =
@@ -668,35 +674,22 @@ function levelOfDetail(parts: DetailParts): {
         depictOptions,
       );
     if (!drawn) {
-      failed.add(index);
+      depictions.refused(index);
       return;
     }
     // The ground RDKit draws behind a structure is dropped on the way in, and
     // `PLATE`'s disc is what this view puts there instead: round, and exactly
     // the size of the node rather than of the square the depiction was drawn in.
     if (!mountDepiction(parts.depictionGroups[index], drawn, DEPICT_SIZE, DEPICT_FIT)) {
-      failed.add(index);
+      depictions.refused(index);
       return;
     }
-    injected.add(index);
-    drawnAgainst[index] = marking(index);
+    depictions.drew(index, marking(index));
   };
 
-  /**
-   * Drop the structures whose highlighting the current pattern has outdated.
-   *
-   * Only those: a structure is expensive and a new pattern usually changes a
-   * handful of nodes, so redrawing every one of them would make typing a
-   * pattern cost more than drawing the network did. A dropped structure is
-   * rebuilt by the next `apply`, and only if it is on screen.
-   */
-  const forget = (): void => {
-    for (const index of [...injected]) {
-      if (drawnAgainst[index] === marking(index)) continue;
-      parts.depictionGroups[index].replaceChildren();
-      injected.delete(index);
-    }
-  };
+  /** Drop the structures whose highlighting the current pattern has outdated. */
+  const forget = (): void =>
+    depictions.forget(marking, (index) => parts.depictionGroups[index].replaceChildren());
 
   const fitted: number[] = [];
 
@@ -761,7 +754,7 @@ function levelOfDetail(parts: DetailParts): {
    * instead, which is what it will keep drawing if RDKit never arrives.
    */
   const show = (index: number, wanted: DetailLevel): void => {
-    const level = wanted.structure && !injected.has(index) ? levelUnder(wanted) : wanted;
+    const level = wanted.structure && !depictions.has(index) ? levelUnder(wanted) : wanted;
     parts.depictionGroups[index].setAttribute("display", level.structure ? "inline" : "none");
     const plate = parts.plates[index];
     plate.setAttribute("display", level.structure ? "inline" : "none");
@@ -836,15 +829,7 @@ function levelOfDetail(parts: DetailParts): {
     if (!level.structure) return;
 
     // Only what is on screen, plus a margin so panning does not tear.
-    const { width, height } = parts.viewport();
-    const visible: number[] = [];
-    parts.nodes.forEach((node, i) => {
-      if (injected.has(i) || failed.has(i)) return;
-      const x = node.x * scale + tx;
-      const y = node.y * scale + ty;
-      if (x < -CULL_MARGIN || y < -CULL_MARGIN || x > width + CULL_MARGIN || y > height + CULL_MARGIN) return;
-      visible.push(i);
-    });
+    const visible = visibleAt(parts.nodes, { scale, tx, ty }, parts.viewport(), (i) => depictions.wants(i));
     if (!visible.length) return;
 
     parts
@@ -859,7 +844,7 @@ function levelOfDetail(parts: DetailParts): {
       .catch(() => undefined);
   };
 
-  return { apply, drawn: () => injected.size, forget };
+  return { apply, drawn: () => depictions.count(), forget };
 }
 
 interface MenuParts {
@@ -916,8 +901,8 @@ function buildMenu(parts: MenuParts): HTMLDivElement {
     },
     match: (pattern) => parts.match(pattern),
     filters: () => {
-      const row = el("div", `display:flex;align-items:center;gap:${SPACE.lg};font-size:${FONT.small};color:${T.textMuted};`);
-      const value = el("span", `min-width:28px;color:${T.textPrimary};`, "0.00");
+      const row = el("div", `display:flex;align-items:center;gap:${SPACE.lg};font-size:${FONT.small};color:${V.textMuted};`);
+      const value = el("span", `min-width:28px;color:${V.textPrimary};`, "0.00");
       const score = el("input", "flex:1;") as HTMLInputElement;
       score.type = "range";
       score.min = "0";
@@ -959,15 +944,12 @@ function buildMenu(parts: MenuParts): HTMLDivElement {
  * Everything a painted canvas can be asked to do afterwards.
  *
  * Named rather than inferred from `#paint`'s return, because the render holds one
- * of these in a single variable. It used to hold six, each declared as a no-op at
- * the top of `renderView` and reassigned a hundred lines later inside `paint`, so
- * what a call did depended on whether a paint had happened yet and nothing said
- * so. One nullable handle says it: no scene yet, nothing to ask.
+ * of these in a single variable. One nullable handle says what a set of
+ * separately-declared callbacks cannot: no scene yet, nothing to ask.
  *
- * One of the six was called `stop`, which is also a method on `window`. After it
- * was removed `stop?.()` in the teardown still compiled - it had quietly become
- * `window.stop()`, which aborts the page's own loading. A local shadowing a DOM
- * global is a name to avoid for exactly that reason.
+ * Nothing on it is named for a method on `window`. A local called `stop` reads
+ * as a local right up until it is deleted, at which point `stop?.()` still
+ * compiles - as `window.stop()`, which aborts the page's own loading.
  */
 interface NetworkScene {
   setSelected(selection: Selection): void;
@@ -1093,8 +1075,8 @@ export class GufeLigandNetwork extends GufeElement<LigandNetworkViz> {
     // instead when the view is taller than it is wide: without it a pane's
     // contents are its floor along whichever axis it is being divided on, and
     // the graph pushes the mapping off the bottom.
-    const left = el("div", `min-width:0;min-height:0;display:flex;flex-direction:column;background:${T.netCanvasBg};`);
-    const right = el("div", `min-width:0;min-height:0;display:flex;flex-direction:column;background:${T.appBg};`);
+    const left = el("div", `min-width:0;min-height:0;display:flex;flex-direction:column;background:${V.netCanvasBg};`);
+    const right = el("div", `min-width:0;min-height:0;display:flex;flex-direction:column;background:${V.appBg};`);
     split.appendChild(left);
     split.appendChild(
       splitter(split, left, right, {
@@ -1112,7 +1094,7 @@ export class GufeLigandNetwork extends GufeElement<LigandNetworkViz> {
     );
     split.appendChild(right);
 
-    const canvas = el("div", `flex:1;position:relative;overflow:hidden;min-height:0;background:${T.netCanvasBg};`);
+    const canvas = el("div", `flex:1;position:relative;overflow:hidden;min-height:0;background:${V.netCanvasBg};`);
     left.appendChild(canvas);
     const layoutSetting = choice<Layout>("ligand-network.layout", "Force-directed", LAYOUTS);
     const toolbar = this.#toolbar(
@@ -1159,12 +1141,27 @@ export class GufeLigandNetwork extends GufeElement<LigandNetworkViz> {
      */
     let scene: NetworkScene | null = null;
 
-    // Taken once, before the first draw. The positions are the layout from here
-    // on, so every redraw uses them; the transform is applied to the first paint
-    // only, because after that the reader owns the camera and a resize must not
-    // undo where they have panned to.
+    // Taken once, before the first draw. The transform is applied to the first
+    // paint only, because after that the reader owns the camera and a resize
+    // must not undo where they have panned to.
     const restored = asNetworkViewState(seededViewState(VIEW_STATE_KEY), nodes.length);
     let pendingTransform = restored && { scale: restored.scale, tx: restored.tx, ty: restored.ty };
+
+    /**
+     * The positions the view opened on, or null once a layout has replaced them.
+     *
+     * Every redraw uses them while they last, because a resize or the menu
+     * opening is not a request to lay the network out again: they are where the
+     * reader left it, and a simulation run against a canvas of a different size
+     * would not reproduce them.
+     *
+     * Choosing a layout *is* that request, and it is what drops them - which is
+     * why this is a variable rather than the state object it came from. Read
+     * straight off `restored` on every redraw, the picker was dead for the life
+     * of a restored view: each new layout was seeded and then immediately
+     * overwritten by the positions it was meant to replace.
+     */
+    let opening = restored ? restored.nodes : null;
 
     /**
      * What the detail pane is showing, and what the halos mark.
@@ -1186,18 +1183,8 @@ export class GufeLigandNetwork extends GufeElement<LigandNetworkViz> {
       scene?.transform() ?? { scale: 1, tx: 0, ty: 0 };
     let layout: Layout = layoutSetting.get();
     let forceUnavailable = false;
-    let alive = true;
-    /**
-     * Which redraw is the current one.
-     *
-     * A force layout is relaxed off the main thread's next turn, so a second
-     * redraw - a resize, the menu opening - can start while the first is still
-     * waiting to paint. Both would then append a scene, and the canvas would end
-     * up holding a stack of them: the reader sees the oldest, while the halos
-     * and the selection are wired to the newest, which is off the bottom of a
-     * pane that does not scroll. A paint whose era has passed is dropped.
-     */
-    let era = 0;
+    /** Which redraw is the current one, and whether the view is still alive. */
+    const eras = generations();
 
     /** Put something in the detail pane, and mark it on the canvas. */
     const showSelection = (): void => {
@@ -1238,7 +1225,10 @@ export class GufeLigandNetwork extends GufeElement<LigandNetworkViz> {
       // A scene exists exactly when a paint has installed one, so it is also
       // the answer to "is there a camera worth keeping".
       const keepCamera = scene && next === layout ? scene.transform() : null;
-      const mine = ++era;
+      // A new layout is a request to lay the network out again, which is exactly
+      // what the opening positions would prevent. See `opening`.
+      if (next !== layout) opening = null;
+      const current = eras.start();
       layout = next;
       scene?.cleanup();
       scene = null;
@@ -1249,10 +1239,10 @@ export class GufeLigandNetwork extends GufeElement<LigandNetworkViz> {
       const width = canvas.clientWidth || 800;
       const height = canvas.clientHeight || 600;
       seedPositions(nodes, width, height, layout, edges);
-      if (restored) placeNodesAt(nodes, restored.nodes);
+      if (opening) placeNodesAt(nodes, opening);
 
       const paint = () => {
-        if (!alive || mine !== era) return;
+        if (!current()) return;
         const painted = this.#paint(canvas, nodes, edges, width, height, select, rdkitReady, tip);
         scene = painted;
 
@@ -1277,7 +1267,7 @@ export class GufeLigandNetwork extends GufeElement<LigandNetworkViz> {
       // A restored network is placed, not laid out: the positions it came with
       // are the answer the simulation would spend a second failing to reproduce
       // against a canvas of a different size.
-      if (layout !== "Force-directed" || forceUnavailable || restored) {
+      if (layout !== "Force-directed" || forceUnavailable || opening) {
         paint();
         return;
       }
@@ -1286,7 +1276,7 @@ export class GufeLigandNetwork extends GufeElement<LigandNetworkViz> {
       // than animated: a DOM write per node per frame is what melts a browser
       // on a network with a few hundred ligands.
       relax(nodes, edges, width, height).then((relaxed) => {
-        if (!alive || mine !== era) return;
+        if (!current()) return;
         if (relaxed) {
           paint();
           return;
@@ -1306,7 +1296,7 @@ export class GufeLigandNetwork extends GufeElement<LigandNetworkViz> {
     return {
       onResize: () => draw(),
       cleanup: () => {
-        alive = false;
+        eras.stop();
         matcher.cancel();
         tip.remove();
         scene?.cleanup();
@@ -1333,11 +1323,14 @@ export class GufeLigandNetwork extends GufeElement<LigandNetworkViz> {
       TOOLBAR.bottom,
     );
 
-    const legend = el("div", `display:flex;align-items:center;gap:6px;font-size:${FONT.small};color:${T.textMuted};`);
+    const legend = el("div", `display:flex;align-items:center;gap:6px;font-size:${FONT.small};color:${V.textMuted};`);
     legend.appendChild(el("span", "", "score"));
     legend.appendChild(
       el(
         "span",
+        // The literal ramp rather than a custom property: the edges it is a key
+        // to are SVG attributes, which cannot resolve one, so the key is drawn
+        // from the same two colours the lines were.
         `width:40px;height:4px;border-radius:2px;background:linear-gradient(to right,${T.netEdgeRamp.join(",")});`,
       ),
     );
@@ -1348,18 +1341,18 @@ export class GufeLigandNetwork extends GufeElement<LigandNetworkViz> {
     // same charge is the common case, and a key for a line it does not draw is
     // a reader looking for something that is not there.
     if (anyChargeChange) {
-      const charge = el("div", `display:flex;align-items:center;gap:6px;font-size:${FONT.small};color:${T.textMuted};`);
+      const charge = el("div", `display:flex;align-items:center;gap:6px;font-size:${FONT.small};color:${V.textMuted};`);
       charge.appendChild(
         el(
           "span",
-          `width:24px;height:0;border-top:2px dashed ${T.netEdgeLine};display:inline-block;`,
+          `width:24px;height:0;border-top:2px dashed ${V.netEdgeLine};display:inline-block;`,
         ),
       );
       charge.appendChild(el("span", "", "net charge change"));
       toolbar.appendChild(charge);
     }
 
-    toolbar.appendChild(el("label", `font-size:${FONT.body};margin-left:auto;color:${T.textMuted};`, "Layout"));
+    toolbar.appendChild(el("label", `font-size:${FONT.body};margin-left:auto;color:${V.textMuted};`, "Layout"));
     const picker = dropdown(
       LAYOUTS.map((name) => ({ id: name, label: name })),
       layoutSetting.get(),
@@ -1373,69 +1366,29 @@ export class GufeLigandNetwork extends GufeElement<LigandNetworkViz> {
   }
 
   /**
-   * The right-hand pane: whatever is open, drawn by the view that owns it.
+   * The right-hand pane, and what this view puts in it.
    *
-   * An edge is a mapping, so it is `<gufe-atom-mapping>`; a node is one ligand,
-   * so it is `<gufe-small-molecule>` - the same two elements a payload of either
-   * kind renders through on its own. Neither picture is drawn twice, so the
-   * in-context one and the standalone one cannot drift apart, and clicking
-   * either half of the graph puts the reader in front of a view they have
-   * already met.
+   * The pane itself is `detailPane`, shared with the alchemical network. What is
+   * here is the one thing that is this view's: an edge is a mapping, so it opens
+   * `<gufe-atom-mapping>`; a node is one ligand, so it opens
+   * `<gufe-small-molecule>` - and both have to be cut loose from the network
+   * first, because an edge carries this view's index and both endpoints
+   * resolved, a node carries wherever the layout put it, and a payload handed on
+   * is a payload someone may validate.
    *
-   * Deliberately nothing but that element, either way. Each carries its own
-   * header and its own labels, so a pane title, a heading repeating the names
-   * and a list of properties underneath were all saying a second time what the
-   * picture below them already said.
-   */
-  /**
-   * The pane beside the canvas: whatever is selected, drawn by the view that
-   * draws that kind of thing.
-   *
-   * One `<gufe-view>`, created once and re-pointed, which is what the alchemical
-   * network already did and what this used to do differently. Two reasons the
-   * nested dispatcher is the better of the two: clicking along a row of edges is
-   * then an update rather than a rebuild, so a mapping's own 3D viewers are not
-   * torn down and rebuilt on every click; and which element draws a payload is a
-   * question `VIEW_TAGS` already answers, so naming `gufe-atom-mapping` and
-   * `gufe-small-molecule` here was a second copy of the dispatch table that
-   * could fall out of step with it.
+   * Neither picture is drawn twice, so the in-context one and the standalone one
+   * cannot drift apart, and clicking either half of the graph puts the reader in
+   * front of a view they have already met.
    */
   #detailPane(
     host: HTMLDivElement,
     registry: RegistryIndex,
-  ): {
-    showMapping(edge: NetEdge): void;
-    showLigand(node: NetNode): void;
-    message(text: string): void;
-    cleanup(): void;
-  } {
-    const body = el("div", "flex:1;min-height:0;display:flex;flex-direction:column;");
-    host.appendChild(body);
-
-    const child = document.createElement("gufe-view") as HTMLElement & { payload: unknown };
-    child.style.cssText = "flex:1;min-width:0;min-height:0;display:flex;";
-
-    const message = (text: string) => body.replaceChildren(centredMessage(text));
-
-    const open = (payload: unknown): void => {
-      child.payload = payload;
-      // Only when it is not already there: `replaceChildren` with what is
-      // already mounted would disconnect and reconnect it, which for these
-      // elements means tearing down a viewer and building it again.
-      if (child.parentNode !== body) body.replaceChildren(child);
-    };
-
+  ): DetailPane & { showMapping(edge: NetEdge): void; showLigand(node: NetNode): void } {
+    const pane = detailPane(host);
     return {
-      // Fed the payload `mappingPayloadFor` cuts loose from the network, with
-      // this view's own bookkeeping off it first: an edge carries its index and
-      // both endpoints resolved, and a payload handed on is a payload someone
-      // may validate.
-      showMapping: (edge) => open(mappingPayloadFor(mappingOf(edge), registry)),
-      showLigand: (node) => open(ligandPayloadFor(node)),
-      message,
-      // Removing the nested view fires its own `disconnectedCallback`, which is
-      // where whatever it mounted releases its viewers.
-      cleanup: () => child.remove(),
+      ...pane,
+      showMapping: (edge) => pane.show(mappingPayloadFor(mappingOf(edge), registry)),
+      showLigand: (node) => pane.show(ligandPayloadFor(node)),
     };
   }
 
@@ -1505,16 +1458,16 @@ export class GufeLigandNetwork extends GufeElement<LigandNetworkViz> {
       });
       hit.addEventListener("mousemove", (event: MouseEvent) => {
         tip.show(
-          `<div style="font-weight:700;color:${T.titleColor};">${esc(label(edge.from))} -&gt; ${esc(label(edge.to))}</div>` +
+          `<div style="font-weight:700;color:${V.titleColor};">${esc(label(edge.from))} -&gt; ${esc(label(edge.to))}</div>` +
             (edge.score == null
-              ? `<div style="color:${T.textMuted2};">no score</div>`
+              ? `<div style="color:${V.textMuted2};">no score</div>`
               : `<div style="margin-top:4px;">score <b>${edge.score.toFixed(3)}</b></div>`) +
             (charged
               ? `<div style="margin-top:4px;">net charge <b>${esc(chargeLabel(charged))}</b>` +
-                ` <span style="color:${T.textMuted2};">(${esc(chargeLabel(edge.from.total_charge ?? 0))} to ` +
+                ` <span style="color:${V.textMuted2};">(${esc(chargeLabel(edge.from.total_charge ?? 0))} to ` +
                 `${esc(chargeLabel(edge.to.total_charge ?? 0))})</span></div>`
               : "") +
-            `<div style="margin-top:4px;font-size:${FONT.tiny};color:${T.textMuted2};">Click to see the mapping</div>`,
+            `<div style="margin-top:4px;font-size:${FONT.tiny};color:${V.textMuted2};">Click to see the mapping</div>`,
           event.offsetX,
           event.offsetY,
         );
@@ -1552,15 +1505,15 @@ export class GufeLigandNetwork extends GufeElement<LigandNetworkViz> {
       const group = svg("g", { class: "gufe-node", style: "cursor:grab;" });
       group.addEventListener("mousemove", (event: MouseEvent) => {
         tip.show(
-          `<div style="font-weight:700;color:${T.titleColor};">${esc(label(node))}</div>` +
+          `<div style="font-weight:700;color:${V.titleColor};">${esc(label(node))}</div>` +
             (node.smiles
               ? `<div style="margin-top:3px;font-family:ui-monospace,Menlo,monospace;overflow-wrap:anywhere;">${esc(node.smiles)}</div>`
               : "") +
             (node.total_charge
               ? `<div style="margin-top:3px;">formal charge <b>${esc(chargeLabel(node.total_charge))}</b></div>`
               : "") +
-            `<div style="margin-top:3px;font-size:${FONT.tiny};color:${T.textMuted2};overflow-wrap:anywhere;">${esc(node["gufe-key"])}</div>` +
-            `<div style="margin-top:4px;font-size:${FONT.tiny};color:${T.textMuted2};">Click to see the ligand</div>`,
+            `<div style="margin-top:3px;font-size:${FONT.tiny};color:${V.textMuted2};overflow-wrap:anywhere;">${esc(node["gufe-key"])}</div>` +
+            `<div style="margin-top:4px;font-size:${FONT.tiny};color:${V.textMuted2};">Click to see the ligand</div>`,
           event.offsetX,
           event.offsetY,
         );
@@ -1781,13 +1734,13 @@ export class GufeLigandNetwork extends GufeElement<LigandNetworkViz> {
   }
 
   /**
-   * Node drag and node click, over the shared camera.
+   * The camera this view moves on, with its nodes made draggable.
    *
-   * The camera - wheel zoom, background pan, framing - is `sceneCamera`, which
-   * the alchemical network uses too. What stays here is what is about a ligand
-   * rather than about a canvas: dragging one to a new position, and telling a
-   * drag from a click. The click is here rather than with the rest of a node
-   * because only this knows whether the pointer was dragging.
+   * The camera - wheel zoom, background pan, framing - is `sceneCamera`; the
+   * drag and the click-versus-drag rule are `draggableNodes`. Both are shared
+   * with the alchemical network. What is left here is the two things that are
+   * about a *ligand* network rather than about a canvas: how far a node reaches
+   * from its position, and how close `focus` lands.
    */
   #interact(
     root: SVGSVGElement,
@@ -1806,49 +1759,9 @@ export class GufeLigandNetwork extends GufeElement<LigandNetworkViz> {
       hint: "Click the graph or hold Ctrl to zoom",
     });
 
-    groups.forEach((group, i) => {
-      let dragging: { x: number; y: number } | null = null;
-      // A node is both a thing to drag and a thing to click, and the pointer
-      // does not say which was meant. Anything that moved further than a hand
-      // wobble was a drag, and the click that follows it is not a selection -
-      // otherwise every reposition would also change what the pane is showing.
-      let moved = false;
-      group.addEventListener("pointerdown", (event: PointerEvent) => {
-        event.stopPropagation();
-        const { scale } = view.transform();
-        dragging = { x: event.clientX - nodes[i].x * scale, y: event.clientY - nodes[i].y * scale };
-        moved = false;
-        group.setPointerCapture(event.pointerId);
-      });
-      group.addEventListener("pointermove", (event: PointerEvent) => {
-        if (!dragging) return;
-        // A second finger turns the press into a pinch, and a ligand that
-        // follows one of the two fingers through a zoom is not what either
-        // hand meant. The drag is abandoned rather than paused: the gesture
-        // owns the canvas from here, and the node keeps where it had got to.
-        if (view.gesturing()) {
-          dragging = null;
-          moved = true;
-          return;
-        }
-        const { scale } = view.transform();
-        const x = (event.clientX - dragging.x) / scale;
-        const y = (event.clientY - dragging.y) / scale;
-        if (Math.hypot(x - nodes[i].x, y - nodes[i].y) * scale > CLICK_SLOP) moved = true;
-        nodes[i].x = nodes[i].fx = x;
-        nodes[i].y = nodes[i].fy = y;
-        place();
-      });
-      const release = () => {
-        dragging = null;
-      };
-      group.addEventListener("pointerup", release);
-      group.addEventListener("pointercancel", release);
-      group.addEventListener("click", (event: MouseEvent) => {
-        event.stopPropagation();
-        if (!moved) onClickNode(i);
-      });
-    });
+    // Every edge is redrawn on every move, because a ligand network's edges are
+    // few enough that finding the incident ones costs more than rewriting them.
+    draggableNodes(groups, nodes, view, { moved: () => place(), clicked: onClickNode });
 
     return {
       ...view,

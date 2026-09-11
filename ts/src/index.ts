@@ -16,12 +16,10 @@
  * suite imports this file for its side effects alone and then reaches into
  * `src/**` directly for anything it needs to inspect.
  *
- * This file used to re-export 125 named symbols on top of that - `kabsch`,
- * `wheelFactor`, `parseAtomSpec`, `openfeShift`, `boundedZoom` and the rest -
- * none of which had a caller anywhere. The cost was not the bytes; it was that
- * the file read as a public API, so every rename inside `shared/` looked like a
- * breaking change and a good deal of the internals were `export`ed only to feed
- * it. What is left is what something outside actually reads.
+ * What is exported is what something outside actually reads, and nothing else.
+ * A file that re-exports the internals reads as a public API, which makes every
+ * rename inside `shared/` look like a breaking change and pulls `export` onto
+ * things that have one caller.
  *
  * `VIEW_TAGS` and `PAYLOAD_TYPES` stay because `bundle.test.ts` asks the built
  * bundle which types it draws, rather than being told in a fixture that goes

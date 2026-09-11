@@ -39,7 +39,7 @@
  * against a known picture instead of a jump to a new one.
  *
  * The two exceptions are `layout` and `alignPair`, which default to what gufe
- * does rather than to what this project used to do. See `DEFAULT_DEPICT_STYLE`.
+ * does rather than to drawing the stored conformer. See `DEFAULT_DEPICT_STYLE`.
  */
 
 import type { RDKitModule } from "./engines.js";

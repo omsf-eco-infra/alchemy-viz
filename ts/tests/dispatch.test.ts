@@ -9,7 +9,7 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import "../src/index.js";
-import { dispatchProblem, VIEW_TAGS } from "../src/gufe-view.js";
+import { describeProblem, VIEW_TAGS } from "../src/gufe-view.js";
 import { PAYLOAD_TYPES } from "../src/schema/types.js";
 import { clearFakeEngines, exampleNames, flush, readExample, seedFakeEngines } from "./helpers.js";
 
@@ -24,10 +24,13 @@ function mountView(payload: unknown): HTMLElement & { payload: unknown } {
 const DRAWABLE = exampleNames().filter((n) => (VIEW_TAGS as Record<string, string>)[readExample(n).type as string]);
 const NOT_YET = exampleNames().filter((n) => !(VIEW_TAGS as Record<string, string>)[readExample(n).type as string]);
 
-describe("dispatchProblem", () => {
+/** The sentence alone, which is what every assertion here is about. */
+const problemWith = (payload: unknown): string | null => describeProblem(payload)?.message ?? null;
+
+describe("describeProblem", () => {
   it("accepts a payload whose type has a view", () => {
-    expect(dispatchProblem(readExample("small_molecule.json"))).toBeNull();
-    expect(dispatchProblem(readExample("protein.json"))).toBeNull();
+    expect(problemWith(readExample("small_molecule.json"))).toBeNull();
+    expect(problemWith(readExample("protein.json"))).toBeNull();
   });
 
   it("refuses a type it does not draw, by name", () => {
@@ -38,17 +41,17 @@ describe("dispatchProblem", () => {
     const undrawn = PAYLOAD_TYPES.find((type) => !VIEW_TAGS[type]);
     if (!undrawn) return; // every declared type draws, which is the goal
 
-    const problem = dispatchProblem({ type: undrawn, name: "" });
+    const problem = problemWith({ type: undrawn, name: "" });
     expect(problem).toContain(undrawn);
     expect(problem).toContain("no visualization");
   });
 
   it("refuses a payload with no type", () => {
-    expect(dispatchProblem({ name: "nameless" })).toContain("no `type`");
+    expect(problemWith({ name: "nameless" })).toContain("no `type`");
   });
 
   it.each([null, undefined, 42, "a string", ["an", "array"]])("refuses a non-object payload: %s", (bad) => {
-    expect(dispatchProblem(bad)).toContain("does not look like a gufe-viz payload");
+    expect(problemWith(bad)).toContain("does not look like a gufe-viz payload");
   });
 
   // There is no version check to test: a payload carries no version, because
@@ -57,7 +60,7 @@ describe("dispatchProblem", () => {
   // key, and is refused as one rather than silently tolerated.
   it("treats a leftover schema_version as the unknown key it now is", () => {
     const payload = { ...readExample("protein.json"), schema_version: "1.0" };
-    expect(dispatchProblem(payload)).toContain("does not match the gufe-viz schema");
+    expect(problemWith(payload)).toContain("does not match the gufe-viz schema");
   });
 });
 
