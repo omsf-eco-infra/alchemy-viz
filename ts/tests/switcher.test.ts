@@ -7,7 +7,8 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { el, switcher } from "../src/shared/dom.js";
+import { el } from "../src/shared/dom.js";
+import { switcher } from "../src/shared/controls.js";
 import { choice } from "../src/shared/settings.js";
 
 /** A pane of `width` px holding a bar that wants `wants` px. */

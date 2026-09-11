@@ -15,19 +15,11 @@
  * say for themselves.
  */
 
-import {
-  buttonGroup,
-  chromeMenu,
-  dropdown,
-  el,
-  MENU_OPEN_SUFFIX,
-  nameWanted,
-  onWidth,
-  orientMenuPanel,
-  toggleButton,
-  viewerHost,
-  type ChromeMenu,
-} from "./dom.js";
+import { el, onWidth } from "./dom.js";
+import { buttonGroup, dropdown, toggleButton } from "./controls.js";
+import { nameWanted, viewerHost } from "./panels.js";
+import { chromeMenu, type ChromeMenu, MENU_OPEN_SUFFIX, orientMenuPanel } from "./chrome.js";
+import { framejsMenuItem } from "./framejs.js";
 import type { ViewHandle } from "./element.js";
 import { choice, flag, type Setting } from "./settings.js";
 import type { ThreeDmolViewer } from "./engines.js";
@@ -44,7 +36,7 @@ import {
 import { T } from "./theme.js";
 
 /** The representations both views offer, in the order both offer them. */
-export const PROTEIN_REPS = [
+const PROTEIN_REPS = [
   { id: "cartoon", label: "Cartoon", title: "Ribbon / cartoon backbone" },
   { id: "surface", label: "Surface", title: "Molecular (VDW) surface" },
   { id: "stick", label: "Stick", title: "All-atom sticks" },
@@ -52,7 +44,7 @@ export const PROTEIN_REPS = [
 ] as const;
 
 /** Likewise the colourings. `proteinColorArgs` is what turns one into 3Dmol. */
-export const PROTEIN_COLOR_SCHEMES = [
+const PROTEIN_COLOR_SCHEMES = [
   { id: "chain", label: "Chain" },
   { id: "spectrum", label: "Spectrum" },
   { id: "ss", label: "Secondary structure" },
@@ -329,6 +321,7 @@ export function proteinScene(spec: ProteinSceneSpec): ProteinScene {
       viewer?.resize();
       viewer?.render();
     },
+    extras: framejsMenuItem,
   });
   // After the button, so the name reads as a caption to it rather than the
   // other way about, and only where this view is not already named by whatever

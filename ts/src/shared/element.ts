@@ -14,7 +14,8 @@
  * creates one element and sets `.payload`.
  */
 
-import { centredMessage, el, errText } from "./dom.js";
+import { el, errText } from "./dom.js";
+import { centredMessage } from "./panels.js";
 import { T } from "./theme.js";
 
 /**

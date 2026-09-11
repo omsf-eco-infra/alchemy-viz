@@ -8,7 +8,9 @@
  * Dev-only: nothing here is part of the shipped bundle.
  */
 
-import { mount } from "../index.js";
+// For its side effects: this is what registers every `<gufe-*>` element.
+import "../index.js";
+import { mount } from "./mount.js";
 import { errText } from "../shared/dom.js";
 import { T } from "../shared/theme.js";
 

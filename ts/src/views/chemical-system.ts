@@ -15,21 +15,15 @@
  * nobody can draw never stops the rest of the system from drawing.
  */
 
-import {
-  centredMessage,
-  el,
-  floatingWarning,
-  HIDE_NAME_ATTRIBUTE,
-  onWidth,
-  typeBadge,
-} from "../shared/dom.js";
+import { el, onWidth } from "../shared/dom.js";
+import { centredMessage, floatingWarning, HIDE_NAME_ATTRIBUTE, typeBadge } from "../shared/panels.js";
 import {
   defineElement,
   GufeElement,
   type ViewHandle,
 } from "../shared/element.js";
 import { text } from "../shared/settings.js";
-import { FONT, WEIGHT } from "../shared/style.js";
+import { FONT, SELECTABLE, WEIGHT } from "../shared/style.js";
 import { T } from "../shared/theme.js";
 import {
   buildRegistry,
@@ -339,8 +333,8 @@ export class GufeChemicalSystem extends GufeElement<ChemicalSystemViz> {
     const select = (index: number): void => {
       buttons.forEach((button, i) => {
         const active = i === index;
-        button.style.background = active ? T.cardBgActive : T.cardBg;
-        button.style.borderColor = active ? T.cardBorderActive : T.cardBorder;
+        button.style.background = active ? SELECTABLE.bgActive : SELECTABLE.bg;
+        button.style.borderColor = active ? SELECTABLE.borderActive : SELECTABLE.border;
       });
       panes[index].point();
       mount(panes[index].element);
@@ -362,11 +356,15 @@ export class GufeChemicalSystem extends GufeElement<ChemicalSystemViz> {
     };
 
     panes.forEach((pane, index) => {
+      // `SELECTABLE` is the card. What is overridden here is what this strip
+      // needs of it: the card fills the list it is in, and this list is a column
+      // only while there is room for one. Below `STACK_BELOW` it is a wrapping
+      // row, where `width:100%` would give every button its own line and there
+      // would be no band left to wrap. `width:auto` is the column's own stretch
+      // in one orientation and the button's content width in the other.
       const button = el(
         "button",
-        "display:flex;flex-direction:column;align-items:flex-start;gap:4px;padding:8px 10px;text-align:left;" +
-          `border:1px solid ${T.cardBorder};border-radius:8px;background:${T.cardBg};cursor:pointer;` +
-          `font-family:inherit;font-size:${FONT.body};flex-shrink:0;max-width:100%;box-sizing:border-box;`,
+        `${SELECTABLE.base}width:auto;flex-shrink:0;max-width:100%;box-sizing:border-box;`,
       );
       button.appendChild(
         el("span", `font-weight:700;color:${T.textPrimary};`, pane.title),

@@ -82,13 +82,23 @@ describe("style.ts", () => {
 });
 
 describe("the network menus", () => {
-  it("both build their panel and list from style.ts", () => {
-    // Two menus that lay themselves out separately drift, and the drift shows
-    // up as one of them scrolling on a long list and the other not.
+  /**
+   * This used to check that each of the two views mentioned `MENU_PANEL` and
+   * `MENU_LIST`, because each built its own menu and the drift between them
+   * showed up as one scrolling on a long list and the other not. There is now
+   * one builder, so the same guarantee is a stronger and simpler claim: the
+   * panel and the list are laid out in exactly one place, and neither view has
+   * gone back to rolling its own.
+   */
+  it("are laid out in one place, from style.ts", () => {
+    const menu = readFileSync(join(SRC, "shared", "network", "menu.ts"), "utf-8");
+    expect(menu, "the shared menu does not use MENU_PANEL").toContain("MENU_PANEL");
+    expect(menu, "the shared menu does not use MENU_LIST").toContain("MENU_LIST");
+
     for (const name of ["ligand-network.ts", "alchemical-network.ts"]) {
       const text = readFileSync(join(SRC, "views", name), "utf-8");
-      expect(text, `${name} does not use MENU_PANEL`).toContain("MENU_PANEL");
-      expect(text, `${name} does not use MENU_LIST`).toContain("MENU_LIST");
+      expect(text, `${name} builds a menu panel of its own`).not.toContain("MENU_PANEL");
+      expect(text, `${name} builds a menu list of its own`).not.toContain("MENU_LIST");
       expect(text, `${name} styles its own scrolling list`).not.toMatch(/min-height:0;overflow:auto/);
     }
   });

@@ -290,11 +290,6 @@ export const SELECTABLE = {
   bgActive: T.cardBgActive,
 } as const;
 
-/** A side panel: the ligand list, a detail column. */
-export const PANEL =
-  `display:flex;flex-direction:column;gap:${SPACE.lg};padding:${SPACE.xl};min-height:0;` +
-  `background:${T.panelBg};`;
-
 /** A floating readout that follows the pointer. */
 export const TOOLTIP =
   `position:absolute;z-index:30;pointer-events:none;opacity:0;transition:opacity .12s ease;` +

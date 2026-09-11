@@ -11,7 +11,10 @@
  */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { buttonGroup, CHROME_OPEN_BY_DEFAULT, chromeMenu, el, headerStrip, splitter } from "../src/shared/dom.js";
+import { el } from "../src/shared/dom.js";
+import { buttonGroup } from "../src/shared/controls.js";
+import { headerStrip } from "../src/shared/panels.js";
+import { CHROME_OPEN_BY_DEFAULT, chromeMenu, splitter } from "../src/shared/chrome.js";
 import { num } from "../src/shared/settings.js";
 import { HEADER_LINE } from "../src/shared/style.js";
 
@@ -40,8 +43,9 @@ describe("chromeMenu", () => {
 
     menu.setOpen(true);
     expect(build).toHaveBeenCalledTimes(1);
-    // What was built, and the share row every menu ends with. See `framejs.ts`.
-    expect(menu.panel.childElementCount).toBe(2);
+    // Only what was built. The share row is a view's `extras`, not something
+    // this helper reaches for - see the `extras` cases below.
+    expect(menu.panel.childElementCount).toBe(1);
   });
 
   it("builds its contents exactly once across many toggles", () => {
@@ -64,7 +68,36 @@ describe("chromeMenu", () => {
     menu.setOpen(false);
     menu.setOpen(true);
     expect(menu.panel.firstElementChild).toBe(first);
+    expect(menu.panel.childElementCount).toBe(1);
+  });
+
+  /**
+   * `extras` is how the share button reaches every menu without this helper
+   * importing the module that uploads to framejs. That import used to run the
+   * other way too, so the two modules were a value cycle held together only by
+   * nothing in `framejs.ts` reading an import at module scope.
+   */
+  it("appends extras after what the view built, on the same first open", () => {
+    const extras = vi.fn((panel: HTMLElement) => {
+      const row = document.createElement("div");
+      row.id = "extra";
+      panel.appendChild(row);
+    });
+    const menu = chromeMenu(header, () => el("div", "", "built"), { extras });
+    expect(extras).not.toHaveBeenCalled();
+
+    menu.setOpen(true);
+    expect(extras).toHaveBeenCalledTimes(1);
     expect(menu.panel.childElementCount).toBe(2);
+    // Last, so a view's own controls stay above it.
+    expect(menu.panel.lastElementChild?.id).toBe("extra");
+  });
+
+  it("appends extras exactly once across many toggles", () => {
+    const extras = vi.fn();
+    const menu = chromeMenu(header, () => document.createElement("div"), { extras });
+    for (const open of [true, false, true, false, true]) menu.setOpen(open);
+    expect(extras).toHaveBeenCalledTimes(1);
   });
 
   it("reports the change so a view can re-lay-out", () => {

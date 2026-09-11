@@ -335,7 +335,7 @@ export function tint(rgb: readonly [number, number, number], towardsWhite: numbe
  * do is hand a deletion to the element changes, so the exclusion is taken with
  * the full reach whatever `boundary` says.
  */
-export function uniqueBonds(
+function uniqueBonds(
   mol: Molecule,
   uniques: { atoms: readonly number[]; elements: readonly number[] },
   boundary: boolean,

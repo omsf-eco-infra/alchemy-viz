@@ -40,35 +40,29 @@
  * `sceneCamera`, which is the same one the ligand network moves on.
  */
 
-import {
-  BTN_CSS,
-  centredMessage,
-  chromeMenu,
-  dropdown,
-  el,
-  floatingWarning,
-  headerStrip,
-  orientMenuPanel,
-  SELECT_CSS,
-  splitter,
-  statChip,
-} from "../shared/dom.js";
+import { el, truncate } from "../shared/dom.js";
+import { dropdown } from "../shared/controls.js";
+import { centredMessage, floatingWarning, headerStrip, statChip } from "../shared/panels.js";
+import { chromeMenu, orientMenuPanel, splitter } from "../shared/chrome.js";
+import { framejsMenuItem } from "../shared/framejs.js";
 import { defineElement, GufeElement, type ViewHandle } from "../shared/element.js";
-import { extentOf, sceneCamera } from "../shared/camera.js";
+import { CLICK_SLOP, extentOf, sceneCamera } from "../shared/camera.js";
 import { withoutLayout } from "../shared/layout.js";
-import { loadD3, loadRDKit, type RDKitModule } from "../shared/engines.js";
+import { optionalRDKit, type RDKitModule } from "../shared/engines.js";
+import { relax as relaxWith } from "../shared/network/force.js";
+import { resolveNetwork } from "../shared/network/resolve.js";
+import { networkMenu } from "../shared/network/menu.js";
+import { CULL_MARGIN, DIM, levelAt as levelIn } from "../shared/network/detail.js";
 import { resetControl } from "../shared/interact.js";
 import { flag, num, text as textSetting } from "../shared/settings.js";
-import { exportBlock, MULTI_SELECT_HINT } from "../shared/selection.js";
-import { createMatcher, smartsBox, type MatchOutcome } from "../shared/smarts.js";
-import { errText } from "../shared/dom.js";
+import { createMatcher, type MatchOutcome } from "../shared/smarts.js";
 import { svg, titled } from "../shared/svg.js";
 import { depictSVG } from "../shared/sdf.js";
 import { depictThemeOptions, nodeCardGround } from "../shared/depict-theme.js";
 import { chargeLabel } from "../shared/charge.js";
 import { DEPICT_STYLE } from "../shared/depict-style.js";
 import { mountDepiction } from "../shared/depict-node.js";
-import { FONT, MENU_LIST, MENU_PANEL, TOOLBAR, WEIGHT } from "../shared/style.js";
+import { FONT, RADIUS, SPACE, TOOLBAR, WEIGHT } from "../shared/style.js";
 import { T } from "../shared/theme.js";
 import { buildRegistry, entryLabel, lookup, lookupOfType, type RegistryIndex } from "../schema/registry.js";
 import { systemPayloadFor } from "./chemical-system.js";
@@ -84,32 +78,16 @@ import type {
 
 // --- just enough of d3-force to configure it -------------------------------
 //
-// Deliberately not shared with the ligand-network view: the two configure
-// different forces at different scales - box-shaped nodes here against
-// depiction-sized discs there - and a shared wrapper would have to be
-// parameterized by everything that differs, which is all of it.
+// The typings and the driver are `shared/network/force.ts`. What is not shared
+// with the ligand-network view is the force set: box-shaped nodes here against
+// depiction-sized discs there, at different scales. A link here is a plain pair
+// of endpoints, because a transformation carries nothing that changes how far
+// apart its two systems settle.
 
-interface D3Force {
-  id(accessor: (node: GraphNode) => string): D3Force;
-  distance(value: number): D3Force;
-  strength(value: number): D3Force;
-  iterations(value: number): D3Force;
-}
-
-interface D3Simulation {
-  force(name: string, force: D3Force): D3Simulation;
-  stop(): D3Simulation;
-  tick(): D3Simulation;
-  alphaMin(): number;
-  alphaDecay(): number;
-}
-
-interface D3ForceModule {
-  forceSimulation(nodes: GraphNode[]): D3Simulation;
-  forceLink(links: { source: string; target: string }[]): D3Force;
-  forceManyBody(): D3Force;
-  forceCenter(x: number, y: number): D3Force;
-  forceCollide(radius: number): D3Force;
+/** What d3-force wants a link to look like; it rewrites these in place. */
+interface D3Link {
+  source: string;
+  target: string;
 }
 
 /** A chemical system resolved out of the registry, with its layout position. */
@@ -288,11 +266,7 @@ export const ZOOM_LEVELS: readonly NodeDetail[] = [
 ];
 
 /** The level a zoom falls in. */
-export const levelAt = (scale: number): NodeDetail =>
-  ZOOM_LEVELS.find((level) => scale >= level.from) ?? ZOOM_LEVELS[ZOOM_LEVELS.length - 1];
-
-/** How far outside the viewport a structure is still built, so panning does not tear. */
-const CULL_MARGIN = 200;
+export const levelAt = (scale: number): NodeDetail => levelIn(ZOOM_LEVELS, scale);
 
 /**
  * How wide a transformation is drawn, and how wide it is to a pointer.
@@ -377,9 +351,6 @@ const FORCE = {
 /** How much of the width the graph gets, before anyone drags the divider. */
 const CANVAS_SHARE = { initial: 0.56, min: 0.25, max: 0.78 };
 
-/** Breathing room between the outermost box and the edge of the canvas. */
-const FIT_MARGIN = 24;
-
 /**
  * How far a node's own box reaches from its position, which is its centre.
  *
@@ -391,28 +362,61 @@ const FIT_MARGIN = 24;
  */
 const NODE_EXTENT = { x: NODE.width / 2, y: NODE.depictedHeight / 2 };
 
-/**
- * How far what a filter left out is faded, rather than removed.
- *
- * Dimmed and not hidden, for the same reason the ligand network dims: seeing
- * what is *not* in the answer is half of reading a filter. The two numbers
- * differ because an edge is a thin line and a box is a filled shape - equal
- * opacities do not read as equally faded.
- */
-const DIM = { node: 0.12, edge: 0.06 };
-
 /** How far in the canvas zooms to show one system the reader went looking for. */
 const FOCUS_SCALE = 1.4;
 
-/** How far a pointer may wander during a node drag and still count as a click, in pixels. */
-const CLICK_SLOP = 3;
+/**
+ * What the filters leave lit, as sets of node keys and edge indices.
+ *
+ * A system is lit when nothing is being asked for at all, or when it is
+ * selected, or when it survives every filter. A transformation is lit when both
+ * of its systems are - so a selection reads as "these systems and what runs
+ * between them", which is also exactly what the Transformations export copies.
+ *
+ * Null means nothing is filtering, which the canvas draws as full strength
+ * everywhere rather than as "everything happens to be lit".
+ *
+ * Pure and outside the render, like the ligand network's `emphasisFor`: it was a
+ * thirty-line callback declared as a no-op at the top of `renderView` and
+ * reassigned from inside `paint`, which is the wrong place for the one part of
+ * this view that is a rule rather than a wiring.
+ */
+function emphasisFor(
+  nodes: readonly GraphNode[],
+  edges: readonly GraphEdge[],
+  haystacks: readonly string[],
+  signatures: readonly string[],
+  selected: ReadonlySet<string>,
+  query: string,
+  composition: string,
+  matched: ReadonlySet<number> | null,
+): { nodes: ReadonlySet<string>; edges: ReadonlySet<number> } | null {
+  const text = query.trim().toLowerCase();
+  if (!selected.size && !text && composition === "" && matched === null) return null;
+
+  // A selection on its own lights only what is in it: with no search and no
+  // composition chosen there is nothing for the two filters to narrow, and a
+  // `shown` that answered "yes, trivially" would light the whole canvas back up.
+  const narrowing = text.length > 0 || composition !== "" || matched !== null;
+  const litNodes = new Set<string>();
+  nodes.forEach((node, index) => {
+    const shown =
+      narrowing &&
+      (!text || haystacks[index].includes(text)) &&
+      (!composition || signatures[index] === composition) &&
+      (!matched || matched.has(index));
+    if (selected.has(node["gufe-key"]) || shown) litNodes.add(node["gufe-key"]);
+  });
+
+  const litEdges = new Set<number>();
+  edges.forEach((edge, index) => {
+    if (litNodes.has(edge.from["gufe-key"]) && litNodes.has(edge.to["gufe-key"])) litEdges.add(index);
+  });
+  return { nodes: litNodes, edges: litEdges };
+}
 
 /** A node's label: its name, or a short form of its gufe key. */
 const nodeLabel = entryLabel;
-
-function truncate(text: string, limit: number): string {
-  return text.length > limit ? `${text.slice(0, limit - 1)}...` : text;
-}
 
 /**
  * What a chemical system is made of, as the set of its component types, sorted.
@@ -649,181 +653,95 @@ interface MenuParts {
 /**
  * The network's menu: search, the composition filter, and the system list.
  *
- * The same three things the ligand network's menu is, asking the two questions
- * an alchemical network raises instead of the two a ligand network does. A
- * ligand network filters by mapping score, which nothing here has; what this
- * has instead is legs - the same campaign run in solvent and in complex - and
- * "show me only the complex leg" is the filter people reach for. The search is
- * the same idea in both, over a different haystack.
+ * The skeleton is `networkMenu`, shared with the ligand network. What is here is
+ * what an *alchemical* network's menu is: it searches a precomputed haystack per
+ * system rather than the system itself, it filters on composition because the
+ * question people ask of a campaign is "show me only the complex leg", and every
+ * row carries the colour its box is drawn in.
  *
- * Everything is a preference and survives a reload, except the selection: it
- * names systems in the network on screen, and restoring it onto a different one
- * would restore nonsense.
- *
- * Lazily built, like the ligand one, and for the same reason: at two hundred
- * systems the list is the most expensive thing in the view, and a menu nobody
- * opened should not pay for it.
+ * Its SMARTS box also does the opposite of the ligand network's. There a node is
+ * a molecule and a match has a structure to colour; here a node is a system made
+ * of several, so a match is something to narrow the list by. `shows` is where
+ * that difference lives.
  */
 function buildMenu(parts: MenuParts): HTMLDivElement {
-  const querySetting = textSetting("alchemical-network.query");
   const compositionSetting = textSetting("alchemical-network.composition");
 
-  const panel = el("div", MENU_PANEL);
-
-  const search = el("input", `${SELECT_CSS}width:100%;box-sizing:border-box;`) as HTMLInputElement;
-  search.type = "search";
-  search.placeholder = "Search systems";
-  search.value = querySetting.get();
-  parts.query.text = search.value;
-  search.setAttribute("aria-label", "Search systems by name, component or gufe key");
-  panel.appendChild(search);
-
-  // Under the search and doing the same job by a different route: the search
-  // knows a system by its name, this one knows it by what its ligands are made
-  // of. Both narrow, so both feed the same list - which is the difference from
-  // the ligand network, where a node *is* a molecule and a match has a
-  // structure to colour rather than a box to hide.
-  const smarts = smartsBox({
-    placeholder: "Filter by SMARTS",
-    label: "Show only the systems whose ligands match this SMARTS pattern",
-    remember: textSetting("alchemical-network.smarts"),
-    run: (pattern) => parts.match(pattern),
-    describe: (outcome) => {
-      const unread = outcome.unreadable ? `, ${outcome.unreadable} could not be read` : "";
-      const left = parts.matched()?.size ?? parts.nodes.length;
-      return `${left} of ${parts.nodes.length} systems contain it${unread}`;
-    },
-  });
-  panel.appendChild(smarts.element);
-
-  // Only when there is more than one, which is also the rule the legend and the
-  // node colouring follow: a network whose systems are all made of the same
-  // things has nothing here to choose between.
-  if (parts.compositions.length > 1) {
-    const row = el("div", `display:flex;align-items:center;gap:6px;font-size:${FONT.small};color:${T.textMuted};`);
-    row.appendChild(el("span", "flex-shrink:0;", "made of"));
-    const picker = dropdown(
-      [{ id: "", label: "anything" }, ...parts.compositions.map((signature) => ({ id: signature, label: signature }))],
-      "",
-      (id) => {
-        parts.filter.composition = id;
-        render();
-        parts.refresh();
-      },
-      compositionSetting,
-    );
-    picker.style.cssText += "flex:1;min-width:0;";
-    parts.filter.composition = picker.value;
-    row.appendChild(picker);
-    panel.appendChild(row);
-  }
-
-  const count = el("div", `font-size:${FONT.small};color:${T.textMuted2};`);
-  panel.appendChild(count);
-
-  const list = el("div", MENU_LIST);
-  panel.appendChild(list);
-
-  panel.appendChild(el("div", `font-size:${FONT.tiny};line-height:1.5;color:${T.textMuted2};`, MULTI_SELECT_HINT));
-
-  const exporter = exportBlock({
+  return networkMenu<GraphNode>({
+    namespace: "alchemical-network",
+    noun: "systems",
     nodes: parts.nodes,
     edges: parts.edges,
     selected: parts.selected,
-    words: {
+    query: parts.query,
+    search: {
+      placeholder: "Search systems",
+      label: "Search systems by name, component or gufe key",
+    },
+    smarts: {
+      placeholder: "Filter by SMARTS",
+      label: "Show only the systems whose ligands match this SMARTS pattern",
+      describe: (outcome) => {
+        const unread = outcome.unreadable ? `, ${outcome.unreadable} could not be read` : "";
+        const left = parts.matched()?.size ?? parts.nodes.length;
+        return `${left} of ${parts.nodes.length} systems contain it${unread}`;
+      },
+    },
+    match: (pattern) => parts.match(pattern),
+    // Only when there is more than one, which is also the rule the legend and
+    // the node colouring follow: a network whose systems are all made of the
+    // same things has nothing here to choose between.
+    filters: (rerender) => {
+      if (parts.compositions.length <= 1) return [];
+      const row = el("div", `display:flex;align-items:center;gap:${SPACE.md};font-size:${FONT.small};color:${T.textMuted};`);
+      row.appendChild(el("span", "flex-shrink:0;", "made of"));
+      const picker = dropdown(
+        [{ id: "", label: "anything" }, ...parts.compositions.map((signature) => ({ id: signature, label: signature }))],
+        "",
+        (id) => {
+          parts.filter.composition = id;
+          rerender();
+          parts.refresh();
+        },
+        compositionSetting,
+      );
+      picker.style.cssText += "flex:1;min-width:0;";
+      parts.filter.composition = picker.value;
+      row.appendChild(picker);
+      return [row];
+    },
+    shows: (_node, index) => {
+      const text = parts.query.text.trim().toLowerCase();
+      if (text && !parts.haystacks[index].includes(text)) return false;
+      if (parts.filter.composition && parts.signatures[index] !== parts.filter.composition) return false;
+      const matched = parts.matched();
+      if (matched && !matched.has(index)) return false;
+      return true;
+    },
+    row: (node, index) => {
+      const colors = parts.colorOf(index);
+      return {
+        // The same colour the box on the canvas is drawn in, so a row and a node
+        // are recognisably the same thing without reading either label.
+        before: el(
+          "span",
+          `width:10px;height:10px;border-radius:${RADIUS.sm};flex-shrink:0;` +
+            `background:${colors.fill};border:1px solid ${colors.stroke};`,
+        ),
+        name: nodeLabel(node),
+        title: `${nodeLabel(node)}\n${parts.signatures[index]}`,
+      };
+    },
+    export: {
       nodes: { button: "Systems", plural: "systems" },
       edges: { button: "Transformations", plural: "transformations" },
     },
-    setting: "alchemical-network.exportAs",
+    refresh: parts.refresh,
+    focus: parts.focus,
+    mounted: parts.mounted,
   });
-  panel.appendChild(exporter.box);
-
-  const clear = el("button", `${BTN_CSS}width:100%;`, "Clear selection");
-  clear.onclick = () => {
-    parts.selected.clear();
-    render();
-    parts.refresh();
-  };
-  panel.appendChild(clear);
-
-  /** Whether a system survives every filter. The list and the canvas ask this. */
-  const shows = (index: number): boolean => {
-    const text = parts.query.text.trim().toLowerCase();
-    if (text && !parts.haystacks[index].includes(text)) return false;
-    if (parts.filter.composition && parts.signatures[index] !== parts.filter.composition) return false;
-    const matched = parts.matched();
-    if (matched && !matched.has(index)) return false;
-    return true;
-  };
-
-  const render = (): void => {
-    // Whatever the export last said was about a selection that has now changed.
-    exporter.clearNote();
-    list.replaceChildren();
-    const shown = parts.nodes.map((node, index) => ({ node, index })).filter(({ index }) => shows(index));
-    count.textContent = `${shown.length} of ${parts.nodes.length} systems`;
-
-    for (const { node, index } of shown) {
-      const key = node["gufe-key"];
-      const picked = parts.selected.has(key);
-      const row = el(
-        "button",
-        "display:flex;align-items:center;gap:6px;padding:5px 8px;border-radius:6px;text-align:left;" +
-          `font-family:inherit;font-size:${FONT.small};cursor:pointer;width:100%;min-width:0;` +
-          `border:1px solid ${picked ? T.cardBorderActive : T.cardBorder};` +
-          `background:${picked ? T.cardBgActive : T.cardBg};color:${T.textPrimary};`,
-      );
-      // The same colour the box on the canvas is drawn in, so a row and a node
-      // are recognisably the same thing without reading either label.
-      const colors = parts.colorOf(index);
-      row.appendChild(
-        el(
-          "span",
-          "width:10px;height:10px;border-radius:3px;flex-shrink:0;" +
-            `background:${colors.fill};border:1px solid ${colors.stroke};`,
-        ),
-      );
-      // The full name, because the canvas caption is truncated to fit its box.
-      const name = el("span", "flex:1;min-width:0;overflow-wrap:anywhere;", nodeLabel(node));
-      name.title = `${nodeLabel(node)}\n${parts.signatures[index]}`;
-      row.appendChild(name);
-      row.onclick = (event) => {
-        // Plain click jumps to it and opens it; modifier-click adds to the
-        // selection, which is what makes "copy the transformations between
-        // these six systems" possible.
-        if (event.shiftKey || event.metaKey || event.ctrlKey) {
-          if (parts.selected.has(key)) parts.selected.delete(key);
-          else parts.selected.add(key);
-        } else {
-          parts.selected.clear();
-          parts.selected.add(key);
-          parts.focus(index);
-        }
-        render();
-        parts.refresh();
-      };
-      list.appendChild(row);
-    }
-
-    if (!shown.length) {
-      list.appendChild(el("div", `font-size:${FONT.small};padding:8px;color:${T.textMuted2};`, "Nothing matches."));
-    }
-  };
-
-  search.oninput = () => {
-    parts.query.text = search.value;
-    querySetting.set(search.value);
-    render();
-    parts.refresh();
-  };
-
-  render();
-  // The sweep is asynchronous and the pattern may be one this menu opened with,
-  // so the list has to be redrawable from outside it.
-  parts.mounted(render);
-  smarts.apply();
-  return panel;
 }
+
 
 /**
  * Seed every node on a circle - deterministic, so reloads look the same.
@@ -851,37 +769,37 @@ function seedPositions(nodes: GraphNode[], width: number, height: number): void 
  * Relax the seeded positions with d3, in place. Resolves `false` when d3 is
  * unreachable, which the caller turns into the circular layout and a banner.
  */
-async function relax(nodes: GraphNode[], edges: GraphEdge[], width: number, height: number): Promise<boolean> {
-  let d3: D3ForceModule;
-  try {
-    d3 = (await loadD3()) as D3ForceModule;
-    if (typeof d3?.forceSimulation !== "function") return false;
-  } catch {
-    return false;
-  }
+function relax(nodes: GraphNode[], edges: GraphEdge[], width: number, height: number): Promise<boolean> {
+  return relaxWith<GraphNode, D3Link>({
+    nodes,
+    // d3-force rewrites link endpoints in place, so it gets its own objects.
+    links: edges.map((edge) => ({ source: edge.from["gufe-key"], target: edge.to["gufe-key"] })),
+    tickMultiplier: FORCE.tickMultiplier,
+    forces: (d3, links) => [
+      [
+        "link",
+        d3
+          .forceLink(links)
+          .id((node) => node["gufe-key"])
+          .distance(FORCE.linkDistance)
+          .strength(FORCE.linkStrength),
+      ],
+      ["charge", d3.forceManyBody().strength(FORCE.chargeStrength)],
+      ["center", d3.forceCenter(width / 2, height / 2)],
+      ["collision", d3.forceCollide(FORCE.collisionRadius).iterations(FORCE.collisionIterations)],
+    ],
+  });
+}
 
-  // d3-force rewrites link endpoints in place, so it gets its own objects.
-  const links = edges.map((edge) => ({ source: edge.from["gufe-key"], target: edge.to["gufe-key"] }));
-  const simulation = d3
-    .forceSimulation(nodes)
-    .force(
-      "link",
-      d3
-        .forceLink(links)
-        .id((node: GraphNode) => node["gufe-key"])
-        .distance(FORCE.linkDistance)
-        .strength(FORCE.linkStrength),
-    )
-    .force("charge", d3.forceManyBody().strength(FORCE.chargeStrength))
-    .force("center", d3.forceCenter(width / 2, height / 2))
-    .force("collision", d3.forceCollide(FORCE.collisionRadius).iterations(FORCE.collisionIterations))
-    .stop();
-
-  // Run to completion and draw once, rather than animating a DOM write per node
-  // per frame.
-  const ticks = Math.ceil(Math.log(simulation.alphaMin()) / Math.log(1 - simulation.alphaDecay()));
-  for (let i = 0; i < ticks * FORCE.tickMultiplier; i++) simulation.tick();
-  return true;
+/** What is on the canvas now. The mirror of the ligand network's `NetworkScene`. */
+interface GraphScene {
+  setSelected(selection: { kind: "node" | "edge"; index: number } | null): void;
+  /** Fade what the filters left out. Null on either means "nothing is filtered". */
+  setEmphasis(nodeKeys: ReadonlySet<string> | null, edgeIndices: ReadonlySet<number> | null): void;
+  /** Bring one system to the middle, zoomed in enough to read it. */
+  focusOn(index: number): void;
+  reset(): void;
+  cleanup(): void;
 }
 
 export class GufeAlchemicalNetwork extends GufeElement<AlchemicalNetworkViz> {
@@ -892,35 +810,19 @@ export class GufeAlchemicalNetwork extends GufeElement<AlchemicalNetworkViz> {
   protected renderView(host: HTMLDivElement, payload: AlchemicalNetworkViz): ViewHandle {
     // The nodes are gufe keys; the chemical systems live in the registry, once,
     // which is what lets forty systems share one protein without carrying the
-    // PDB forty times.
+    // PDB forty times. A key that names no entry, or a transformation naming a
+    // system this network does not contain, is a schema-valid payload the view
+    // has to survive: both are counted and reported rather than drawn as a
+    // silently smaller network. `resolveNetwork` is that rule, shared with the
+    // ligand network.
     const registry = buildRegistry(payload);
-    const nodes: GraphNode[] = [];
-    let unresolved = 0;
-    for (const key of payload.nodes ?? []) {
-      const system = lookupOfType<ChemicalSystemViz>(registry, key, "ChemicalSystemViz");
-      if (!system) {
-        unresolved++;
-        continue;
-      }
-      nodes.push({ ...system, x: 0, y: 0 });
-    }
-    const byId = new Map(nodes.map((node) => [node["gufe-key"], node]));
-
-    // An edge whose endpoints are not both present cannot be drawn. The schema
-    // cannot express "source names a node that exists", so a valid payload can
-    // still say this: drop the edge and count it rather than showing a smaller
-    // network with no explanation.
-    const edges: GraphEdge[] = [];
-    let dangling = 0;
-    for (const edge of payload.edges ?? []) {
-      const from = byId.get(edge.stateA);
-      const to = byId.get(edge.stateB);
-      if (!from || !to) {
-        dangling++;
-        continue;
-      }
-      edges.push({ ...edge, index: edges.length, from, to });
-    }
+    const { nodes, edges, unresolved, dangling } = resolveNetwork<TransformationViz, ChemicalSystemViz>({
+      registry,
+      keys: payload.nodes ?? [],
+      nodeType: "ChemicalSystemViz",
+      edges: payload.edges ?? [],
+      ends: (edge) => [edge.stateA, edge.stateB],
+    });
 
     // Every transformation of a network usually names the same protocol, which
     // is why it is a registry entry rather than a field repeated per edge. A
@@ -961,10 +863,35 @@ export class GufeAlchemicalNetwork extends GufeElement<AlchemicalNetworkViz> {
     const selected = new Set<string>();
     const filter = { composition: "" };
     const query = { text: "" };
-    let applyEmphasis = () => {};
-    let focusNode: (index: number) => void = () => {};
-    // Assigned once there is a scene; the menu can be opened before there is.
-    let openNode: (index: number) => void = () => {};
+
+    /**
+     * The canvas as it is painted right now, or null before the first paint.
+     *
+     * One handle rather than the five no-op callbacks this used to declare and
+     * reassign from inside `paint`. See `GraphScene`.
+     */
+    let scene: GraphScene | null = null;
+
+    /**
+     * Push whatever the filters now leave lit at whatever is painted now.
+     *
+     * `emphasisFor` is the rule; this is the line that applies it. A no-op before
+     * the first paint, which is correct rather than merely harmless - the next
+     * paint applies it again from scratch.
+     */
+    const applyEmphasis = (): void => {
+      const lit = emphasisFor(
+        nodes,
+        edges,
+        haystacks,
+        groups.signatures,
+        selected,
+        query.text,
+        filter.composition,
+        matched,
+      );
+      scene?.setEmphasis(lit?.nodes ?? null, lit?.edges ?? null);
+    };
 
     // Built once, here rather than in the menu, because the canvas filters
     // against them too and a menu nobody opened must not be what decides
@@ -974,17 +901,12 @@ export class GufeAlchemicalNetwork extends GufeElement<AlchemicalNetworkViz> {
     /**
      * RDKit, fetched once and only if something asks.
      *
-     * Behind an accessor rather than started here, so that a network nobody
-     * types a pattern into never fetches seven megabytes of WebAssembly to do
-     * nothing with. This view draws no structures of its own, so unlike the
-     * ligand network there is nothing else that would have paid for it.
+     * Behind an accessor rather than called here, so that a network nothing
+     * draws a structure for never fetches seven megabytes of WebAssembly to do
+     * nothing with. `optionalRDKit` answers null instead of rejecting, which is
+     * what lets a node fall back to initials.
      */
-    let rdkitPromise: Promise<RDKitModule | null> | null = null;
-    const rdkit = (): Promise<RDKitModule | null> =>
-      (rdkitPromise ??= loadRDKit().catch((e: unknown) => {
-        console.warn("[gufe-viz] RDKit failed to load:", errText(e));
-        return null;
-      }));
+    const rdkit = (): Promise<RDKitModule | null> => optionalRDKit();
 
     const ligands = ligandIndex(nodes, registry);
     const matcher = createMatcher(rdkit, ligands.sources);
@@ -1056,14 +978,15 @@ export class GufeAlchemicalNetwork extends GufeElement<AlchemicalNetworkViz> {
           // list is how you reach one you cannot see on the canvas, and
           // reaching it is not the point.
           focus: (index) => {
-            focusNode(index);
-            openNode(index);
+            scene?.focusOn(index);
+            select("node", index);
           },
         }),
       {
         label: "Search, filter and select systems",
         onToggle: () => redraw(),
         remember: flag("alchemical-network.menuOpen", false),
+        extras: framejsMenuItem,
       },
     );
     // `min-height` as well as `min-width`, because the split divides the height
@@ -1139,10 +1062,6 @@ export class GufeAlchemicalNetwork extends GufeElement<AlchemicalNetworkViz> {
     let alive = true;
     let forceUnavailable = false;
     let selectedItem: { kind: "node" | "edge"; index: number } | null = null;
-    let refreshSelection = () => {};
-    /** The camera of the scene currently on the canvas; a redraw replaces both. */
-    let resetView = () => {};
-    let stopScene = () => {};
     /**
      * Which draw is the current one.
      *
@@ -1160,14 +1079,13 @@ export class GufeAlchemicalNetwork extends GufeElement<AlchemicalNetworkViz> {
     const anyChargeChange = edges.some(
       (edge) => (chargeByKey.get(edge.to["gufe-key"]) ?? 0) !== (chargeByKey.get(edge.from["gufe-key"]) ?? 0),
     );
-    left.appendChild(this.#canvasBar(groups.legend, () => resetView(), anyChargeChange));
+    left.appendChild(this.#canvasBar(groups.legend, () => scene?.reset(), anyChargeChange));
 
     const select = (kind: "node" | "edge", index: number): void => {
       selectedItem = { kind, index };
       detail.show(kind === "node" ? nodes[index] : edges[index], kind);
-      refreshSelection();
+      scene?.setSelected(selectedItem);
     };
-    openNode = (index) => select("node", index);
 
     const draw = (): void => {
       const mine = ++era;
@@ -1182,53 +1100,13 @@ export class GufeAlchemicalNetwork extends GufeElement<AlchemicalNetworkViz> {
         // draw may have appended one before this guard existed to stop it.
         // Torn down here rather than when the draw started, so the graph on
         // screen stays there while the layout for the next one is worked out.
-        stopScene();
+        scene?.cleanup();
         canvas.querySelectorAll("svg").forEach((stale) => stale.remove());
-        const scene = this.#paint(canvas, nodes, edges, width, height, faces, rdkit, select);
-        stopScene = scene.cleanup;
-        resetView = scene.reset;
-        focusNode = (index) => scene.focusOn(index);
-        refreshSelection = () => scene.setSelected(selectedItem);
-        refreshSelection();
+        scene = this.#paint(canvas, nodes, edges, width, height, faces, rdkit, select);
 
-        /**
-         * What the filters leave lit, applied to the canvas.
-         *
-         * A system is lit when nothing is being asked for at all, or when it is
-         * selected, or when it survives both filters. A transformation is lit
-         * when both of its systems are - so a selection reads as "these systems
-         * and what runs between them", which is also exactly what the
-         * Transformations export copies.
-         */
-        applyEmphasis = () => {
-          const text = query.text.trim().toLowerCase();
-          const filtering = selected.size > 0 || text.length > 0 || filter.composition !== "" || matched !== null;
-          if (!filtering) {
-            scene.setEmphasis(null, null);
-            return;
-          }
-
-          // A selection on its own lights only what is in it: with no search
-          // and no composition chosen there is nothing for the two filters to
-          // narrow, and a `shown` that answered "yes, trivially" would light
-          // the whole canvas back up.
-          const narrowing = text.length > 0 || filter.composition !== "" || matched !== null;
-          const litNodes = new Set<string>();
-          nodes.forEach((node, index) => {
-            const shown =
-              narrowing &&
-              (!text || haystacks[index].includes(text)) &&
-              (!filter.composition || groups.signatures[index] === filter.composition) &&
-              (!matched || matched.has(index));
-            if (selected.has(node["gufe-key"]) || shown) litNodes.add(node["gufe-key"]);
-          });
-
-          const litEdges = new Set<number>();
-          edges.forEach((edge, index) => {
-            if (litNodes.has(edge.from["gufe-key"]) && litNodes.has(edge.to["gufe-key"])) litEdges.add(index);
-          });
-          scene.setEmphasis(litNodes, litEdges);
-        };
+        // A redraw builds a graph with nothing on it, so both are applied again
+        // here rather than only when the reader changes them.
+        scene.setSelected(selectedItem);
         applyEmphasis();
       };
 
@@ -1257,7 +1135,8 @@ export class GufeAlchemicalNetwork extends GufeElement<AlchemicalNetworkViz> {
       onResize: () => draw(),
       cleanup: () => {
         alive = false;
-        stopScene();
+        scene?.cleanup();
+        scene = null;
         detail.cleanup();
       },
     };
@@ -1365,15 +1244,7 @@ export class GufeAlchemicalNetwork extends GufeElement<AlchemicalNetworkViz> {
     faces: readonly NodeFace[],
     rdkit: () => Promise<RDKitModule | null>,
     onSelect: (kind: "node" | "edge", index: number) => void,
-  ): {
-    setSelected(selection: { kind: "node" | "edge"; index: number } | null): void;
-    /** Fade what the filters left out. Null on either means "nothing is filtered". */
-    setEmphasis(nodeKeys: ReadonlySet<string> | null, edgeIndices: ReadonlySet<number> | null): void;
-    /** Bring one system to the middle, zoomed in enough to read it. */
-    focusOn(index: number): void;
-    reset(): void;
-    cleanup(): void;
-  } {
+  ): GraphScene {
     // Named, so the graph itself can be found among whatever the detail pane
     // has drawn beside it - the ligand-network view names its own the same way.
     // `touch-action` off, or a drag to pan scrolls the page instead.
@@ -1401,7 +1272,6 @@ export class GufeAlchemicalNetwork extends GufeElement<AlchemicalNetworkViz> {
 
     const camera = sceneCamera(root, scene, {
       bounds: () => extentOf(nodes, NODE_EXTENT.x, NODE_EXTENT.y),
-      margin: FIT_MARGIN,
       hint: "Click the graph or hold Ctrl to zoom",
       onTransform: (scale, tx, ty) => onZoom(scale, tx, ty),
     });

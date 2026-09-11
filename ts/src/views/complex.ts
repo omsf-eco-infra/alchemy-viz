@@ -21,7 +21,8 @@
  * and `complexPartsFor` is what decides whether there is anything to mount.
  */
 
-import { buttonGroup, errText } from "../shared/dom.js";
+import { errText } from "../shared/dom.js";
+import { buttonGroup } from "../shared/controls.js";
 import { defineElement, GufeElement, type ViewHandle } from "../shared/element.js";
 import { choice } from "../shared/settings.js";
 import { load3Dmol, ThreeDmol } from "../shared/engines.js";

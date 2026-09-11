@@ -12,7 +12,7 @@ import { parsePdbStats } from "../src/shared/pdb.js";
 import { formatIssues, validatePayload } from "../src/schema/validate.js";
 import { buildRegistry, lookupOfType } from "../src/schema/registry.js";
 import { T } from "../src/shared/theme.js";
-import { HIDE_NAME_ATTRIBUTE } from "../src/shared/dom.js";
+import { HIDE_NAME_ATTRIBUTE } from "../src/shared/panels.js";
 import { inFrameOf, mappingPayloadFor, openfeShift, pairColour, uniqueAtoms } from "../src/views/atom-mapping.js";
 import { DEPICT_STYLE, markGroups, threeDmolColor } from "../src/shared/depict-style.js";
 import { diffStatus, transformationPayloadFor } from "../src/views/transformation.js";

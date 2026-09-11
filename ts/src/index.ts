@@ -1,9 +1,32 @@
 /**
  * The bundle entry point.
  *
- * Importing this registers every `<gufe-*>` custom element and sets it's payload.
- * Each gufe/schema type as a corresponding <gufe-*> element.
- * This is for the HTML export and soon the notebook widget
+ * Importing this registers every `<gufe-*>` custom element. Each gufe/schema
+ * type has a corresponding `<gufe-*>` element. This is what `to_html` inlines
+ * and what the notebook widget loads.
+ *
+ * ## Why there is almost nothing exported here
+ *
+ * The whole of the browser-facing contract is two lines a host writes:
+ *
+ *     document.querySelector("gufe-view").payload = payload;
+ *
+ * That is what `python/gufe_viz/html.py` does, what `notebook.py` does, and what
+ * `ts/tests/bundle.test.ts` drives the built artifact through. Every test in the
+ * suite imports this file for its side effects alone and then reaches into
+ * `src/**` directly for anything it needs to inspect.
+ *
+ * This file used to re-export 125 named symbols on top of that - `kabsch`,
+ * `wheelFactor`, `parseAtomSpec`, `openfeShift`, `boundedZoom` and the rest -
+ * none of which had a caller anywhere. The cost was not the bytes; it was that
+ * the file read as a public API, so every rename inside `shared/` looked like a
+ * breaking change and a good deal of the internals were `export`ed only to feed
+ * it. What is left is what something outside actually reads.
+ *
+ * `VIEW_TAGS` and `PAYLOAD_TYPES` stay because `bundle.test.ts` asks the built
+ * bundle which types it draws, rather than being told in a fixture that goes
+ * stale the day a view lands. Anything else a host turns out to need is one line
+ * to add back, with a caller to justify it.
  */
 
 import "./gufe-view.js";
@@ -19,133 +42,13 @@ import "./views/solvent.js";
 import "./views/transformation.js";
 import "./views/unknown-component.js";
 
-export { GufeView, VIEW_TAGS, describeProblem, dispatchProblem } from "./gufe-view.js";
-export { PAYLOAD_TYPES, SCHEMA_TYPES, formatIssues, validateAs, validatePayload } from "./schema/validate.js";
-export { buildRegistry, entriesFor, entryLabel, lookup, lookupOfType, type RegistryEntry, type RegistryIndex } from "./schema/registry.js";
-export { GufeSmallMolecule } from "./views/small-molecule.js";
-export { GufeProtein, type PdbPayload } from "./views/protein.js";
-export { GufeProtocol } from "./views/protocol.js";
-export { GufeLigandNetwork } from "./views/ligand-network.js";
-export { GufeAlchemicalNetwork } from "./views/alchemical-network.js";
-export {
-  GufeAtomMapping,
-  inFrameOf,
-  liftFor,
-  mappingPayloadFor,
-  openfeShift,
-  pairColour,
-  uniqueAtoms,
-  type Uniques,
-} from "./views/atom-mapping.js";
-export { applyRT, kabsch, type Transform, type Vec3 } from "./shared/kabsch.js";
-export { GufeChemicalSystem, systemPayloadFor } from "./views/chemical-system.js";
-export { GufeComplex, complexPartsFor, hasComplex, type ComplexParts } from "./views/complex.js";
-export { GufeSolvent } from "./views/solvent.js";
-export { GufeTransformation, diffStatus, transformationPayloadFor, type DiffStatus } from "./views/transformation.js";
-export { GufeUnknownComponent } from "./views/unknown-component.js";
-export { GufeElement, defineElement, type ViewHandle } from "./shared/element.js";
-export {
-  CHROME_OPEN_BY_DEFAULT,
-  HIDE_NAME_ATTRIBUTE,
-  chromeMenu,
-  nameWanted,
-  onWidth,
-  orientMenuPanel,
-  splitter,
-  type ChromeMenu,
-  type ChromeMenuOptions,
-  type SplitterOptions,
-} from "./shared/dom.js";
-export { MAPPING_COLORS, MAPPING_RAMP_3D, MAPPING_RAMP_NAME } from "./shared/atom-colors.js";
-export {
-  DEFAULT_DEPICT_STYLE,
-  DEPICT_STYLE,
-  DEPICT_STYLE_RANGES,
-  markGroups,
-  markedBonds,
-  normaliseDepictStyle,
-  parseAtomSpec,
-  uniqueBonds,
-  type CircleStyle,
-  type CustomAtoms,
-  type DepictStyle,
-  type ElementColors,
-  type HydrogenMode,
-  type MarkGroup,
-  type MarkStyle,
-  type Side,
-} from "./shared/depict-style.js";
-export {
-  align2D,
-  alignedToPartner,
-  applyTurn,
-  laidOut,
-  layoutPair,
-  withCoords,
-  type Layout2D,
-  type Turn2D,
-  type Vec2,
-} from "./shared/depict-layout.js";
-export {
-  boundedZoom,
-  claimGestures,
-  DEFAULT_ZOOM_BOUNDS,
-  guardWheel,
-  resetControl,
-  viewerInteraction,
-  wheelFactor,
-  type BoundedZoom,
-  type Interaction,
-  type ZoomBounds,
-} from "./shared/interact.js";
-export {
-  extentOf,
-  sceneCamera,
-  type Camera,
-  type CameraOptions,
-  type CameraTransform,
-  type Extent,
-} from "./shared/camera.js";
-export {
-  exportBlock,
-  MULTI_SELECT_HINT,
-  selectionText,
-  type ExportAs,
-  type ExportBlockOptions,
-  type ExportWord,
-  type SelectableEdge,
-  type SelectableNode,
-} from "./shared/selection.js";
-export { DEBUG_ATTRIBUTE, DEBUG_GLOBAL, debugEnabled, logPayload, payloadJson } from "./shared/debug.js";
-export {
-  choice,
-  flag,
-  num,
-  setting,
-  text as textSetting,
-  type Setting,
-} from "./shared/settings.js";
 import { resetSettings, settings } from "./shared/settings.js";
-export { resetSettings, settings };
-export type * from "./schema/types.js";
 
-/**
- * Put a `<gufe-view>` inside `host` and give it `payload`.
- *
- * Reuses an existing `<gufe-view>` if the host already has one, so calling this
- * again is an update rather than a rebuild - the create/update/destroy cycle
- * as seen from outside.
- */
-export function mount(host: HTMLElement, payload?: unknown): HTMLElement & { payload: unknown } {
-  let view = host.querySelector("gufe-view") as (HTMLElement & { payload: unknown }) | null;
-  if (!view) {
-    view = document.createElement("gufe-view") as HTMLElement & { payload: unknown };
-    view.style.cssText = "display:block;width:100%;height:100%;";
-    host.appendChild(view);
-  }
-  if (payload !== undefined) view.payload = payload;
-  return view;
-}
+/** The dispatch table, for a caller asking the bundle what it can draw. */
+export { VIEW_TAGS } from "./gufe-view.js";
+
+/** Every `type` the schema declares, drawn or not. */
+export { PAYLOAD_TYPES } from "./schema/validate.js";
 
 /**
  * The settings a view has remembered, on the console.

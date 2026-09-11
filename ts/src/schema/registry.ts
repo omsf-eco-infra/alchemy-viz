@@ -26,9 +26,6 @@ export type RegistryEntry = ComponentViz | ProtocolViz | ChemicalSystemViz;
 /** A resolved registry: gufe key -> the object it names. */
 export type RegistryIndex = ReadonlyMap<GufeKey, RegistryEntry>;
 
-/** The empty index, for a payload that refers to nothing. */
-export const EMPTY_REGISTRY: RegistryIndex = new Map();
-
 interface MaybeCarriesRegistry {
   registry?: Registry;
 }

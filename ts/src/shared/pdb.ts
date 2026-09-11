@@ -9,7 +9,7 @@
 import { errText, fmt } from "./dom.js";
 import { ThreeDmol, type ThreeDmolViewer } from "./engines.js";
 
-export const WATER_RESN = ["HOH", "WAT", "SOL", "TIP3"];
+const WATER_RESN = ["HOH", "WAT", "SOL", "TIP3"];
 const SEL_POLYMER = { hetflag: false };
 const SEL_HETERO = { hetflag: true };
 const SEL_WATER = { resn: WATER_RESN };

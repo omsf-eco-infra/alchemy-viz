@@ -31,10 +31,10 @@
  *   `finally`, including on the cancelled path.
  */
 
-import { el, errText, SELECT_CSS } from "./dom.js";
+import { el, errText } from "./dom.js";
 import type { RDKitModule, RDKitMol } from "./engines.js";
 import type { Setting } from "./settings.js";
-import { FONT } from "./style.js";
+import { FONT, INPUT } from "./style.js";
 import { T } from "./theme.js";
 
 /**
@@ -64,6 +64,14 @@ export type MatchOutcome =
   /** A newer run started, so this one stopped and has nothing to say. */
   | { status: "superseded" };
 
+/**
+ * The half of a `MatchOutcome` there is anything to say about: a sweep that ran.
+ *
+ * Named because two places describe a successful sweep - the box's own note and
+ * the network menu's spec - and they were each restating the shape inline.
+ */
+export type MatchSummary = { matched: Map<number, number[]>; unreadable: number };
+
 /** Let the browser paint between slices. */
 const yieldToPaint = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 0));
 
@@ -91,7 +99,7 @@ function release(mol: RDKitMol | null): void {
  * The consequence to know about is that a pattern naming hydrogens explicitly
  * matches nothing when hydrogens have been stripped.
  */
-export function matchAtoms(RDKit: RDKitModule, query: RDKitMol, source: string, removeHs: boolean): number[] | null {
+function matchAtoms(RDKit: RDKitModule, query: RDKitMol, source: string, removeHs: boolean): number[] | null {
   let mol: RDKitMol | null = null;
   try {
     mol = RDKit.get_mol(source, JSON.stringify({ removeHs }));
@@ -201,7 +209,7 @@ export function createMatcher(
  * "nothing happened". The sweep is cancellable either way, so this is about
  * work not started rather than about correctness.
  */
-export const MATCH_DEBOUNCE_MS = 250;
+const MATCH_DEBOUNCE_MS = 250;
 
 export interface SmartsBoxOptions {
   /** In the empty box: "Colour by SMARTS", "Filter by SMARTS". */
@@ -213,7 +221,7 @@ export interface SmartsBoxOptions {
   /** Run a pattern. What a match then means is the view's business. */
   run(pattern: string): Promise<MatchOutcome>;
   /** What a successful sweep is worth saying. Only the counts differ per view. */
-  describe(outcome: { matched: Map<number, number[]>; unreadable: number }): string;
+  describe(outcome: MatchSummary): string;
 }
 
 /**
@@ -232,7 +240,7 @@ export interface SmartsBoxOptions {
 export function smartsBox(options: SmartsBoxOptions): { element: HTMLDivElement; apply(): void } {
   const element = el("div", "display:flex;flex-direction:column;gap:8px;");
 
-  const input = el("input", `${SELECT_CSS}width:100%;box-sizing:border-box;`) as HTMLInputElement;
+  const input = el("input", INPUT) as HTMLInputElement;
   input.type = "text";
   input.placeholder = options.placeholder;
   input.value = options.remember.get();

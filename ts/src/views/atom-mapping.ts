@@ -78,7 +78,9 @@
  * the transformation view both do.
  */
 
-import { centredMessage, EM_DASH, el, errText, nameWanted, statChip, switcher } from "../shared/dom.js";
+import { el, EM_DASH, errText } from "../shared/dom.js";
+import { switcher } from "../shared/controls.js";
+import { centredMessage, nameWanted, statChip } from "../shared/panels.js";
 import { defineElement, GufeElement, type ViewHandle } from "../shared/element.js";
 import { choice } from "../shared/settings.js";
 import { load3Dmol, loadRDKit, ThreeDmol, type RDKitModule, type ThreeDmolViewer } from "../shared/engines.js";
@@ -388,7 +390,7 @@ function extents(coords: readonly Vec3[]): { min: Vec3; max: Vec3; span: Vec3 } 
  * clear the first molecule, or a fraction of its longest span - the second is
  * what stops two flat molecules ending up nearly on top of each other.
  */
-export function liftFor(a: readonly Vec3[], b: readonly Vec3[]): { axis: number; lift: number } {
+function liftFor(a: readonly Vec3[], b: readonly Vec3[]): { axis: number; lift: number } {
   const first = extents(a);
   const second = extents(b);
   let axis = 0;
@@ -454,6 +456,97 @@ export function pairColour(index: number, count: number): string {
   return hex;
 }
 
+/**
+ * Everything the six modes draw from, once the payload has been resolved and its
+ * two molecules read.
+ *
+ * One object rather than ten locals at the top of `renderView`, which is where
+ * these lived: the whole of that method was 663 lines, and its first fifty were
+ * this - resolving two keys, parsing two SDFs, putting the second into the
+ * first's frame, and working out which atoms are unique to each. None of it
+ * touches the DOM, and all of it is the same for every mode, so it does not
+ * belong inside the thing that builds the panes.
+ */
+export interface MappedPair {
+  from: SmallMoleculeComponentViz;
+  to: SmallMoleculeComponentViz;
+  nameA: string;
+  nameB: string;
+  /** A's atom index to B's, as the payload gives it. */
+  pairs: Map<number, number>;
+  /** The same, the other way round, for reading B against A. */
+  flipped: Map<number, number>;
+  molA: Molecule;
+  /** Already in `molA`'s frame - see `inFrameOf`. */
+  molB: Molecule;
+  uniquesA: Uniques;
+  uniquesB: Uniques;
+}
+
+/**
+ * The pair, or the sentence to put on the page instead of a picture.
+ *
+ * Two things can go wrong before anything is drawn and neither is exceptional: a
+ * schema-valid payload can name molecules its registry does not hold, and an SDF
+ * can be unreadable. Returning the message rather than throwing keeps both on
+ * the same footing as every other "cannot draw this" in the codebase.
+ */
+export type PreparedPair = { pair: MappedPair } | { problem: string; isError: boolean };
+
+export function preparePair(payload: LigandAtomMappingViz, registry: RegistryIndex): PreparedPair {
+  const from = lookupOfType<SmallMoleculeComponentViz>(registry, payload.componentA, "SmallMoleculeComponentViz");
+  const to = lookupOfType<SmallMoleculeComponentViz>(registry, payload.componentB, "SmallMoleculeComponentViz");
+  if (!from || !to) {
+    return {
+      problem: "This mapping names two molecules, and its registry does not hold them.",
+      isError: false,
+    };
+  }
+
+  const nameA = entryLabel(from);
+  const nameB = entryLabel(to);
+  const pairs = pairMap(payload);
+
+  let molA: Molecule;
+  let molB: Molecule;
+  try {
+    molA = parseSDF(from.sdf, nameA);
+    molB = parseSDF(to.sdf, nameB);
+  } catch (e) {
+    return { problem: `Could not read a molecule: ${errText(e)}`, isError: true };
+  }
+
+  // Both molecules into one frame, once, before any mode draws - see
+  // `inFrameOf`. Here rather than inside each mode so that clicking along the
+  // switcher cannot also turn a molecule, and so the four 3D modes cannot
+  // disagree about which way round the pair sits. 2D arrives at the same
+  // place by its own route: `layoutPair` aligns the two depictions in two
+  // dimensions, so the flat picture agrees with the spatial ones.
+  //
+  // Coordinates are all this changes. Symbols, bonds and atom indices are
+  // untouched, so everything downstream that reads the mapping - the marking,
+  // the counts, Info's correspondence - reads exactly what it read before.
+  molB = inFrameOf(molA, molB, pairs);
+
+  const flipped = new Map<number, number>();
+  for (const [a, b] of pairs) flipped.set(b, a);
+
+  return {
+    pair: {
+      from,
+      to,
+      nameA,
+      nameB,
+      pairs,
+      flipped,
+      molA,
+      molB,
+      uniquesA: uniqueAtoms(pairs, molA.symbols, molB.symbols),
+      uniquesB: uniqueAtoms(flipped, molB.symbols, molA.symbols),
+    },
+  };
+}
+
 export class GufeAtomMapping extends GufeElement<LigandAtomMappingViz> {
   protected override placeholder(): string {
     return "Waiting for a LigandAtomMapping payload...";
@@ -461,46 +554,12 @@ export class GufeAtomMapping extends GufeElement<LigandAtomMappingViz> {
 
   protected renderView(host: HTMLDivElement, payload: LigandAtomMappingViz): ViewHandle {
     const registry = buildRegistry(payload);
-    const from = lookupOfType<SmallMoleculeComponentViz>(registry, payload.componentA, "SmallMoleculeComponentViz");
-    const to = lookupOfType<SmallMoleculeComponentViz>(registry, payload.componentB, "SmallMoleculeComponentViz");
-
-    if (!from || !to) {
-      host.appendChild(
-        centredMessage("This mapping names two molecules, and its registry does not hold them."),
-      );
+    const prepared = preparePair(payload, registry);
+    if ("problem" in prepared) {
+      host.appendChild(centredMessage(prepared.problem, prepared.isError));
       return {};
     }
-
-    const nameA = entryLabel(from);
-    const nameB = entryLabel(to);
-    const pairs = pairMap(payload);
-
-    let molA: Molecule;
-    let molB: Molecule;
-    try {
-      molA = parseSDF(from.sdf, nameA);
-      molB = parseSDF(to.sdf, nameB);
-    } catch (e) {
-      host.appendChild(centredMessage(`Could not read a molecule: ${errText(e)}`, true));
-      return {};
-    }
-
-    // Both molecules into one frame, once, before any mode draws - see
-    // `inFrameOf`. Here rather than inside each mode so that clicking along the
-    // switcher cannot also turn a molecule, and so the four 3D modes cannot
-    // disagree about which way round the pair sits. 2D arrives at the same
-    // place by its own route: `layoutPair` aligns the two depictions in two
-    // dimensions, so the flat picture agrees with the spatial ones.
-    //
-    // Coordinates are all this changes. Symbols, bonds and atom indices are
-    // untouched, so everything downstream that reads the mapping - the marking,
-    // the counts, Info's correspondence - reads exactly what it read before.
-    molB = inFrameOf(molA, molB, pairs);
-
-    const flipped = new Map<number, number>();
-    for (const [a, b] of pairs) flipped.set(b, a);
-    const uniquesA = uniqueAtoms(pairs, molA.symbols, molB.symbols);
-    const uniquesB = uniqueAtoms(flipped, molB.symbols, molA.symbols);
+    const { from, to, nameA, nameB, pairs, molA, molB, uniquesA, uniquesB } = prepared.pair;
 
     // Whether each box names its molecule. On by default; off where something
     // above has already named them - see `HIDE_NAME_ATTRIBUTE`.

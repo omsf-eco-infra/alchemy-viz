@@ -139,7 +139,7 @@ declare global {
 //
 // Moving a pin is a deliberate edit here, with the page re-checked afterwards.
 
-export const ENGINE_VERSIONS = {
+const ENGINE_VERSIONS = {
   threeDmol: "2.5.5",
   rdkit: "2025.3.4-1.0.0",
   d3: "7.9.0",
@@ -148,7 +148,7 @@ export const ENGINE_VERSIONS = {
 // Built here rather than at the import site, so the bundler leaves them alone
 // and anything vendoring these instead has one obvious place to look.
 
-export const ENGINE_URLS = {
+const ENGINE_URLS = {
   threeDmol: `https://unpkg.com/3dmol@${ENGINE_VERSIONS.threeDmol}/build/3Dmol-min.js`,
   rdkit: `https://unpkg.com/@rdkit/rdkit@${ENGINE_VERSIONS.rdkit}/dist/RDKit_minimal.js`,
   d3: `https://cdn.jsdelivr.net/npm/d3@${ENGINE_VERSIONS.d3}/+esm`,
@@ -225,6 +225,35 @@ export function loadRDKit(): Promise<RDKitModule> {
   return rdkitPromise;
 }
 
+/**
+ * RDKit, or null if it could not be had.
+ *
+ * For a view that draws something either way. The two network views fall back to
+ * initials in a node when there is no RDKit, which is a coarser picture rather
+ * than no picture, so a rejected promise is the wrong shape for them: they each
+ * used to wrap `loadRDKit` in their own `catch`, and each memoised the result a
+ * second time even though the loader above already does.
+ *
+ * A view with nothing to draw without RDKit - `small-molecule`, `atom-mapping` -
+ * deliberately does not use this. It wants the error, because it has a panel to
+ * put the reason in, and "why is this blank" is a question only the message can
+ * answer.
+ *
+ * Warned once, not per caller: the memo above means the fetch is attempted once,
+ * so this says so once.
+ */
+let optionalRdkitPromise: Promise<RDKitModule | null> | null = null;
+
+export function optionalRDKit(): Promise<RDKitModule | null> {
+  // Memoised in its own right, not just relying on `loadRDKit`'s memo: a bare
+  // `.catch` per call would attach a fresh handler each time and warn once per
+  // caller on a page where the fetch failed.
+  return (optionalRdkitPromise ??= loadRDKit().catch((e: unknown) => {
+    console.warn("[gufe-viz] RDKit failed to load:", e instanceof Error ? e.message : String(e));
+    return null;
+  }));
+}
+
 // --- d3 (graph views) ------------------------------------------------------
 
 let d3Promise: Promise<unknown> | null = null;
@@ -244,5 +273,6 @@ export function _resetEnginesForTests(): void {
   ThreeDmol = null;
   threeDmolPromise = null;
   rdkitPromise = null;
+  optionalRdkitPromise = null;
   d3Promise = null;
 }

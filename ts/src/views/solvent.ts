@@ -25,7 +25,8 @@
  * says.
  */
 
-import { card, el } from "../shared/dom.js";
+import { el } from "../shared/dom.js";
+import { card } from "../shared/panels.js";
 import { defineElement, GufeElement, type ViewHandle } from "../shared/element.js";
 import { CHIP, FONT, NOTE, SECTION_LABEL, SPACE, WEIGHT } from "../shared/style.js";
 import { T } from "../shared/theme.js";

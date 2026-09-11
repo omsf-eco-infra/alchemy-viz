@@ -26,7 +26,7 @@ import { errText } from "./dom.js";
 const URL_FLAGS = ["debug", "gufe-debug"];
 
 /** The attribute a host or `to_html` puts on the element. */
-export const DEBUG_ATTRIBUTE = "debug";
+const DEBUG_ATTRIBUTE = "debug";
 
 /** The global a notebook widget or a console session can set. */
 export const DEBUG_GLOBAL = "GUFE_VIZ_DEBUG";

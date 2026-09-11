@@ -25,7 +25,9 @@
  * there; this way the conformer is ready whichever mode the view opens on.
  */
 
-import { switcher, toggleButton, centredMessage, EM_DASH, el, errText, nameWanted, viewerHost } from "../shared/dom.js";
+import { el, EM_DASH, errText } from "../shared/dom.js";
+import { switcher, toggleButton } from "../shared/controls.js";
+import { centredMessage, nameWanted, viewerHost } from "../shared/panels.js";
 import { defineElement, GufeElement, type ViewHandle } from "../shared/element.js";
 import { choice, flag } from "../shared/settings.js";
 import { load3Dmol, loadRDKit, ThreeDmol, type ThreeDmolViewer } from "../shared/engines.js";

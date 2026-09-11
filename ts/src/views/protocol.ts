@@ -12,7 +12,8 @@
  * additive change to the schema and a few more rows here.
  */
 
-import { card, el, fieldRow, headerStrip, typeBadge } from "../shared/dom.js";
+import { el } from "../shared/dom.js";
+import { card, fieldRow, headerStrip, typeBadge } from "../shared/panels.js";
 import { defineElement, GufeElement, type ViewHandle } from "../shared/element.js";
 import { FONT } from "../shared/style.js";
 import { T } from "../shared/theme.js";

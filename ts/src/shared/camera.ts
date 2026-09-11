@@ -52,7 +52,7 @@ export interface CameraOptions {
    * node extents already in it: only the view knows how big its nodes are.
    */
   bounds(): Extent | null;
-  /** Breathing room around `bounds`, in scene units. */
+  /** Breathing room around `bounds`, in scene units. Defaults to `FIT_MARGIN`. */
   margin?: number;
   /** How far the wheel may zoom. */
   zoom?: { min: number; max: number };
@@ -93,8 +93,27 @@ export interface Camera {
   cleanup(): void;
 }
 
-/** How far a pointer may wander during a pan and still count as a click, in pixels. */
-const CLICK_SLOP = 3;
+/**
+ * How far a pointer may wander during a drag and still count as a click, in
+ * screen pixels.
+ *
+ * Exported because the two graph views ask the same question about a *node*
+ * drag that this file asks about a canvas pan - a press that moved a node is not
+ * also a click selecting it - and each had its own copy of the number. One
+ * threshold, so the canvas and the things on it cannot disagree about what a
+ * click is.
+ */
+export const CLICK_SLOP = 3;
+
+/**
+ * Breathing room between the outermost thing in the scene and the edge of the
+ * viewport, in scene units, when `fit` frames it.
+ *
+ * The default rather than something each caller states, because both graph views
+ * were stating the same number. A scene framed flush to the viewport reads as
+ * cropped even when nothing is actually cut off.
+ */
+export const FIT_MARGIN = 24;
 
 /**
  * The box a set of laid-out things occupies, grown by how big each one is.
@@ -142,7 +161,7 @@ export const ZOOM_LIMITS = { min: 0.15, max: 5 };
 const ZOOM_EPSILON = 1e-9;
 
 export function sceneCamera(root: SVGSVGElement, scene: SVGGElement, options: CameraOptions): Camera {
-  const margin = options.margin ?? 0;
+  const margin = options.margin ?? FIT_MARGIN;
   const limits = options.zoom ?? ZOOM_LIMITS;
 
   let scale = 1;

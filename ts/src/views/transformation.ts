@@ -30,7 +30,9 @@
  * anything, the same blocks become a band above the molecules instead.
  */
 
-import { buttonGroup, centredMessage, el, onWidth, statChip, typeBadge } from "../shared/dom.js";
+import { el, onWidth } from "../shared/dom.js";
+import { buttonGroup } from "../shared/controls.js";
+import { centredMessage, statChip, typeBadge } from "../shared/panels.js";
 import { defineElement, GufeElement, type ViewHandle } from "../shared/element.js";
 import { FONT, PANE_LABEL, RADIUS, SPACE, WEIGHT } from "../shared/style.js";
 import { T } from "../shared/theme.js";

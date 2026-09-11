@@ -22,7 +22,8 @@
  * the browser actually get?", which is otherwise unreadable inside the page.
  */
 
-import { centredMessage, el, esc } from "./shared/dom.js";
+import { el, esc } from "./shared/dom.js";
+import { centredMessage } from "./shared/panels.js";
 import { logPayload } from "./shared/debug.js";
 import {
   defineElement,
@@ -67,7 +68,7 @@ export interface DispatchProblem {
   detail?: string;
 }
 
-export function describeProblem(payload: unknown): DispatchProblem | null {
+function describeProblem(payload: unknown): DispatchProblem | null {
   if (
     payload == null ||
     typeof payload !== "object" ||

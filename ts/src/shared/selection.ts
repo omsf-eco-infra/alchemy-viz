@@ -12,9 +12,10 @@
  * who thinks they should be able to edit is the failure mode.
  */
 
-import { BTN_CSS, dropdown, el } from "./dom.js";
+import { el } from "./dom.js";
+import { dropdown } from "./controls.js";
 import { choice } from "./settings.js";
-import { FONT } from "./style.js";
+import { BUTTON, FONT } from "./style.js";
 import { T } from "./theme.js";
 import { entryLabel } from "../schema/registry.js";
 
@@ -166,7 +167,7 @@ export function exportBlock<N extends SelectableNode>(
     ["edges", words.edges, `Copy the ${words.edges.plural} between the selected ${words.nodes.plural}, one pair per line`],
   ];
   for (const [what, word, title] of buttons) {
-    const button = el("button", `${BTN_CSS}flex:1;`, word.button);
+    const button = el("button", `${BUTTON.base}flex:1;`, word.button);
     button.title = title;
     button.onclick = (event) => {
       const as = asPicker.value as ExportAs;

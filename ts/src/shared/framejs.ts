@@ -14,9 +14,15 @@
  * find. Nothing is uploaded until it is pressed, which is what lets it be shown
  * on a page that may never touch the network.
  *
- * It is the only thing in this codebase that knows framejs exists at runtime,
- * and it is deliberately one file with one call site: deleting it is `rm` plus
- * the two lines in `chromeMenu` that call `framejsMenuItem`.
+ * It is the only thing in this codebase that knows framejs exists at runtime.
+ * It reaches a menu as that menu's `extras` callback rather than by `chromeMenu`
+ * importing this file, so the arrow points one way: this file knows about the
+ * DOM vocabulary, and the DOM vocabulary knows nothing about uploading. The
+ * other direction used to exist as well, which made the two a value cycle that
+ * happened to work only because nothing here reads an import at module scope.
+ *
+ * Deleting it is `rm` plus `grep framejsMenuItem`: the three views that carry a
+ * menu each name it once.
  *
  * ## How it works
  *
@@ -69,7 +75,8 @@
  * it and claims it with a free account.
  */
 
-import { el, MENU_OPEN_SUFFIX } from "./dom.js";
+import { el } from "./dom.js";
+import { MENU_OPEN_SUFFIX } from "./chrome.js";
 import { VIEW_STATE_GLOBAL } from "./element.js";
 import { PREFIX, settingsDump } from "./settings.js";
 import { BUTTON, FONT, SPACE } from "./style.js";
