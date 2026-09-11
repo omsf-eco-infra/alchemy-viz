@@ -38,10 +38,10 @@ def gufe_key(obj: Any) -> str:
     identifier worth having in front of you when a payload does not draw.
 
     Note the two spellings, which are the two gufe uses. In JSON the field is
-    ``gufe-key``, hyphenated, the way gufe writes it in its own serialized form.
-    In Python it is ``gufe_key``, an identifier, the way gufe writes it in
-    ``gufe_keys()`` and ``is_gufe_key_dict()``. This function is the Python one
-    and the string it is assigned to is the JSON one.
+    ``gufe-key``, hyphenated, the way gufe writes it in its own serialized form -
+    which is what ``gufe.tokenization.is_gufe_key_dict`` looks for. In Python it
+    is ``gufe_key``, an identifier, because a hyphen is not one. This function is
+    the Python spelling and the string it is assigned to is the JSON one.
     """
     return str(obj.key)
 

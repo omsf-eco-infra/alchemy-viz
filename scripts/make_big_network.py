@@ -96,9 +96,9 @@ def _smiles(count: int) -> list[str]:
     which the registry would collapse, silently producing a smaller network than
     was asked for.
 
-    Raises if the combinations run out. An earlier version instead lengthened an
-    alkyl chain to make up the shortfall, which quietly produced an 874-carbon
-    molecule at n=934: unembeddable in reasonable time, and a payload
+    Raises if the combinations run out, rather than making up the shortfall by
+    lengthening an alkyl chain. Padding that way is how you get an 874-carbon
+    molecule at n=934 - unembeddable in reasonable time, and a payload
     measurement of nothing real.
     """
     from rdkit import Chem

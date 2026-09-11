@@ -1,17 +1,24 @@
 /**
- * The component model: every `<gufe-*>` element is a custom element with
- * the same three-beat lifecycle.
+ * The component model: every `<gufe-*>` element is a custom element with the
+ * same three-beat lifecycle.
  *
  *   create   `connectedCallback`  - build the DOM, start engines
  *   update   `payload` setter     - tear the old view down, build the new one
  *   destroy  `disconnectedCallback` - kill viewers, observers and timers
  *
  * This is also what makes component reuse structural rather than conventional:
- * embedding one
- * view inside another is `host.appendChild(document.createElement('gufe-...'))`,
- * and the embedded element cleans itself up when its parent removes it. And it
- * is the whole of the future notebook-widget story - an anywidget wrapper
- * creates one element and sets `.payload`.
+ * embedding one view inside another is
+ * `host.appendChild(document.createElement('gufe-...'))`, and the embedded
+ * element cleans itself up when its parent removes it. And it is the whole of
+ * the future notebook-widget story - an anywidget wrapper creates one element
+ * and sets `.payload`.
+ *
+ * Two things here are about that lifecycle rather than part of it.
+ * `connectedCallback` installs the palette, because every view goes through it
+ * and no host should have to know a stylesheet exists. And `generations` is the
+ * same staleness guard the element keeps for itself, in a form a view can use
+ * inside one render - a paint that lands after the thing that asked for it has
+ * moved on must be dropped, wherever it was started.
  */
 
 import { el, errText } from "./dom.js";

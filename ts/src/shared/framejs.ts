@@ -21,8 +21,8 @@
  * the other way as well, the two would be a value cycle - live only because
  * nothing here reads an import at module scope.
  *
- * Deleting it is `rm` plus `grep framejsMenuItem`: the three views that carry a
- * menu each name it once.
+ * Deleting it is `rm` plus `grep framejsMenuItem`: the two network views and
+ * `protein-scene.ts` each name it once, and nothing else mentions it.
  *
  * ## How it works
  *

@@ -256,8 +256,9 @@ export function dropdown(
 /**
  * An on/off button that shows its state, and remembers it if asked.
  *
- * Spin, waters, hetero, lines: four toggles across the views, one definition of
- * what a toggle is and how its state is said.
+ * Waters, hetero and spin in a protein scene, spin again in the single-molecule
+ * view: one definition of what a toggle looks like and how its state is said, so
+ * the two places cannot answer either question differently.
  */
 export function toggleButton(
   label: string,

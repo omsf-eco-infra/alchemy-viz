@@ -23,12 +23,15 @@ export function el<K extends keyof HTMLElementTagNameMap>(
 /**
  * `s` as HTML text, safe in an attribute as well as in a body.
  *
- * The quotes are escaped, which they were not. Every call site today
- * interpolates into a body, where they do not matter - but the call sites are
- * lines of `innerHTML` with a `style="..."` in them a few characters away, so
- * the distance between "correct" and "a payload name closes an attribute" is one
- * edit nobody would think twice about. Escaping four characters instead of three
- * costs nothing and removes the question.
+ * Quotes are escaped along with the angle brackets. Every call site today
+ * interpolates into a body, where quotes do not matter - but those call sites
+ * are lines of `innerHTML` with a `style="..."` in them a few characters away,
+ * so the distance between "correct" and "a payload name closes an attribute" is
+ * one edit nobody would think twice about.
+ *
+ * For `textContent` this is the wrong function: the DOM escapes there already,
+ * and running text through both turns a molecule called `2'-deoxy` into
+ * `2&#39;-deoxy`. Only use it where the result is going into markup.
  */
 export function esc(s: unknown): string {
   return String(s == null ? "" : s)

@@ -127,8 +127,8 @@ export function guardWheel(host: HTMLElement, options: WheelGuardOptions): Inter
  * that moves under the finger.
  *
  * The 3D views need none of this: 3Dmol registers its own touch handlers and
- * refuses these defaults itself, which is why they were the ones that already
- * worked on a phone.
+ * refuses these defaults itself, so a pinch inside one is already the viewer's.
+ * An SVG has nobody to do that for it, which is the whole reason this exists.
  */
 export function claimGestures(host: Element): Interaction {
   const refuse = (event: Event) => event.preventDefault();

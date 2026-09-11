@@ -155,8 +155,10 @@ is no case where the two can be at different versions.
 Adding an optional `schema_version` later is additive and non-breaking, so this
 is a decision that can be revisited without a migration.
 
-All twelve types are declared even though only three are drawn so far. That
-costs nothing and means adding a view is an additive change, not a breaking one.
+All twelve declared types have a view. Declaring a type before drawing it costs
+nothing and keeps adding a view an additive change rather than a breaking one,
+which is why the schema is allowed to run ahead of the browser; `VIEW_TAGS` and
+`ts/tests/dispatch.test.ts` are what say where the two stand today.
 
 ## Types
 
@@ -205,12 +207,14 @@ Three things, all tested elsewhere because JSON Schema cannot express them:
   validation time both are just non-empty strings: "this string is the
   `gufe-key` of an entry in that array, and that entry has this type" is a join
   across two parts of the document, and JSON Schema has no such construct. This
-  is the other side of referential integrity, and it is what the inlined
-  `molA_sdf` used to guarantee structurally. The named key types put the
-  referent in the contract's vocabulary and in the generated TypeScript; the
-  check itself is a Python test (`test_mapping_carries_both_endpoints_by_key`)
-  and, in the browser, `lookupOfType`, which returns undefined and lets the view
-  degrade rather than drawing the wrong thing.
+  is the other side of referential integrity: inlining a molecule into the
+  mapping that names it would guarantee the join structurally, at the cost of
+  carrying every ligand of a network once per edge. The named key types buy the
+  vocabulary back - the referent is in the contract and in the generated
+  TypeScript - and the check itself is a Python test
+  (`test_mapping_carries_both_endpoints_by_key_and_the_index_map`) and, in the
+  browser, `lookupOfType`, which returns undefined and lets the view degrade
+  rather than drawing the wrong thing.
 
   A pattern on the key's class-name prefix looks like it would close this, and
   does not: dispatch is `isinstance`-based, so a `SmallMoleculeComponent`
@@ -281,10 +285,10 @@ to disagree about the style.
 Every key is optional except `version`, and what a document leaves out takes the
 built-in default. Those defaults are either a value gufe sets or a value RDKit
 already uses, so passing them explicitly changes nothing: with the document
-untouched, the picture is byte-identical to the single
-`get_svg_with_highlights` call this project made before the document existed.
-The editor starts on the same values, which is what makes an edited style a
-readable diff rather than a jump to something new.
+untouched, the picture is byte-identical to what one plain
+`get_svg_with_highlights` call draws. The editor starts on the same values,
+which is what makes an edited style a readable diff rather than a jump to
+something new.
 
 Three tests hold that together: the committed document validates against the
 schema, the schema and the TypeScript defaults agree key by key and range by

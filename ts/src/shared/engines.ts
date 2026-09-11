@@ -7,16 +7,21 @@
  * small-molecule page never pays for d3.
  *
  * A host may instead **pre-seed** an engine through `globalThis.__gufeEngines`,
- * in which case nothing is fetched at all. That is the hook the zero-network
- * HTML export uses: it inlines the engines into the page and hands
- * them over here. A seeded value may be the module itself or a promise for it.
+ * in which case nothing is fetched at all. A seeded value may be the module
+ * itself or a promise for it.
+ *
+ * That is the hook a zero-network HTML export would use - inline the engines
+ * into the page and hand them over here. `to_html` has no such mode yet; what
+ * drives the hook today is the test suite, which seeds fakes through it so that
+ * no test reaches a CDN.
  */
 
 // --- minimal structural types for the three engines ------------------------
 //
 // None of these ship type declarations we can rely on, and vendoring a full
-// @types package for three call sites would be worse than describing exactly
-// what we use.
+// @types package would be worse than describing exactly what we use: what is
+// here is the surface this project actually touches, which is a fraction of
+// each library and is checked by being the only thing that compiles.
 
 export interface ThreeDmolViewer {
   addModel(data: string, format: string): unknown;

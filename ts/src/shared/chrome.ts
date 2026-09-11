@@ -1,12 +1,15 @@
 /**
- * How a view is arranged: watching its width, dividing it, and the menu.
+ * How a view is arranged: dividing it, and the menu.
  *
- * These are the three things that answer "a view is as
- * wide as whoever mounted it made it, and it does not know who that was": a
- * width watcher, because there is no window to ask; a splitter, because two
- * panes side by side in a phone-shaped box are two panes too narrow to read; and
- * a collapsible menu, because the controls a network needs do not fit on a
- * toolbar.
+ * Both answer "a view is as wide as whoever mounted it made it, and it does not
+ * know who that was". A splitter, because two panes side by side in a
+ * phone-shaped box are two panes too narrow to read; and a collapsible menu,
+ * because the controls a network needs do not fit on a toolbar.
+ *
+ * The width watching itself is `onWidth` and `onNarrow` in `dom.ts`, which is
+ * where anything that has to measure a pane goes. A splitter does its own,
+ * because what it watches for is the row changing shape rather than a threshold
+ * being crossed.
  */
 
 import { button } from "./controls.js";
@@ -188,7 +191,7 @@ export function orientMenuPanel(wrap: HTMLElement, stacked: boolean): void {
 //
 // One hamburger per view: same style, same place, same behaviour, different
 // contents. It exists as a helper rather than as a convention because a
-// convention across nine view files drifts and a helper cannot.
+// convention spread across every view drifts and a helper cannot.
 //
 // Two rules are enforced here rather than left to callers:
 //
@@ -305,7 +308,7 @@ function hamburgerIcon(): HTMLSpanElement {
 const MENU_ICONS = {
   /** The OpenFE mark, as `docs.openfree.energy` uses it. */
   openFreeEnergy: openFreeEnergyIcon,
-  /** Three bars. What this was before. */
+  /** Three bars: the generic form, for a build that should carry no branding. */
   hamburger: hamburgerIcon,
 } as const;
 

@@ -22,6 +22,8 @@
  * 3Dmol wants `0x`-prefixed colour strings, which is the form these are in.
  */
 
+import { currentTheme } from "./theme.js";
+
 /** How light and dark differ. Only the light values are tuned for print. */
 interface MoleculeColors {
   /** Atoms that carry over between the two molecules, and 3D-Map's unmarked ones. */
@@ -40,13 +42,13 @@ const LIGHT: MoleculeColors = {
   pairLine: "0xd9a300",
 };
 
-function prefersDark(): boolean {
-  try {
-    return globalThis.matchMedia?.("(prefers-color-scheme: dark)").matches ?? false;
-  } catch {
-    return false;
-  }
-}
-
-/** The set in use, chosen once at load like the interface theme is. */
-export const MOL: MoleculeColors = prefersDark() ? DARK : LIGHT;
+/**
+ * The set in use.
+ *
+ * A function, and reading `theme.ts`'s answer rather than asking `matchMedia`
+ * itself: these are 3Dmol colours, so they are read when a scene is built, and
+ * `setTheme` has to move them with everything else. A copy of the preference
+ * check here would be a second answer that a switch could not reach - which is
+ * what a `const` chosen at load was.
+ */
+export const MOL = (): MoleculeColors => (currentTheme() === "dark" ? DARK : LIGHT);

@@ -7,9 +7,9 @@
  * did, and nothing here decides what that should look like.
  *
  * The control that drives it is at the bottom of this file: an input, a status
- * line and the debounce between them, which both network views had written out
- * identically. What a match then *means* still belongs to the view - the ligand
- * network colours with it, the alchemical network filters with it.
+ * line and the debounce between them, shared by both network views. What a
+ * match then *means* still belongs to the view - the ligand network colours with
+ * it, the alchemical network filters with it.
  *
  * RDKit is already in the page for the depictions, so matching costs no extra
  * download. It does cost a molecule parse each, which is the whole reason for
@@ -68,7 +68,8 @@ export type MatchOutcome =
  * The half of a `MatchOutcome` there is anything to say about: a sweep that ran.
  *
  * Named because two places describe a successful sweep - the box's own note and
- * the network menu's spec - and they were each restating the shape inline.
+ * the network menu's spec - and a shape spelled out at both is a shape that can
+ * be spelled differently at each.
  */
 export type MatchSummary = { matched: Map<number, number[]>; unreadable: number };
 

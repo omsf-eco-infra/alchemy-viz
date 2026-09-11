@@ -12,9 +12,11 @@
  *
  * ## What the switch follows
  *
- * The page theme, like everything else in the interface. `theme.ts` reads the
- * host's colour-scheme preference once at load and never changes it, so a
- * depiction is drawn once, for the theme in force, and never has to be redrawn.
+ * The page theme, like everything else in the interface, asked for when a
+ * depiction is drawn rather than captured at load. A depiction is ink baked into
+ * an SVG, so it cannot follow `setTheme` the way the chrome does: what is on
+ * screen stays as it was drawn, and the next one drawn is drawn for the theme
+ * now in force. That is the same bargain `theme.ts` describes for `T`.
  *
  * `setDarkDepictions` exists for the two callers that need the answer to be
  * something other than the page's: the parity page, which puts our drawing

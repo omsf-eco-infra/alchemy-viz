@@ -65,8 +65,9 @@ pixi run dev
 # http://localhost:5173/gallery.html
 ```
 
-The gallery deliberately shows "sorry, there is no visualization for X yet" for
-the types that have no view.
+Every declared type has a view, so the gallery draws all of them. The "sorry,
+there is no visualization for X yet" panel is still what a payload naming an
+undeclared type gets, which is what `ts/tests/dispatch.test.ts` exercises.
 
 **Drag and drop:** the same dev server, one payload at a time. Drop any file
 from `examples/` anywhere on the page:
@@ -218,7 +219,7 @@ flowchart LR
   subgraph BR["Browser · ts/src"]
     direction TB
     gview["<b>&lt;gufe-view&gt;</b><br/>validate, then dispatch on <code>type</code>"]
-    view["<b>&lt;gufe-small-molecule&gt;</b><br/><b>&lt;gufe-protein&gt;</b><br/><b>&lt;gufe-ligand-network&gt;</b>"]
+    view["<b>&lt;gufe-small-molecule&gt;</b><br/><b>&lt;gufe-protein&gt;</b><br/><b>&lt;gufe-ligand-network&gt;</b><br/>... one per declared type"]
     gview --> view
   end
 
@@ -239,7 +240,7 @@ of TypeScript that has to track gufe's serialization forever.
 ### The generated HTML file: what is in it, and how it loads
 
 `to_html(obj)` returns a complete page as a **string** and writes nothing
-anywhere. THen the CLI chooses where write it.
+anywhere. The CLI is what chooses where to put it.
 The page has four parts and no others:
 
 ```html
@@ -704,7 +705,8 @@ somewhere sensible - for that, see
 ```
 schema/     the Python<->TypeScript contract, and the mutation matrix
 python/     gufe_viz - payload builders, HTML writer, notebook view, CLI
-ts/         the custom elements, one file per view
+ts/         the custom elements; src/views one per payload type, src/shared
+            the machinery they are built from
 examples/   golden payloads, shared by pytest, vitest, the dropzone and the gallery
             notebooks/ - one demo covering every type and every delivery mode
 scripts/    the generators, and CI runs
@@ -715,23 +717,27 @@ scripts/    the generators, and CI runs
 
 The pipeline works end to end. Nothing is published yet.
 
-**Has a view:**
+Every type the schema declares has a view. `ts/tests/dispatch.test.ts` asserts
+that, so this table cannot go stale without the suite saying so:
 
 | Type | View |
 |---|---|
-| `SmallMoleculeComponentViz` | 2D depiction + 3D conformer |
-| `ProteinComponentViz` | 3Dmol with representation and colour-scheme switchers |
-| `LigandNetworkViz` | force / circular / radial graph, ligand depictions in the nodes, a detail pane per mapping |
+| `SmallMoleculeComponentViz` | 2D depiction, 3D conformer in three styles, and an info pane |
+| `ProteinComponentViz` | 3Dmol with representation, colour scheme, waters and hetero atoms |
+| `SolvatedPDBComponentViz`, `ProteinMembraneComponentViz` | the same view, opened showing what surrounds the protein |
+| `SolventComponentViz` | the conditions card - what the solvent is, and how it is ionized |
+| `LigandAtomMappingViz` | six ways to read one mapping, including gufe's own `view_3d` |
+| `LigandNetworkViz` | force / circular / radial graph, ligand depictions in the nodes, a detail pane per mapping or ligand |
+| `ChemicalSystemViz` | the labelled components, the selected one drawn beside them, and the whole complex in one scene where there is one |
+| `TransformationViz` | the state diff beside the atom mapping it carries |
+| `AlchemicalNetworkViz` | systems joined by transformations, coloured by composition, with a detail pane per system or transformation |
+| `ProtocolViz`, `UnknownComponentViz` | a card naming what the payload says, for the things there is nothing to draw |
 
-**Declared, built by Python, no view yet:** `SolvatedPDBComponentViz`,
-`ProteinMembraneComponentViz`, `SolventComponentViz`, `UnknownComponentViz`,
-`LigandAtomMappingViz`, `ChemicalSystemViz`, `TransformationViz`,
-`AlchemicalNetworkViz`.
-
-**Not there yet:** the remaining views; zero-network pages with RDKit, 3Dmol and
-d3 inlined (today's pages still fetch those three from their CDNs on demand);
-the notebook widget; an optional localhost server; PyPI/conda-forge and the
-transfer to the OpenFE org.
+**Not there yet:** zero-network pages with RDKit, 3Dmol and d3 inlined - the
+`__gufeEngines` hook they would use is in place and the tests drive it, but
+`to_html` has no `engines="bundled"` mode, so today's pages still fetch those
+three from their CDNs on demand. Also an optional localhost server;
+PyPI/conda-forge and the transfer to the OpenFE org.
 
 ## Licence
 

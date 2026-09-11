@@ -5,15 +5,16 @@
  * `schema/gufe-viz.schema.json`, then mount the `<gufe-*>` element that claims
  * the payload's `type`.
  *
- * There is no version check, because a payload carries no version. Every
- * consumer ships the reader and the writer in one artifact, so the two cannot be at different
- * versions. The version would normally lives in the schema's `$id`, however,
- * that might not be checked as there are currently no plans for external
- * consumers of the schmea.
+ * There is no version check, because a payload carries no version field. Every
+ * consumer ships the reader and the writer in one artifact - a generated page
+ * inlines the exact bundle that reads it - so the two cannot be at different
+ * versions. The schema's `$id` carries one for anything that ever does need to
+ * ask, and nothing here reads it: there are no external consumers of the schema
+ * to ask on behalf of.
  *
  * Nothing here throws at the caller, because the caller is often a notebook
- * widget with no way to surface an exception. Every failure, e.g. a payload that is
- * not an object, a type with no view, a missing required field, they all become a panel
+ * widget with no way to surface an exception. Every failure - a payload that is
+ * not an object, a type with no view, a missing required field - becomes a panel
  * that names what happened and where.
  *
  * When the debug switch is on (`?debug` in the URL, a `debug` attribute on the

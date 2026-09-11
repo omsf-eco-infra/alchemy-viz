@@ -217,12 +217,13 @@ export function renderPlain(stage: MappingStage, pair: MappedPair): void {
  */
 export function renderColored(stage: MappingStage, pair: MappedPair): void {
   const style = DEPICT_STYLE;
+  const mol = MOL();
   for (const side of sidesOf(pair)) {
     const box = stage.box(side.mol.name);
     const viewer = stage.open(box, [side.mol]);
     viewer.setStyle(
       {},
-      { stick: { radius: STYLE.stick, color: MOL.core }, sphere: { scale: STYLE.sphere, color: MOL.core } },
+      { stick: { radius: STYLE.stick, color: mol.core }, sphere: { scale: STYLE.sphere, color: mol.core } },
     );
     // 3Dmol's V2000 reader numbers `serial` from zero within a model, so an
     // atom's serial is the payload's own index. Adding one to it marked the next
@@ -370,7 +371,7 @@ export function renderLines(stage: MappingStage, pair: MappedPair): void {
       dashed: true,
       fromCap: "round",
       toCap: "round",
-      color: MOL.pairLine,
+      color: MOL().pairLine,
     });
   }
   viewer.zoomTo();
