@@ -3,7 +3,7 @@
     "The mutation matrix: break a valid payload in a known way and prove that validation fails.",
     "",
     "Declared here once, in data, and applied by BOTH test suites - pytest with jsonschema, vitest",
-    "with Ajv, against the same hand-written schema/gufe-viz.schema.json.",
+    "with Ajv, against the same hand-written schema/alchemy-viz.schema.json.",
     "",
     "This matrix is the load-bearing half of schema-first. Correctness comes from testing.",
     "",

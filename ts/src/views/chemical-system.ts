@@ -5,7 +5,7 @@
  * A chemical system is a dictionary of labels to gufe keys, and each key
  * resolves to a whole, standalone component payload - the same object that
  * would be the top-level payload if that component were visualized on its own.
- * So the detail pane is a nested `<gufe-view>`: this view chooses *which*
+ * So the detail pane is a nested `<alchemy-view>`: this view chooses *which*
  * component, and the dispatcher decides how to draw it, exactly as it would at
  * the top level.
  *
@@ -19,7 +19,7 @@ import { el, onNarrow } from "../shared/dom.js";
 import { centredMessage, floatingWarning, HIDE_NAME_ATTRIBUTE, typeBadge } from "../shared/panels.js";
 import {
   defineElement,
-  GufeElement,
+  AlchemyElement,
   type ViewHandle,
 } from "../shared/element.js";
 import { text } from "../shared/settings.js";
@@ -123,7 +123,7 @@ function systemTitle(name: string): HTMLDivElement {
   );
 }
 
-export class GufeChemicalSystem extends GufeElement<ChemicalSystemViz> {
+export class GufeChemicalSystem extends AlchemyElement<ChemicalSystemViz> {
   protected override placeholder(): string {
     return "Waiting for a ChemicalSystem payload...";
   }
@@ -213,7 +213,7 @@ export class GufeChemicalSystem extends GufeElement<ChemicalSystemViz> {
       "flex:1;min-height:0;display:flex;",
     ) as HTMLDivElement;
     detail.appendChild(view);
-    const child = document.createElement("gufe-view") as HTMLElement & {
+    const child = document.createElement("alchemy-view") as HTMLElement & {
       payload: unknown;
       resize?(): void;
     };

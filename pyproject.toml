@@ -6,7 +6,7 @@ requires = [
 ]
 
 [project]
-name = "gufe-viz"
+name = "alchemy-viz"
 description = "Visualization tools for gufe"
 readme = "README.md"
 license = "MIT"
@@ -34,14 +34,14 @@ dynamic = [ "version" ]
 # pixi tries to resolve gufe from PyPI and fails.
 #
 # The version `>=1.12` floor is the real version control. PyPI's gufe is a single 0.4 release
-# predating the 1.0 API, so this makes `pip install gufe-viz` fail with
+# predating the 1.0 API, so this makes `pip install alchemy-viz` fail with
 # "Could not find a version that satisfies the requirement gufe>=1.12 (from
 # versions: 0.4)" rather than quietly installing a gufe whose API is gone. The
 # floor is also where SolvatedPDBComponent and ProteinMembraneComponent appear.
 dependencies = [
   "gufe>=1.12",
 ]
-# The live notebook layer. `gufe_viz.view()` works without this, returning the
+# The live notebook layer. `alchemy_viz.view()` works without this, returning the
 # static page. With anywidget we get update-in-place instead of the picture.
 optional-dependencies.notebook = [
   "anywidget>=0.9",
@@ -50,9 +50,9 @@ optional-dependencies.test = [
   "jsonschema>=4",
   "pytest>=7",
 ]
-urls.Homepage = "https://github.com/omsf-eco-infra/gufe-viz"
-urls.Issues = "https://github.com/omsf-eco-infra/gufe-viz/issues"
-scripts.gufe-viz = "gufe_viz.cli:main"
+urls.Homepage = "https://github.com/omsf-eco-infra/alchemy-viz"
+urls.Issues = "https://github.com/omsf-eco-infra/alchemy-viz/issues"
+scripts.alchemy-viz = "alchemy_viz.cli:main"
 
 [tool.setuptools]
 package-dir = { "" = "python" }
@@ -62,7 +62,7 @@ include-package-data = true
 zip-safe = false
 # The Vite bundle and the HTML template are build artifacts, committed to the
 # repo so `pip install .` needs no Node toolchain.
-package-data.gufe_viz = [ "_assets/*" ]
+package-data.alchemy_viz = [ "_assets/*" ]
 
 [tool.setuptools_scm]
 fallback_version = "0.0.0"

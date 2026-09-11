@@ -188,7 +188,7 @@ export function depictSVG(
     }
     return rdmol.get_svg(size, size) || null;
   } catch (e) {
-    console.warn("[gufe-viz] depictSVG threw -", errText(e));
+    console.warn("[alchemy-viz] depictSVG threw -", errText(e));
     return null;
   } finally {
     if (rdmol) {

@@ -97,7 +97,7 @@ describe("the framejs share button", () => {
     // where this gets used most, so refusing there would be refusing in the one
     // place it is wanted.
     const fetchSpy = vi.spyOn(globalThis, "fetch").mockImplementation((input) =>
-      Promise.resolve(String(input).endsWith("/gufe-dev-bundle.js") ? new Response(FAKE_BUNDLE) : new Response(null)),
+      Promise.resolve(String(input).endsWith("/alchemy-dev-bundle.js") ? new Response(FAKE_BUNDLE) : new Response(null)),
     );
     vi.spyOn(window, "open").mockReturnValue(null);
 
@@ -108,12 +108,12 @@ describe("the framejs share button", () => {
     framejsButton(node)!.click();
     await flush();
 
-    expect(String(fetchSpy.mock.calls[0][0])).toBe("/gufe-dev-bundle.js");
+    expect(String(fetchSpy.mock.calls[0][0])).toBe("/alchemy-dev-bundle.js");
     const posted = JSON.parse(String((fetchSpy.mock.calls[1][1] as RequestInit).body)) as { js: string };
     expect(posted.js).toContain(FAKE_BUNDLE);
     // A plain bundle ends at `export` and draws nothing on its own, so the
     // trailing line has to be what applies the payload.
-    expect(posted.js).toContain("gufeView.payload = JSON.parse(gufePayload.textContent)");
+    expect(posted.js).toContain("alchemyView.payload = JSON.parse(gufePayload.textContent)");
     // And the frame is not passed off as showing the sources on screen.
     expect(node.textContent).toContain("pixi run build");
   });
@@ -185,12 +185,12 @@ describe("the framejs share button", () => {
     // and the bundle draws as soon as it has a payload. Restoring afterwards
     // would restore nothing.
     const js = framejsModule(FAKE_BUNDLE, { type: "LigandNetworkViz" }, {
-      settings: { "gufe-viz:ligand-network.layout": '"Circular"' },
+      settings: { "alchemy-viz:ligand-network.layout": '"Circular"' },
       views: { "ligand-network": { scale: 0.5, tx: 10, ty: 20, selected: 3, nodes: [] } },
     });
     expect(js.indexOf("localStorage.setItem")).toBeLessThan(js.indexOf(FAKE_BUNDLE));
-    expect(js.indexOf("GUFE_VIZ_VIEW_STATE")).toBeLessThan(js.indexOf(FAKE_BUNDLE));
-    expect(js).toContain('"gufe-viz:ligand-network.layout"');
+    expect(js.indexOf("ALCHEMY_VIZ_VIEW_STATE")).toBeLessThan(js.indexOf(FAKE_BUNDLE));
+    expect(js).toContain('"alchemy-viz:ligand-network.layout"');
     expect(js).toContain('"selected":3');
   });
 
@@ -217,7 +217,7 @@ describe("the framejs share button", () => {
 
     const posted = JSON.parse(String((fetchSpy.mock.calls[0][1] as RequestInit).body)) as { js: string };
     const seeded = JSON.parse(
-      posted.js.match(/globalThis\["GUFE_VIZ_VIEW_STATE"\] = (\{.*?\});/)![1],
+      posted.js.match(/globalThis\["ALCHEMY_VIZ_VIEW_STATE"\] = (\{.*?\});/)![1],
     ) as Record<string, NetworkViewState>;
 
     const state = seeded["ligand-network"];
@@ -260,24 +260,24 @@ describe("the framejs share button", () => {
     // back to memory for. The generated code reads `localStorage` as a free
     // name, so a parameter of that name is what it sees.
     const store = fakeStorage({
-      "gufe-viz:ligand-network.menuOpen": "true",
-      "gufe-viz:some-later-view.menuOpen": "true",
-      "gufe-viz:atom-mapping.mode": '"3d"',
+      "alchemy-viz:ligand-network.menuOpen": "true",
+      "alchemy-viz:some-later-view.menuOpen": "true",
+      "alchemy-viz:atom-mapping.mode": '"3d"',
       "unrelated:menuOpen": "true",
     });
 
     const js = framejsModule(FAKE_BUNDLE, { type: "LigandNetworkViz" }, {
-      settings: { "gufe-viz:atom-mapping.mode": '"2d"' },
+      settings: { "alchemy-viz:atom-mapping.mode": '"2d"' },
       views: {},
     });
     // Everything the frame runs before it builds any DOM.
     new Function("localStorage", js.slice(0, js.indexOf('root.innerHTML = "";')))(store);
 
-    expect(store.getItem("gufe-viz:ligand-network.menuOpen")).toBeNull();
-    expect(store.getItem("gufe-viz:some-later-view.menuOpen")).toBeNull();
+    expect(store.getItem("alchemy-viz:ligand-network.menuOpen")).toBeNull();
+    expect(store.getItem("alchemy-viz:some-later-view.menuOpen")).toBeNull();
     // A real preference is restored, not cleared, and a key that is not ours is
     // not ours to remove.
-    expect(store.getItem("gufe-viz:atom-mapping.mode")).toBe('"2d"');
+    expect(store.getItem("alchemy-viz:atom-mapping.mode")).toBe('"2d"');
     expect(store.getItem("unrelated:menuOpen")).toBe("true");
   });
 });

@@ -1,6 +1,6 @@
-# gufe-viz
+# alchemy-viz
 
-Python turns a gufe object into a JSON payload, `schema/gufe-viz.schema.json`
+Python turns a gufe object into a JSON payload, `schema/alchemy-viz.schema.json`
 gates it, TypeScript custom elements draw it. Both sides validate against that
 one schema file.
 
@@ -14,7 +14,7 @@ of them with descriptions.
 | `pixi run test` | both suites (`test-py`, `test-ts` run them separately) |
 | `pixi run lint` | ruff check + format check + `tsc --noEmit` |
 | `pixi run ci` | what CI runs, including generated-artifact freshness |
-| `pixi run build` | bundle `ts/src/**` into `python/gufe_viz/_assets/gufe-viz.js` |
+| `pixi run build` | bundle `ts/src/**` into `python/alchemy_viz/_assets/alchemy-viz.js` |
 | `pixi run dev` | vite server; `/gallery.html` renders every example |
 
 Run one vitest file with `npx vitest run ts/tests/<name>.test.ts`.
@@ -31,7 +31,7 @@ They are large enough to cost more context than they can repay. Use `head`,
 - `scripts/data/jak2_docked_poses.sdf` (1.4M), `jak2_protein.pdb` (389K),
   `jak2_network_edges.json` (133K), `tyk2_protein.pdb`, `large_network.sdf`
   (~400K each)
-- `python/gufe_viz/_assets/gufe-viz.js` (~400K, generated)
+- `python/alchemy_viz/_assets/alchemy-viz.js` (~400K, generated)
 - `do-not-commit/` is scratch, not part of the project
 
 `examples/small_molecule.json`, `ligand_network.json`, `transformation.json` and
@@ -42,18 +42,18 @@ They are large enough to cost more context than they can repay. Use `head`,
 Generated and committed; CI's `check-generated` job rebuilds and diffs them.
 Edit the source, then run the command.
 
-- `ts/src/schema/types.ts` <- `schema/gufe-viz.schema.json`, `pixi run types`
+- `ts/src/schema/types.ts` <- `schema/alchemy-viz.schema.json`, `pixi run types`
 - `ts/src/shared/atom-colors.ts` <- `scripts/gen_atom_colors.py`, `pixi run atom-colors`
-- `python/gufe_viz/_assets/gufe-viz.js` <- `ts/src/**`, `pixi run build`
+- `python/alchemy_viz/_assets/alchemy-viz.js` <- `ts/src/**`, `pixi run build`
 - `examples/*.json` <- `scripts/make_examples.py`, `pixi run examples`
 
-`schema/gufe-viz.schema.json` is hand-written and is the source of truth.
+`schema/alchemy-viz.schema.json` is hand-written and is the source of truth.
 
 ## Where work lands
 
 - a new payload field: schema, then `pixi run types`, then the Python builder in
-  `python/gufe_viz/` (`components.py`, `networks.py`, `alchemical.py`), then the view
-- a new payload type: also add it to `VIEW_TAGS` in `ts/src/gufe-view.ts`;
+  `python/alchemy_viz/` (`components.py`, `networks.py`, `alchemical.py`), then the view
+- a new payload type: also add it to `VIEW_TAGS` in `ts/src/alchemy-view.ts`;
   `ts/tests/dispatch.test.ts` asserts the schema's types and that table agree
 - drawing behaviour: `ts/src/views/<type>.ts`; shared machinery in
   `ts/src/shared/`, and `ts/src/shared/network/` for what the two graph views

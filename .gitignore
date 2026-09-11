@@ -7,7 +7,7 @@ dist/
 .pytest_cache/
 .ruff_cache/
 .ipynb_checkpoints
-python/gufe_viz/_version.py
+python/alchemy_viz/_version.py
 
 # Node
 node_modules/

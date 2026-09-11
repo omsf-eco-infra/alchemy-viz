@@ -14,12 +14,12 @@
 
 import { el } from "../shared/dom.js";
 import { card, fieldRow, headerStrip, typeBadge } from "../shared/panels.js";
-import { defineElement, GufeElement, type ViewHandle } from "../shared/element.js";
+import { defineElement, AlchemyElement, type ViewHandle } from "../shared/element.js";
 import { FONT } from "../shared/style.js";
 import { V } from "../shared/theme.js";
 import type { ProtocolViz } from "../schema/types.js";
 
-export class GufeProtocol extends GufeElement<ProtocolViz> {
+export class GufeProtocol extends AlchemyElement<ProtocolViz> {
   protected override placeholder(): string {
     return "Waiting for a Protocol payload...";
   }

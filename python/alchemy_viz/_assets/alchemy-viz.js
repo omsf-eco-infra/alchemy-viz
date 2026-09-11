@@ -190,11 +190,11 @@ function sc() {
   ].join(`
 `);
 }
-const Po = "gufe-viz-theme";
+const Ao = "alchemy-viz-theme";
 function Ws() {
-  if (typeof document > "u" || document.getElementById(Po)) return;
+  if (typeof document > "u" || document.getElementById(Ao)) return;
   const e = document.createElement("style");
-  e.id = Po, e.textContent = sc(), document.head.appendChild(e);
+  e.id = Ao, e.textContent = sc(), document.head.appendChild(e);
 }
 const Y = {
   family: "'Inter',system-ui,sans-serif",
@@ -249,7 +249,7 @@ const Y = {
    * cannot carry.
    */
   viewer: () => le.viewerBg
-}, Ao = {
+}, Po = {
   // `max-width` and `box-sizing` are what keep a button inside whatever holds
   // it. A label wider than the menu column would otherwise run out over the
   // picture, and `width:100%` on a padded, bordered button means 100% plus the
@@ -350,7 +350,7 @@ const zr = "data-gufe-hide-name";
 function Xr(e) {
   return !e.closest(`[${zr}]`);
 }
-const $c = ["debug", "gufe-debug"], vc = "debug", bc = "GUFE_VIZ_DEBUG";
+const $c = ["debug", "gufe-debug"], vc = "debug", bc = "ALCHEMY_VIZ_DEBUG";
 function wc() {
   return !!globalThis[bc];
 }
@@ -376,10 +376,10 @@ function Cc(e) {
 }
 function kc(e, t, n) {
   if (!Sc(n)) return;
-  const r = Cc(t), o = t?.type, i = `[gufe-viz] ${e}${typeof o == "string" ? ` ${o}` : ""} (${r.length} chars)`, s = typeof console.groupCollapsed == "function";
+  const r = Cc(t), o = t?.type, i = `[alchemy-viz] ${e}${typeof o == "string" ? ` ${o}` : ""} (${r.length} chars)`, s = typeof console.groupCollapsed == "function";
   s ? console.groupCollapsed(i) : console.log(i), console.log(r), console.log(t), s && console.groupEnd?.();
 }
-const na = "GUFE_VIZ_VIEW_STATE";
+const na = "ALCHEMY_VIZ_VIEW_STATE";
 function Ec(e) {
   const t = globalThis[na];
   if (!t || typeof t != "object") return null;
@@ -438,7 +438,7 @@ class Re extends HTMLElement {
       try {
         this.#t.cleanup();
       } catch (t) {
-        console.warn("[gufe-viz] cleanup failed:", t);
+        console.warn("[alchemy-viz] cleanup failed:", t);
       }
     this.#t = null, this.replaceChildren(), this.#n = null;
   }
@@ -493,14 +493,14 @@ class Re extends HTMLElement {
       try {
         t?.cleanup?.();
       } catch (r) {
-        console.warn("[gufe-viz] cleanup of a superseded view failed:", r);
+        console.warn("[alchemy-viz] cleanup of a superseded view failed:", r);
       }
       return;
     }
     this.#t = t || null;
   }
   #l(t, n, r) {
-    n === this.#i && (console.warn("[gufe-viz] render failed:", r), t.replaceChildren(pe(`Failed to render: ${he(r)}`, !0)));
+    n === this.#i && (console.warn("[alchemy-viz] render failed:", r), t.replaceChildren(pe(`Failed to render: ${he(r)}`, !0)));
   }
   /** Force a resize pass - for hosts that know they resized us. */
   resize() {
@@ -517,7 +517,7 @@ class Re extends HTMLElement {
 function Ne(e, t) {
   typeof customElements > "u" || customElements.get(e) || customElements.define(e, t);
 }
-function Pc(e) {
+function Ac(e) {
   return e && e.__esModule && Object.prototype.hasOwnProperty.call(e, "default") ? e.default : e;
 }
 var jt = { exports: {} }, fr = {}, je = {}, tt = {}, pr = {}, hr = {}, mr = {}, No;
@@ -819,12 +819,12 @@ function ie() {
       }
     }
     class s extends i {
-      constructor(b, k, P) {
-        super(), this.varKind = b, this.name = k, this.rhs = P;
+      constructor(b, k, A) {
+        super(), this.varKind = b, this.name = k, this.rhs = A;
       }
       render({ es5: b, _n: k }) {
-        const P = b ? n.varKinds.var : this.varKind, V = this.rhs === void 0 ? "" : ` = ${this.rhs}`;
-        return `${P} ${this.name}${V};` + k;
+        const A = b ? n.varKinds.var : this.varKind, V = this.rhs === void 0 ? "" : ` = ${this.rhs}`;
+        return `${A} ${this.name}${V};` + k;
       }
       optimizeNames(b, k) {
         if (b[this.name.str])
@@ -835,8 +835,8 @@ function ie() {
       }
     }
     class a extends i {
-      constructor(b, k, P) {
-        super(), this.lhs = b, this.rhs = k, this.sideEffects = P;
+      constructor(b, k, A) {
+        super(), this.lhs = b, this.rhs = k, this.sideEffects = A;
       }
       render({ _n: b }) {
         return `${this.lhs} = ${this.rhs};` + b;
@@ -851,8 +851,8 @@ function ie() {
       }
     }
     class c extends a {
-      constructor(b, k, P, V) {
-        super(b, P, V), this.op = k;
+      constructor(b, k, A, V) {
+        super(b, A, V), this.op = k;
       }
       render({ _n: b }) {
         return `${this.lhs} ${this.op}= ${this.rhs};` + b;
@@ -907,25 +907,25 @@ function ie() {
         super(), this.nodes = b;
       }
       render(b) {
-        return this.nodes.reduce((k, P) => k + P.render(b), "");
+        return this.nodes.reduce((k, A) => k + A.render(b), "");
       }
       optimizeNodes() {
         const { nodes: b } = this;
         let k = b.length;
         for (; k--; ) {
-          const P = b[k].optimizeNodes();
-          Array.isArray(P) ? b.splice(k, 1, ...P) : P ? b[k] = P : b.splice(k, 1);
+          const A = b[k].optimizeNodes();
+          Array.isArray(A) ? b.splice(k, 1, ...A) : A ? b[k] = A : b.splice(k, 1);
         }
         return b.length > 0 ? this : void 0;
       }
       optimizeNames(b, k) {
-        const { nodes: P } = this;
-        let V = P.length;
+        const { nodes: A } = this;
+        let V = A.length;
         for (; V--; ) {
-          const H = P[V];
-          H.optimizeNames(b, k) || (L(b, H.names), P.splice(V, 1));
+          const H = A[V];
+          H.optimizeNames(b, k) || (L(b, H.names), A.splice(V, 1));
         }
-        return P.length > 0 ? this : void 0;
+        return A.length > 0 ? this : void 0;
       }
       get names() {
         return this.nodes.reduce((b, k) => R(b, k.names), {});
@@ -956,8 +956,8 @@ function ie() {
           return this.nodes;
         let k = this.else;
         if (k) {
-          const P = k.optimizeNodes();
-          k = this.else = Array.isArray(P) ? new f(P) : P;
+          const A = k.optimizeNodes();
+          k = this.else = Array.isArray(A) ? new f(A) : A;
         }
         if (k)
           return b === !1 ? k instanceof v ? k : k.nodes : this.nodes.length ? this : new v(W(b), k instanceof v ? [k] : k.nodes);
@@ -965,8 +965,8 @@ function ie() {
           return this;
       }
       optimizeNames(b, k) {
-        var P;
-        if (this.else = (P = this.else) === null || P === void 0 ? void 0 : P.optimizeNames(b, k), !!(super.optimizeNames(b, k) || this.else))
+        var A;
+        if (this.else = (A = this.else) === null || A === void 0 ? void 0 : A.optimizeNames(b, k), !!(super.optimizeNames(b, k) || this.else))
           return this.condition = I(this.condition, b, k), this;
       }
       get names() {
@@ -994,12 +994,12 @@ function ie() {
       }
     }
     class _ extends p {
-      constructor(b, k, P, V) {
-        super(), this.varKind = b, this.name = k, this.from = P, this.to = V;
+      constructor(b, k, A, V) {
+        super(), this.varKind = b, this.name = k, this.from = A, this.to = V;
       }
       render(b) {
-        const k = b.es5 ? n.varKinds.var : this.varKind, { name: P, from: V, to: H } = this;
-        return `for(${k} ${P}=${V}; ${P}<${H}; ${P}++)` + super.render(b);
+        const k = b.es5 ? n.varKinds.var : this.varKind, { name: A, from: V, to: H } = this;
+        return `for(${k} ${A}=${V}; ${A}<${H}; ${A}++)` + super.render(b);
       }
       get names() {
         const b = D(super.names, this.from);
@@ -1007,8 +1007,8 @@ function ie() {
       }
     }
     class u extends p {
-      constructor(b, k, P, V) {
-        super(), this.loop = b, this.varKind = k, this.name = P, this.iterable = V;
+      constructor(b, k, A, V) {
+        super(), this.loop = b, this.varKind = k, this.name = A, this.iterable = V;
       }
       render(b) {
         return `for(${this.varKind} ${this.name} ${this.loop} ${this.iterable})` + super.render(b);
@@ -1022,8 +1022,8 @@ function ie() {
       }
     }
     class h extends $ {
-      constructor(b, k, P) {
-        super(), this.name = b, this.args = k, this.async = P;
+      constructor(b, k, A) {
+        super(), this.name = b, this.args = k, this.async = A;
       }
       render(b) {
         return `${this.async ? "async " : ""}function ${this.name}(${this.args})` + super.render(b);
@@ -1046,8 +1046,8 @@ function ie() {
         return super.optimizeNodes(), (b = this.catch) === null || b === void 0 || b.optimizeNodes(), (k = this.finally) === null || k === void 0 || k.optimizeNodes(), this;
       }
       optimizeNames(b, k) {
-        var P, V;
-        return super.optimizeNames(b, k), (P = this.catch) === null || P === void 0 || P.optimizeNames(b, k), (V = this.finally) === null || V === void 0 || V.optimizeNames(b, k), this;
+        var A, V;
+        return super.optimizeNames(b, k), (A = this.catch) === null || A === void 0 || A.optimizeNames(b, k), (V = this.finally) === null || V === void 0 || V.optimizeNames(b, k), this;
       }
       get names() {
         const b = super.names;
@@ -1063,12 +1063,12 @@ function ie() {
       }
     }
     E.kind = "catch";
-    class A extends $ {
+    class P extends $ {
       render(b) {
         return "finally" + super.render(b);
       }
     }
-    A.kind = "finally";
+    P.kind = "finally";
     class M {
       constructor(b, k = {}) {
         this._values = {}, this._blockStarts = [], this._constants = {}, this.opts = { ...k, _n: k.lines ? `
@@ -1087,8 +1087,8 @@ function ie() {
       }
       // reserves unique name in the external scope and assigns value to it
       scopeValue(b, k) {
-        const P = this._extScope.value(b, k);
-        return (this._values[P.prefix] || (this._values[P.prefix] = /* @__PURE__ */ new Set())).add(P), P;
+        const A = this._extScope.value(b, k);
+        return (this._values[A.prefix] || (this._values[A.prefix] = /* @__PURE__ */ new Set())).add(A), A;
       }
       getScopeValue(b, k) {
         return this._extScope.getValue(b, k);
@@ -1101,25 +1101,25 @@ function ie() {
       scopeCode() {
         return this._extScope.scopeCode(this._values);
       }
-      _def(b, k, P, V) {
+      _def(b, k, A, V) {
         const H = this._scope.toName(k);
-        return P !== void 0 && V && (this._constants[H.str] = P), this._leafNode(new s(b, H, P)), H;
+        return A !== void 0 && V && (this._constants[H.str] = A), this._leafNode(new s(b, H, A)), H;
       }
       // `const` declaration (`var` in es5 mode)
-      const(b, k, P) {
-        return this._def(n.varKinds.const, b, k, P);
+      const(b, k, A) {
+        return this._def(n.varKinds.const, b, k, A);
       }
       // `let` declaration with optional assignment (`var` in es5 mode)
-      let(b, k, P) {
-        return this._def(n.varKinds.let, b, k, P);
+      let(b, k, A) {
+        return this._def(n.varKinds.let, b, k, A);
       }
       // `var` declaration with optional assignment
-      var(b, k, P) {
-        return this._def(n.varKinds.var, b, k, P);
+      var(b, k, A) {
+        return this._def(n.varKinds.var, b, k, A);
       }
       // assignment code
-      assign(b, k, P) {
-        return this._leafNode(new a(b, k, P));
+      assign(b, k, A) {
+        return this._leafNode(new a(b, k, A));
       }
       // `+=` code
       add(b, k) {
@@ -1132,17 +1132,17 @@ function ie() {
       // returns code for object literal for the passed argument list of key-value pairs
       object(...b) {
         const k = ["{"];
-        for (const [P, V] of b)
-          k.length > 1 && k.push(","), k.push(P), (P !== V || this.opts.es5) && (k.push(":"), (0, t.addCodeArg)(k, V));
+        for (const [A, V] of b)
+          k.length > 1 && k.push(","), k.push(A), (A !== V || this.opts.es5) && (k.push(":"), (0, t.addCodeArg)(k, V));
         return k.push("}"), new t._Code(k);
       }
       // `if` clause (or statement if `thenBody` and, optionally, `elseBody` are passed)
-      if(b, k, P) {
-        if (this._blockNode(new v(b)), k && P)
-          this.code(k).else().code(P).endIf();
+      if(b, k, A) {
+        if (this._blockNode(new v(b)), k && A)
+          this.code(k).else().code(A).endIf();
         else if (k)
           this.code(k).endIf();
-        else if (P)
+        else if (A)
           throw new Error('CodeGen: "else" body without "then" body');
         return this;
       }
@@ -1166,28 +1166,28 @@ function ie() {
         return this._for(new C(b), k);
       }
       // `for` statement for a range of values
-      forRange(b, k, P, V, H = this.opts.es5 ? n.varKinds.var : n.varKinds.let) {
+      forRange(b, k, A, V, H = this.opts.es5 ? n.varKinds.var : n.varKinds.let) {
         const Q = this._scope.toName(b);
-        return this._for(new _(H, Q, k, P), () => V(Q));
+        return this._for(new _(H, Q, k, A), () => V(Q));
       }
       // `for-of` statement (in es5 mode replace with a normal for loop)
-      forOf(b, k, P, V = n.varKinds.const) {
+      forOf(b, k, A, V = n.varKinds.const) {
         const H = this._scope.toName(b);
         if (this.opts.es5) {
           const Q = k instanceof t.Name ? k : this.var("_arr", k);
           return this.forRange("_i", 0, (0, t._)`${Q}.length`, (ee) => {
-            this.var(H, (0, t._)`${Q}[${ee}]`), P(H);
+            this.var(H, (0, t._)`${Q}[${ee}]`), A(H);
           });
         }
-        return this._for(new u("of", V, H, k), () => P(H));
+        return this._for(new u("of", V, H, k), () => A(H));
       }
       // `for-in` statement.
       // With option `ownProperties` replaced with a `for-of` loop for object keys
-      forIn(b, k, P, V = this.opts.es5 ? n.varKinds.var : n.varKinds.const) {
+      forIn(b, k, A, V = this.opts.es5 ? n.varKinds.var : n.varKinds.const) {
         if (this.opts.ownProperties)
-          return this.forOf(b, (0, t._)`Object.keys(${k})`, P);
+          return this.forOf(b, (0, t._)`Object.keys(${k})`, A);
         const H = this._scope.toName(b);
-        return this._for(new u("in", V, H, k), () => P(H));
+        return this._for(new u("in", V, H, k), () => A(H));
       }
       // end `for` loop
       endFor() {
@@ -1209,15 +1209,15 @@ function ie() {
         return this._endBlockNode(y);
       }
       // `try` statement
-      try(b, k, P) {
-        if (!k && !P)
+      try(b, k, A) {
+        if (!k && !A)
           throw new Error('CodeGen: "try" without "catch" and "finally"');
         const V = new x();
         if (this._blockNode(V), this.code(b), k) {
           const H = this.name("e");
           this._currNode = V.catch = new E(H), k(H);
         }
-        return P && (this._currNode = V.finally = new A(), this.code(P)), this._endBlockNode(E, A);
+        return A && (this._currNode = V.finally = new P(), this.code(A)), this._endBlockNode(E, P);
       }
       // `throw` statement
       throw(b) {
@@ -1232,14 +1232,14 @@ function ie() {
         const k = this._blockStarts.pop();
         if (k === void 0)
           throw new Error("CodeGen: not in self-balancing block");
-        const P = this._nodes.length - k;
-        if (P < 0 || b !== void 0 && P !== b)
-          throw new Error(`CodeGen: wrong number of nodes: ${P} vs ${b} expected`);
+        const A = this._nodes.length - k;
+        if (A < 0 || b !== void 0 && A !== b)
+          throw new Error(`CodeGen: wrong number of nodes: ${A} vs ${b} expected`);
         return this._nodes.length = k, this;
       }
       // `function` heading (or definition if funcBody is passed)
-      func(b, k = t.nil, P, V) {
-        return this._blockNode(new h(b, k, P)), V && this.code(V).endFunc(), this;
+      func(b, k = t.nil, A, V) {
+        return this._blockNode(new h(b, k, A)), V && this.code(V).endFunc(), this;
       }
       // end function definition
       endFunc() {
@@ -1256,8 +1256,8 @@ function ie() {
         this._currNode.nodes.push(b), this._nodes.push(b);
       }
       _endBlockNode(b, k) {
-        const P = this._currNode;
-        if (P instanceof b || k && P instanceof k)
+        const A = this._currNode;
+        if (A instanceof b || k && A instanceof k)
           return this._nodes.pop(), this;
         throw new Error(`CodeGen: not in block "${k ? `${b.kind}/${k.kind}` : b.kind}"`);
       }
@@ -1290,11 +1290,11 @@ function ie() {
     }
     function I(z, b, k) {
       if (z instanceof t.Name)
-        return P(z);
+        return A(z);
       if (!V(z))
         return z;
-      return new t._Code(z._items.reduce((H, Q) => (Q instanceof t.Name && (Q = P(Q)), Q instanceof t._Code ? H.push(...Q._items) : H.push(Q), H), []));
-      function P(H) {
+      return new t._Code(z._items.reduce((H, Q) => (Q instanceof t.Name && (Q = A(Q)), Q instanceof t._Code ? H.push(...Q._items) : H.push(Q), H), []));
+      function A(H) {
         const Q = k[H.str];
         return Q === void 0 || b[H.str] !== 1 ? H : (delete b[H.str], Q);
       }
@@ -1349,8 +1349,8 @@ function ce() {
     if (!y.strictSchema || typeof h == "boolean")
       return;
     const E = x.RULES.keywords;
-    for (const A in h)
-      E[A] || _(u, `unknown keyword: "${A}"`);
+    for (const P in h)
+      E[P] || _(u, `unknown keyword: "${P}"`);
   }
   se.checkUnknownRules = o;
   function i(u, h) {
@@ -1406,8 +1406,8 @@ function ce() {
   }
   se.eachItem = w;
   function g({ mergeNames: u, mergeToName: h, mergeValues: y, resultToName: x }) {
-    return (E, A, M, R) => {
-      const D = M === void 0 ? A : M instanceof e.Name ? (A instanceof e.Name ? u(E, A, M) : h(E, A, M), M) : A instanceof e.Name ? (h(E, M, A), A) : y(A, M);
+    return (E, P, M, R) => {
+      const D = M === void 0 ? P : M instanceof e.Name ? (P instanceof e.Name ? u(E, P, M) : h(E, P, M), M) : P instanceof e.Name ? (h(E, M, P), P) : y(P, M);
       return R === e.Name && !(D instanceof e.Name) ? x(E, D) : D;
     };
   }
@@ -1575,13 +1575,13 @@ function Jn() {
       return p && (_ = (0, t.str)`${_}${(0, n.getErrorPath)(p, n.Type.Str)}`), [d.schemaPath, _];
     }
     function S(f, { params: v, message: p }, C) {
-      const { keyword: _, data: u, schemaValue: h, it: y } = f, { opts: x, propertyName: E, topSchemaRef: A, schemaPath: M } = y;
-      C.push([d.keyword, _], [d.params, typeof v == "function" ? v(f) : v || (0, t._)`{}`]), x.messages && C.push([d.message, typeof p == "function" ? p(f) : p]), x.verbose && C.push([d.schema, h], [d.parentSchema, (0, t._)`${A}${M}`], [r.default.data, u]), E && C.push([d.propertyName, E]);
+      const { keyword: _, data: u, schemaValue: h, it: y } = f, { opts: x, propertyName: E, topSchemaRef: P, schemaPath: M } = y;
+      C.push([d.keyword, _], [d.params, typeof v == "function" ? v(f) : v || (0, t._)`{}`]), x.messages && C.push([d.message, typeof p == "function" ? p(f) : p]), x.verbose && C.push([d.schema, h], [d.parentSchema, (0, t._)`${P}${M}`], [r.default.data, u]), E && C.push([d.propertyName, E]);
     }
   })(pr)), pr;
 }
 var jo;
-function Ac() {
+function Pc() {
   if (jo) return tt;
   jo = 1, Object.defineProperty(tt, "__esModule", { value: !0 }), tt.boolOrEmptySchema = tt.topBoolOrEmptySchema = void 0;
   const e = /* @__PURE__ */ Jn(), t = /* @__PURE__ */ ie(), n = /* @__PURE__ */ Oe(), r = {
@@ -1705,11 +1705,11 @@ function Un() {
     const { gen: u, data: h, opts: y } = p, x = u.let("dataType", (0, r._)`typeof ${h}`), E = u.let("coerced", (0, r._)`undefined`);
     y.coerceTypes === "array" && u.if((0, r._)`${x} == 'object' && Array.isArray(${h}) && ${h}.length == 1`, () => u.assign(h, (0, r._)`${h}[0]`).assign(x, (0, r._)`typeof ${h}`).if($(C, h, y.strictNumbers), () => u.assign(E, h))), u.if((0, r._)`${E} !== undefined`);
     for (const M of _)
-      (l.has(M) || M === "array" && y.coerceTypes === "array") && A(M);
+      (l.has(M) || M === "array" && y.coerceTypes === "array") && P(M);
     u.else(), f(p), u.endIf(), u.if((0, r._)`${E} !== undefined`, () => {
       u.assign(h, E), w(p, E);
     });
-    function A(M) {
+    function P(M) {
       switch (M) {
         case "string":
           u.elseIf((0, r._)`${x} == "number" || ${x} == "boolean"`).assign(E, (0, r._)`"" + ${h}`).elseIf((0, r._)`${h} === null`).assign(E, (0, r._)`""`);
@@ -1882,7 +1882,7 @@ function Fe() {
     return m(C).filter((_) => !(0, t.alwaysValidSchema)(p, C[_]));
   }
   de.schemaProperties = w;
-  function g({ schemaCode: p, data: C, it: { gen: _, topSchemaRef: u, schemaPath: h, errorPath: y }, it: x }, E, A, M) {
+  function g({ schemaCode: p, data: C, it: { gen: _, topSchemaRef: u, schemaPath: h, errorPath: y }, it: x }, E, P, M) {
     const R = M ? (0, e._)`${p}, ${C}, ${u}${h}` : C, D = [
       [n.default.instancePath, (0, e.strConcat)(n.default.instancePath, y)],
       [n.default.parentData, x.parentData],
@@ -1891,7 +1891,7 @@ function Fe() {
     ];
     x.opts.dynamicRef && D.push([n.default.dynamicAnchors, n.default.dynamicAnchors]);
     const I = (0, e._)`${R}, ${_.object(...D)}`;
-    return A !== e.nil ? (0, e._)`${E}.call(${A}, ${I})` : (0, e._)`${E}(${I})`;
+    return P !== e.nil ? (0, e._)`${E}.call(${P}, ${I})` : (0, e._)`${E}(${I})`;
   }
   de.callValidateCode = g;
   const $ = (0, e._)`new RegExp`;
@@ -1912,8 +1912,8 @@ function Fe() {
     }
     return C.var(y, !0), x(() => C.break()), y;
     function x(E) {
-      const A = C.const("len", (0, e._)`${_}.length`);
-      C.forRange("i", 0, A, (M) => {
+      const P = C.const("len", (0, e._)`${_}.length`);
+      C.forRange("i", 0, P, (M) => {
         p.subschema({
           keyword: u,
           dataProp: M,
@@ -1927,10 +1927,10 @@ function Fe() {
     const { gen: C, schema: _, keyword: u, it: h } = p;
     if (!Array.isArray(_))
       throw new Error("ajv implementation error");
-    if (_.some((A) => (0, t.alwaysValidSchema)(h, A)) && !h.opts.unevaluated)
+    if (_.some((P) => (0, t.alwaysValidSchema)(h, P)) && !h.opts.unevaluated)
       return;
     const x = C.let("valid", !1), E = C.name("_valid");
-    C.block(() => _.forEach((A, M) => {
+    C.block(() => _.forEach((P, M) => {
       const R = p.subschema({
         keyword: u,
         schemaProp: M,
@@ -1969,7 +1969,7 @@ function Nc() {
       if (g.errors === !1)
         M(), g.modifying && s(w), R(() => w.error());
       else {
-        const D = g.async ? E() : A();
+        const D = g.async ? E() : P();
         g.modifying && s(w), R(() => a(w, D));
       }
     }
@@ -1977,7 +1977,7 @@ function Nc() {
       const D = S.let("ruleErrs", null);
       return S.try(() => M((0, e._)`await `), (I) => S.assign(y, !1).if((0, e._)`${I} instanceof ${_.ValidationError}`, () => S.assign(D, (0, e._)`${I}.errors`), () => S.throw(I))), D;
     }
-    function A() {
+    function P() {
       const D = (0, e._)`${h}.errors`;
       return S.assign(D, null), M(e.nil), D;
     }
@@ -2266,19 +2266,19 @@ function Yn() {
     if (typeof S == "boolean")
       return {};
     const { schemaId: v, uriResolver: p } = this.opts, C = m(S[v] || f), _ = { "": C }, u = c(p, C, !1), h = {}, y = /* @__PURE__ */ new Set();
-    return n(S, { allKeys: !0 }, (A, M, R, D) => {
+    return n(S, { allKeys: !0 }, (P, M, R, D) => {
       if (D === void 0)
         return;
       const I = u + M;
       let L = _[D];
-      typeof A[v] == "string" && (L = W.call(this, A[v])), ne.call(this, A.$anchor), ne.call(this, A.$dynamicAnchor), _[M] = L;
+      typeof P[v] == "string" && (L = W.call(this, P[v])), ne.call(this, P.$anchor), ne.call(this, P.$dynamicAnchor), _[M] = L;
       function W(X) {
         const oe = this.opts.uriResolver.resolve;
         if (X = m(L ? oe(L, X) : X), y.has(X))
           throw E(X);
         y.add(X);
         let G = this.refs[X];
-        return typeof G == "string" && (G = this.refs[G]), typeof G == "object" ? x(A, G.schema, X) : X !== m(I) && (X[0] === "#" ? (x(A, h[X], X), h[X] = A) : this.refs[X] = I), X;
+        return typeof G == "string" && (G = this.refs[G]), typeof G == "object" ? x(P, G.schema, X) : X !== m(I) && (X[0] === "#" ? (x(P, h[X], X), h[X] = P) : this.refs[X] = I), X;
       }
       function ne(X) {
         if (typeof X == "string") {
@@ -2288,12 +2288,12 @@ function Yn() {
         }
       }
     }), h;
-    function x(A, M, R) {
-      if (M !== void 0 && !t(A, M))
+    function x(P, M, R) {
+      if (M !== void 0 && !t(P, M))
         throw E(R);
     }
-    function E(A) {
-      return new Error(`reference "${A}" resolves to more than one schema`);
+    function E(P) {
+      return new Error(`reference "${P}" resolves to more than one schema`);
     }
   }
   return ye.getSchemaRefs = $, ye;
@@ -2302,7 +2302,7 @@ var Jo;
 function Xn() {
   if (Jo) return je;
   Jo = 1, Object.defineProperty(je, "__esModule", { value: !0 }), je.getData = je.KeywordCxt = je.validateFunctionCode = void 0;
-  const e = /* @__PURE__ */ Ac(), t = /* @__PURE__ */ Un(), n = /* @__PURE__ */ oa(), r = /* @__PURE__ */ Un(), o = /* @__PURE__ */ Rc(), i = /* @__PURE__ */ Nc(), s = /* @__PURE__ */ Mc(), a = /* @__PURE__ */ ie(), c = /* @__PURE__ */ Oe(), l = /* @__PURE__ */ Yn(), d = /* @__PURE__ */ ce(), m = /* @__PURE__ */ Jn();
+  const e = /* @__PURE__ */ Pc(), t = /* @__PURE__ */ Un(), n = /* @__PURE__ */ oa(), r = /* @__PURE__ */ Un(), o = /* @__PURE__ */ Rc(), i = /* @__PURE__ */ Nc(), s = /* @__PURE__ */ Mc(), a = /* @__PURE__ */ ie(), c = /* @__PURE__ */ Oe(), l = /* @__PURE__ */ Yn(), d = /* @__PURE__ */ ce(), m = /* @__PURE__ */ Jn();
   function w(N) {
     if (u(N) && (y(N), _(N))) {
       f(N);
@@ -2329,7 +2329,7 @@ function Xn() {
   function f(N) {
     const { schema: F, opts: K, gen: J } = N;
     g(N, () => {
-      K.$comment && F.$comment && D(N), A(N), J.let(c.default.vErrors, null), J.let(c.default.errors, 0), K.unevaluated && v(N), x(N), I(N);
+      K.$comment && F.$comment && D(N), P(N), J.let(c.default.vErrors, null), J.let(c.default.errors, 0), K.unevaluated && v(N), x(N), I(N);
     });
   }
   function v(N) {
@@ -2377,7 +2377,7 @@ function Xn() {
     const { schema: F, errSchemaPath: K, opts: J, self: te } = N;
     F.$ref && J.ignoreKeywordsWithRef && (0, d.schemaHasRulesButRef)(F, te.RULES) && te.logger.warn(`$ref: keywords ignored in schema at path "${K}"`);
   }
-  function A(N) {
+  function P(N) {
     const { schema: F, opts: K } = N;
     F.default !== void 0 && K.useDefaults && K.strictSchema && (0, d.checkStrictMode)(N, "default is ignored in the schema root");
   }
@@ -2470,7 +2470,7 @@ function Xn() {
     const K = N.schemaEnv.baseId + N.errSchemaPath;
     F += ` at "${K}" (strictTypes)`, (0, d.checkStrictMode)(N, F, N.opts.strictTypes);
   }
-  class P {
+  class A {
     constructor(F, K, J) {
       if ((0, i.validateKeywordUsage)(F, K, J), this.gen = F.gen, this.allErrors = F.allErrors, this.keyword = J, this.data = F.data, this.schema = F.schema[J], this.$data = K.$data && F.opts.$data && this.schema && this.schema.$data, this.schemaValue = (0, d.schemaRefOrVal)(F, this.schema, J, this.$data), this.schemaType = K.schemaType, this.parentSchema = F.schema, this.params = {}, this.it = F, this.def = K, this.$data)
         this.schemaCode = F.gen.const("vSchema", ee(this.$data, F));
@@ -2571,9 +2571,9 @@ function Xn() {
         return te.if(K, () => this.mergeEvaluated(F, a.Name)), !0;
     }
   }
-  je.KeywordCxt = P;
+  je.KeywordCxt = A;
   function V(N, F, K, J) {
-    const te = new P(N, K, F);
+    const te = new A(N, K, F);
     "code" in K ? K.code(te, J) : te.$data && K.validate ? (0, i.funcKeywordCode)(te, K) : "macro" in K ? (0, i.macroKeywordCode)(te, K) : (K.compile || K.validate) && (0, i.funcKeywordCode)(te, K);
   }
   const H = /^\/(?:[^~]|~0|~1)*$/, Q = /^([0-9]+)(#|\/(?:[^~]|~0|~1)*)?$/;
@@ -2685,12 +2685,12 @@ function Qn() {
       opts: this.opts,
       self: this
     };
-    let A;
+    let P;
     try {
       this._compilations.add(f), (0, i.validateFunctionCode)(E), h.optimize(this.opts.code.optimize);
       const M = h.toString();
-      A = `${h.scopeRefs(n.default.scope)}return ${M}`, this.opts.code.process && (A = this.opts.code.process(A, f));
-      const D = new Function(`${n.default.self}`, `${n.default.scope}`, A)(this, this.scope.get());
+      P = `${h.scopeRefs(n.default.scope)}return ${M}`, this.opts.code.process && (P = this.opts.code.process(P, f));
+      const D = new Function(`${n.default.self}`, `${n.default.scope}`, P)(this, this.scope.get());
       if (this.scope.value(x, { ref: D }), D.errors = null, D.schema = f.schema, D.schemaEnv = f, f.$async && (D.$async = !0), this.opts.code.source === !0 && (D.source = { validateName: x, validateCode: M, scopeValues: h._values }), this.opts.unevaluated) {
         const { props: I, items: L } = E;
         D.evaluated = {
@@ -2702,7 +2702,7 @@ function Qn() {
       }
       return f.validate = D, f;
     } catch (M) {
-      throw delete f.validate, delete f.validateName, A && this.logger.error("Error compiling schema, function code:", A), M;
+      throw delete f.validate, delete f.validateName, P && this.logger.error("Error compiling schema, function code:", P), M;
     } finally {
       this._compilations.delete(f);
     }
@@ -2839,18 +2839,18 @@ function sa() {
   function l(u) {
     let h = 0;
     const y = { error: !1, address: "", zone: "" }, x = [], E = [];
-    let A = !1, M = !1, R = c;
+    let P = !1, M = !1, R = c;
     for (let D = 0; D < u.length; D++) {
       const I = u[D];
       if (!(I === "[" || I === "]"))
         if (I === ":") {
-          if (A === !0 && (M = !0), !R(E, x, y))
+          if (P === !0 && (M = !0), !R(E, x, y))
             break;
           if (++h > 7) {
             y.error = !0;
             break;
           }
-          D > 0 && u[D - 1] === ":" && (A = !0), x.push(":");
+          D > 0 && u[D - 1] === ":" && (P = !0), x.push(":");
           continue;
         } else if (I === "%") {
           if (!R(E, x, y))
@@ -2951,8 +2951,8 @@ function sa() {
       if (u[x] === "%" && x + 2 < u.length) {
         const E = u.slice(x + 1, x + 3);
         if (n(E)) {
-          const A = E.toUpperCase(), M = String.fromCharCode(parseInt(A, 16));
-          h && r(M) ? y += M : y += "%" + A, x += 2;
+          const P = E.toUpperCase(), M = String.fromCharCode(parseInt(P, 16));
+          h && r(M) ? y += M : y += "%" + P, x += 2;
           continue;
         }
       }
@@ -2966,8 +2966,8 @@ function sa() {
       if (u[y] === "%" && y + 2 < u.length) {
         const x = u.slice(y + 1, y + 3);
         if (n(x)) {
-          const E = x.toUpperCase(), A = String.fromCharCode(parseInt(E, 16));
-          A !== "." && r(A) ? h += A : h += "%" + E, y += 2;
+          const E = x.toUpperCase(), P = String.fromCharCode(parseInt(E, 16));
+          P !== "." && r(P) ? h += P : h += "%" + E, y += 2;
           continue;
         }
       }
@@ -3063,8 +3063,8 @@ function qc() {
     if (y) {
       const x = h.scheme || u.scheme || "urn";
       u.nid = y[1].toLowerCase(), u.nss = y[2];
-      const E = `${x}:${h.nid || u.nid}`, A = _(E);
-      u.path = void 0, A && (u = A.parse(u, h));
+      const E = `${x}:${h.nid || u.nid}`, P = _(E);
+      u.path = void 0, P && (u = P.parse(u, h));
     } else
       u.error = u.error || "URN can not be parsed.";
     return u;
@@ -3072,8 +3072,8 @@ function qc() {
   function d(u, h) {
     if (u.nid === void 0)
       throw new Error("URN without nid cannot be serialized");
-    const y = h.scheme || u.scheme || "urn", x = u.nid.toLowerCase(), E = `${y}:${h.nid || x}`, A = _(E);
-    A && (u = A.serialize(u, h));
+    const y = h.scheme || u.scheme || "urn", x = u.nid.toLowerCase(), E = `${y}:${h.nid || x}`, P = _(E);
+    P && (u = P.serialize(u, h));
     const M = u, R = u.nss;
     return M.path = `${x || h.nid}:${R}`, h.skipEscape = !0, M;
   }
@@ -3166,24 +3166,24 @@ function Vc() {
   if (ti) return xt.exports;
   ti = 1;
   const { normalizeIPv6: e, removeDotSegments: t, recomposeAuthority: n, normalizePercentEncoding: r, normalizePathEncoding: o, escapePreservingEscapes: i, reescapeHostDelimiters: s, isIPv4: a, nonSimpleDomain: c } = sa(), { SCHEMES: l, getSchemeHandler: d } = qc();
-  function m(E, A) {
+  function m(E, P) {
     return typeof E == "string" ? E = /** @type {T} */
-    u(E, A) : typeof E == "object" && (E = /** @type {T} */
-    _(S(E, A), A)), E;
+    u(E, P) : typeof E == "object" && (E = /** @type {T} */
+    _(S(E, P), P)), E;
   }
-  function w(E, A, M) {
-    const R = M ? Object.assign({ scheme: "null" }, M) : { scheme: "null" }, D = g(_(E, R), _(A, R), R, !0);
+  function w(E, P, M) {
+    const R = M ? Object.assign({ scheme: "null" }, M) : { scheme: "null" }, D = g(_(E, R), _(P, R), R, !0);
     return R.skipEscape = !0, S(D, R);
   }
-  function g(E, A, M, R) {
+  function g(E, P, M, R) {
     const D = {};
-    return R || (E = _(S(E, M), M), A = _(S(A, M), M)), M = M || {}, !M.tolerant && A.scheme ? (D.scheme = A.scheme, D.userinfo = A.userinfo, D.host = A.host, D.port = A.port, D.path = t(A.path || ""), D.query = A.query) : (A.userinfo !== void 0 || A.host !== void 0 || A.port !== void 0 ? (D.userinfo = A.userinfo, D.host = A.host, D.port = A.port, D.path = t(A.path || ""), D.query = A.query) : (A.path ? (A.path[0] === "/" ? D.path = t(A.path) : ((E.userinfo !== void 0 || E.host !== void 0 || E.port !== void 0) && !E.path ? D.path = "/" + A.path : E.path ? D.path = E.path.slice(0, E.path.lastIndexOf("/") + 1) + A.path : D.path = A.path, D.path = t(D.path)), D.query = A.query) : (D.path = E.path, A.query !== void 0 ? D.query = A.query : D.query = E.query), D.userinfo = E.userinfo, D.host = E.host, D.port = E.port), D.scheme = E.scheme), D.fragment = A.fragment, D;
+    return R || (E = _(S(E, M), M), P = _(S(P, M), M)), M = M || {}, !M.tolerant && P.scheme ? (D.scheme = P.scheme, D.userinfo = P.userinfo, D.host = P.host, D.port = P.port, D.path = t(P.path || ""), D.query = P.query) : (P.userinfo !== void 0 || P.host !== void 0 || P.port !== void 0 ? (D.userinfo = P.userinfo, D.host = P.host, D.port = P.port, D.path = t(P.path || ""), D.query = P.query) : (P.path ? (P.path[0] === "/" ? D.path = t(P.path) : ((E.userinfo !== void 0 || E.host !== void 0 || E.port !== void 0) && !E.path ? D.path = "/" + P.path : E.path ? D.path = E.path.slice(0, E.path.lastIndexOf("/") + 1) + P.path : D.path = P.path, D.path = t(D.path)), D.query = P.query) : (D.path = E.path, P.query !== void 0 ? D.query = P.query : D.query = E.query), D.userinfo = E.userinfo, D.host = E.host, D.port = E.port), D.scheme = E.scheme), D.fragment = P.fragment, D;
   }
-  function $(E, A, M) {
-    const R = y(E, M), D = y(A, M);
+  function $(E, P, M) {
+    const R = y(E, M), D = y(P, M);
     return R !== void 0 && D !== void 0 && R.toLowerCase() === D.toLowerCase();
   }
-  function S(E, A) {
+  function S(E, P) {
     const M = {
       host: E.host,
       scheme: E.scheme,
@@ -3199,7 +3199,7 @@ function Vc() {
       resourceName: E.resourceName,
       secure: E.secure,
       error: ""
-    }, R = Object.assign({}, A), D = [], I = d(R.scheme || M.scheme);
+    }, R = Object.assign({}, P), D = [], I = d(R.scheme || M.scheme);
     I && I.serialize && I.serialize(M, R), M.path !== void 0 && (R.skipEscape ? M.path = r(M.path) : (M.path = i(M.path), M.scheme !== void 0 && (M.path = M.path.split("%3A").join(":")))), R.reference !== "suffix" && M.scheme && D.push(M.scheme, ":");
     const L = n(M);
     if (L !== void 0 && (R.reference !== "suffix" && D.push("//"), D.push(L), M.path && M.path[0] !== "/" && D.push("/")), M.path !== void 0) {
@@ -3209,14 +3209,14 @@ function Vc() {
     return M.query !== void 0 && D.push("?", M.query), M.fragment !== void 0 && D.push("#", M.fragment), D.join("");
   }
   const f = /^(?:([^#/:?]+):)?(?:\/\/((?:([^#/?@]*)@)?(\[[^#/?\]]+\]|[^#/:?]*)(?::(\d*))?))?([^#?]*)(?:\?([^#]*))?(?:#((?:.|[\n\r])*))?/u, v = /^(?:[^#/:?]+:)?\/\/([^/?#]*)/;
-  function p(E, A) {
-    if (A[2] !== void 0 && E.path && E.path[0] !== "/")
+  function p(E, P) {
+    if (P[2] !== void 0 && E.path && E.path[0] !== "/")
       return 'URI path must start with "/" when authority is present.';
     if (typeof E.port == "number" && (E.port < 0 || E.port > 65535))
       return "URI port is malformed.";
   }
-  function C(E, A) {
-    const M = Object.assign({}, A), R = {
+  function C(E, P) {
+    const M = Object.assign({}, P), R = {
       scheme: void 0,
       userinfo: void 0,
       host: "",
@@ -3258,26 +3258,26 @@ function Vc() {
       R.error = R.error || "URI can not be parsed.";
     return { parsed: R, malformedAuthorityOrPort: D };
   }
-  function _(E, A) {
-    return C(E, A).parsed;
+  function _(E, P) {
+    return C(E, P).parsed;
   }
-  function u(E, A) {
-    return h(E, A).normalized;
+  function u(E, P) {
+    return h(E, P).normalized;
   }
-  function h(E, A) {
-    const { parsed: M, malformedAuthorityOrPort: R } = C(E, A);
+  function h(E, P) {
+    const { parsed: M, malformedAuthorityOrPort: R } = C(E, P);
     return {
-      normalized: R ? E : S(M, A),
+      normalized: R ? E : S(M, P),
       malformedAuthorityOrPort: R
     };
   }
-  function y(E, A) {
+  function y(E, P) {
     if (typeof E == "string") {
-      const { normalized: M, malformedAuthorityOrPort: R } = h(E, A);
+      const { normalized: M, malformedAuthorityOrPort: R } = h(E, P);
       return R ? void 0 : M;
     }
     if (typeof E == "object")
-      return S(E, A);
+      return S(E, P);
   }
   const x = {
     SCHEMES: l,
@@ -3357,10 +3357,10 @@ function Uc() {
       unicode: '"minLength"/"maxLength" account for unicode characters by default.'
     }, p = 200;
     function C(G) {
-      var O, U, z, b, k, P, V, H, Q, ee, N, F, K, J, te, re, ue, we, $e, ve, me, dt, Ce, cr, lr;
+      var O, U, z, b, k, A, V, H, Q, ee, N, F, K, J, te, re, ue, we, $e, ve, me, dt, Ce, cr, lr;
       const Ct = G.strict, dr = (O = G.code) === null || O === void 0 ? void 0 : O.optimize, ko = dr === !0 || dr === void 0 ? 1 : dr || 0, Eo = (z = (U = G.code) === null || U === void 0 ? void 0 : U.regExp) !== null && z !== void 0 ? z : g, rc = (b = G.uriResolver) !== null && b !== void 0 ? b : w.default;
       return {
-        strictSchema: (P = (k = G.strictSchema) !== null && k !== void 0 ? k : Ct) !== null && P !== void 0 ? P : !0,
+        strictSchema: (A = (k = G.strictSchema) !== null && k !== void 0 ? k : Ct) !== null && A !== void 0 ? A : !0,
         strictNumbers: (H = (V = G.strictNumbers) !== null && V !== void 0 ? V : Ct) !== null && H !== void 0 ? H : !0,
         strictTypes: (ee = (Q = G.strictTypes) !== null && Q !== void 0 ? Q : Ct) !== null && ee !== void 0 ? ee : "log",
         strictTuples: (F = (N = G.strictTuples) !== null && N !== void 0 ? N : Ct) !== null && F !== void 0 ? F : "log",
@@ -3386,7 +3386,7 @@ function Uc() {
         const { es5: U, lines: z } = this.opts.code;
         this.scope = new a.ValueScope({ scope: {}, prefixes: S, es5: U, lines: z }), this.logger = R(O.logger);
         const b = O.validateFormats;
-        O.validateFormats = !1, this.RULES = (0, i.getRules)(), u.call(this, f, O, "NOT SUPPORTED"), u.call(this, v, O, "DEPRECATED", "warn"), this._metaOpts = A.call(this), O.formats && x.call(this), this._addVocabularies(), this._addDefaultMetaSchema(), O.keywords && E.call(this, O.keywords), typeof O.meta == "object" && this.addMetaSchema(O.meta), y.call(this), O.validateFormats = b;
+        O.validateFormats = !1, this.RULES = (0, i.getRules)(), u.call(this, f, O, "NOT SUPPORTED"), u.call(this, v, O, "DEPRECATED", "warn"), this._metaOpts = P.call(this), O.formats && x.call(this), this._addVocabularies(), this._addDefaultMetaSchema(), O.keywords && E.call(this, O.keywords), typeof O.meta == "object" && this.addMetaSchema(O.meta), y.call(this), O.validateFormats = b;
       }
       _addVocabularies() {
         this.addKeyword("$async");
@@ -3422,18 +3422,18 @@ function Uc() {
         async function b(ee, N) {
           await k.call(this, ee.$schema);
           const F = this._addSchema(ee, N);
-          return F.validate || P.call(this, F);
+          return F.validate || A.call(this, F);
         }
         async function k(ee) {
           ee && !this.getSchema(ee) && await b.call(this, { $ref: ee }, !0);
         }
-        async function P(ee) {
+        async function A(ee) {
           try {
             return this._compileSchemaEnv(ee);
           } catch (N) {
             if (!(N instanceof o.default))
               throw N;
-            return V.call(this, N), await H.call(this, N.missingSchema), P.call(this, ee);
+            return V.call(this, N), await H.call(this, N.missingSchema), A.call(this, ee);
           }
         }
         function V({ missingSchema: ee, missingRef: N }) {
@@ -3458,15 +3458,15 @@ function Uc() {
       // Adds schema to the instance
       addSchema(O, U, z, b = this.opts.validateSchema) {
         if (Array.isArray(O)) {
-          for (const P of O)
-            this.addSchema(P, void 0, z, b);
+          for (const A of O)
+            this.addSchema(A, void 0, z, b);
           return this;
         }
         let k;
         if (typeof O == "object") {
-          const { schemaId: P } = this.opts;
-          if (k = O[P], k !== void 0 && typeof k != "string")
-            throw new Error(`schema ${P} must be string`);
+          const { schemaId: A } = this.opts;
+          if (k = O[A], k !== void 0 && typeof k != "string")
+            throw new Error(`schema ${A} must be string`);
         }
         return U = (0, c.normalizeId)(U || k), this._checkUnique(U), this.schemas[U] = this._addSchema(O, z, U, b, !0), this;
       }
@@ -3555,7 +3555,7 @@ function Uc() {
           type: (0, l.getJSONTypes)(U.type),
           schemaType: (0, l.getJSONTypes)(U.schemaType)
         };
-        return (0, d.eachItem)(z, b.type.length === 0 ? (k) => L.call(this, k, b) : (k) => b.type.forEach((P) => L.call(this, k, b, P))), this;
+        return (0, d.eachItem)(z, b.type.length === 0 ? (k) => L.call(this, k, b) : (k) => b.type.forEach((A) => L.call(this, k, b, A))), this;
       }
       getKeyword(O) {
         const U = this.RULES.all[O];
@@ -3583,15 +3583,15 @@ function Uc() {
         O = JSON.parse(JSON.stringify(O));
         for (const b of U) {
           const k = b.split("/").slice(1);
-          let P = O;
+          let A = O;
           for (const V of k)
-            P = P[V];
+            A = A[V];
           for (const V in z) {
             const H = z[V];
             if (typeof H != "object")
               continue;
-            const { $data: Q } = H.definition, ee = P[V];
-            Q && ee && (P[V] = oe(ee));
+            const { $data: Q } = H.definition, ee = A[V];
+            Q && ee && (A[V] = oe(ee));
           }
         }
         return O;
@@ -3603,10 +3603,10 @@ function Uc() {
         }
       }
       _addSchema(O, U, z, b = this.opts.validateSchema, k = this.opts.addUsedSchema) {
-        let P;
+        let A;
         const { schemaId: V } = this.opts;
         if (typeof O == "object")
-          P = O[V];
+          A = O[V];
         else {
           if (this.opts.jtd)
             throw new Error("schema must be object");
@@ -3616,7 +3616,7 @@ function Uc() {
         let H = this._cache.get(O);
         if (H !== void 0)
           return H;
-        z = (0, c.normalizeId)(P || z);
+        z = (0, c.normalizeId)(A || z);
         const Q = c.getSchemaRefs.call(this, O, z);
         return H = new s.SchemaEnv({ schema: O, schemaId: V, meta: U, baseId: z, localRefs: Q }), this._cache.set(H.schema, H), k && !z.startsWith("#") && (z && this._checkUnique(z), this.refs[z] = H), b && this.validateSchema(O, !0), H;
       }
@@ -3675,7 +3675,7 @@ function Uc() {
         U.keyword || (U.keyword = O), this.addKeyword(U);
       }
     }
-    function A() {
+    function P() {
       const G = { ...this.opts };
       for (const O of $)
         delete G[O];
@@ -3711,8 +3711,8 @@ function Uc() {
       if (U && b)
         throw new Error('keyword with "post" flag cannot have "type"');
       const { RULES: k } = this;
-      let P = b ? k.post : k.rules.find(({ type: H }) => H === U);
-      if (P || (P = { type: U, rules: [] }, k.rules.push(P)), k.keywords[G] = !0, !O)
+      let A = b ? k.post : k.rules.find(({ type: H }) => H === U);
+      if (A || (A = { type: U, rules: [] }, k.rules.push(A)), k.keywords[G] = !0, !O)
         return;
       const V = {
         keyword: G,
@@ -3722,7 +3722,7 @@ function Uc() {
           schemaType: (0, l.getJSONTypes)(O.schemaType)
         }
       };
-      O.before ? W.call(this, P, V, O.before) : P.rules.push(V), k.all[G] = V, (z = O.implements) === null || z === void 0 || z.forEach((H) => this.addKeyword(H));
+      O.before ? W.call(this, A, V, O.before) : A.rules.push(V), k.all[G] = V, (z = O.implements) === null || z === void 0 || z.forEach((H) => this.addKeyword(H));
     }
     function W(G, O, U) {
       const z = G.rules.findIndex((b) => b.keyword === U);
@@ -3780,14 +3780,14 @@ function eo() {
         c(l, x, y, y.$async);
       }
       function h(y) {
-        const x = d.scopeValue("schema", f.code.source === !0 ? { ref: y, code: (0, n.stringify)(y) } : { ref: y }), E = d.name("valid"), A = l.subschema({
+        const x = d.scopeValue("schema", f.code.source === !0 ? { ref: y, code: (0, n.stringify)(y) } : { ref: y }), E = d.name("valid"), P = l.subschema({
           schema: y,
           dataTypes: [],
           schemaPath: n.nil,
           topSchemaRef: x,
           errSchemaPath: m
         }, E);
-        l.mergeEvaluated(A), l.ok(E);
+        l.mergeEvaluated(P), l.ok(E);
       }
     }
   };
@@ -3825,15 +3825,15 @@ function eo() {
         if (E && !E.dynamicProps)
           E.props !== void 0 && ($.props = i.mergeEvaluated.props(g, E.props, $.props));
         else {
-          const A = g.var("props", (0, n._)`${y}.evaluated.props`);
-          $.props = i.mergeEvaluated.props(g, A, $.props, n.Name);
+          const P = g.var("props", (0, n._)`${y}.evaluated.props`);
+          $.props = i.mergeEvaluated.props(g, P, $.props, n.Name);
         }
       if ($.items !== !0)
         if (E && !E.dynamicItems)
           E.items !== void 0 && ($.items = i.mergeEvaluated.items(g, E.items, $.items));
         else {
-          const A = g.var("items", (0, n._)`${y}.evaluated.items`);
-          $.items = i.mergeEvaluated.items(g, A, $.items, n.Name);
+          const P = g.var("items", (0, n._)`${y}.evaluated.items`);
+          $.items = i.mergeEvaluated.items(g, P, $.items, n.Name);
         }
     }
   }
@@ -4542,10 +4542,10 @@ function la() {
   };
   return un.default = i, un;
 }
-var fn = {}, Pi;
+var fn = {}, Ai;
 function ll() {
-  if (Pi) return fn;
-  Pi = 1, Object.defineProperty(fn, "__esModule", { value: !0 });
+  if (Ai) return fn;
+  Ai = 1, Object.defineProperty(fn, "__esModule", { value: !0 });
   const e = /* @__PURE__ */ Xn(), t = /* @__PURE__ */ Fe(), n = /* @__PURE__ */ ce(), r = /* @__PURE__ */ la(), o = {
     keyword: "properties",
     type: "object",
@@ -4577,10 +4577,10 @@ function ll() {
   };
   return fn.default = o, fn;
 }
-var pn = {}, Ai;
+var pn = {}, Pi;
 function dl() {
-  if (Ai) return pn;
-  Ai = 1, Object.defineProperty(pn, "__esModule", { value: !0 });
+  if (Pi) return pn;
+  Pi = 1, Object.defineProperty(pn, "__esModule", { value: !0 });
   const e = /* @__PURE__ */ Fe(), t = /* @__PURE__ */ ie(), n = /* @__PURE__ */ ce(), r = /* @__PURE__ */ ce(), o = {
     keyword: "patternProperties",
     type: "object",
@@ -4934,10 +4934,10 @@ function Cl() {
   const e = /* @__PURE__ */ wl(), t = /* @__PURE__ */ _l(), n = /* @__PURE__ */ Sl(), r = [e.default, t.default, n.default];
   return Sn.default = r, Sn;
 }
-var xn = {}, Pn = {}, Ki;
+var xn = {}, An = {}, Ki;
 function kl() {
-  if (Ki) return Pn;
-  Ki = 1, Object.defineProperty(Pn, "__esModule", { value: !0 });
+  if (Ki) return An;
+  Ki = 1, Object.defineProperty(An, "__esModule", { value: !0 });
   const e = /* @__PURE__ */ ie(), t = /* @__PURE__ */ ce(), n = /* @__PURE__ */ Oe(), o = {
     keyword: "unevaluatedProperties",
     type: "object",
@@ -4978,12 +4978,12 @@ function kl() {
       }
     }
   };
-  return Pn.default = o, Pn;
+  return An.default = o, An;
 }
-var An = {}, Gi;
+var Pn = {}, Gi;
 function El() {
-  if (Gi) return An;
-  Gi = 1, Object.defineProperty(An, "__esModule", { value: !0 });
+  if (Gi) return Pn;
+  Gi = 1, Object.defineProperty(Pn, "__esModule", { value: !0 });
   const e = /* @__PURE__ */ ie(), t = /* @__PURE__ */ ce(), r = {
     keyword: "unevaluatedItems",
     type: "array",
@@ -5011,7 +5011,7 @@ function El() {
       }
     }
   };
-  return An.default = r, An;
+  return Pn.default = r, Pn;
 }
 var Wi;
 function xl() {
@@ -5021,7 +5021,7 @@ function xl() {
   return xn.default = n, xn;
 }
 var Rn = {}, Nn = {}, Ji;
-function Pl() {
+function Al() {
   if (Ji) return Nn;
   Ji = 1, Object.defineProperty(Nn, "__esModule", { value: !0 });
   const e = /* @__PURE__ */ ie(), n = {
@@ -5073,8 +5073,8 @@ function Pl() {
           }
         }
         function h(x) {
-          const E = x instanceof RegExp ? (0, e.regexpCode)(x) : m.code.formats ? (0, e._)`${m.code.formats}${(0, e.getProperty)(c)}` : void 0, A = i.scopeValue("formats", { key: c, ref: x, code: E });
-          return typeof x == "object" && !(x instanceof RegExp) ? [x.type || "string", x.validate, (0, e._)`${A}.validate`] : ["string", x, A];
+          const E = x instanceof RegExp ? (0, e.regexpCode)(x) : m.code.formats ? (0, e._)`${m.code.formats}${(0, e.getProperty)(c)}` : void 0, P = i.scopeValue("formats", { key: c, ref: x, code: E });
+          return typeof x == "object" && !(x instanceof RegExp) ? [x.type || "string", x.validate, (0, e._)`${P}.validate`] : ["string", x, P];
         }
         function y() {
           if (typeof v == "object" && !(v instanceof RegExp) && v.async) {
@@ -5090,10 +5090,10 @@ function Pl() {
   return Nn.default = n, Nn;
 }
 var Yi;
-function Al() {
+function Pl() {
   if (Yi) return Rn;
   Yi = 1, Object.defineProperty(Rn, "__esModule", { value: !0 });
-  const t = [(/* @__PURE__ */ Pl()).default];
+  const t = [(/* @__PURE__ */ Al()).default];
   return Rn.default = t, Rn;
 }
 var rt = {}, Xi;
@@ -5116,7 +5116,7 @@ var Zi;
 function Nl() {
   if (Zi) return Bt;
   Zi = 1, Object.defineProperty(Bt, "__esModule", { value: !0 });
-  const e = /* @__PURE__ */ Kc(), t = /* @__PURE__ */ ol(), n = /* @__PURE__ */ yl(), r = /* @__PURE__ */ bl(), o = /* @__PURE__ */ Cl(), i = /* @__PURE__ */ xl(), s = /* @__PURE__ */ Al(), a = /* @__PURE__ */ Rl(), c = [
+  const e = /* @__PURE__ */ Kc(), t = /* @__PURE__ */ ol(), n = /* @__PURE__ */ yl(), r = /* @__PURE__ */ bl(), o = /* @__PURE__ */ Cl(), i = /* @__PURE__ */ xl(), s = /* @__PURE__ */ Pl(), a = /* @__PURE__ */ Rl(), c = [
     r.default,
     e.default,
     t.default,
@@ -5129,14 +5129,14 @@ function Nl() {
   ];
   return Bt.default = c, Bt;
 }
-var Mn = {}, Pt = {}, Qi;
+var Mn = {}, At = {}, Qi;
 function Ml() {
-  if (Qi) return Pt;
-  Qi = 1, Object.defineProperty(Pt, "__esModule", { value: !0 }), Pt.DiscrError = void 0;
+  if (Qi) return At;
+  Qi = 1, Object.defineProperty(At, "__esModule", { value: !0 }), At.DiscrError = void 0;
   var e;
   return (function(t) {
     t.Tag = "tag", t.Mapping = "mapping";
-  })(e || (Pt.DiscrError = e = {})), Pt;
+  })(e || (At.DiscrError = e = {})), At;
 }
 var es;
 function Tl() {
@@ -5198,14 +5198,14 @@ function Tl() {
         }
         function E(M, R) {
           if (M.const)
-            A(M.const, R);
+            P(M.const, R);
           else if (M.enum)
             for (const D of M.enum)
-              A(D, R);
+              P(D, R);
           else
             throw new Error(`discriminator: "properties/${$}" must have "const" or "enum"`);
         }
-        function A(M, R) {
+        function P(M, R) {
           if (typeof M != "string" || M in u)
             throw new Error(`discriminator: "${$}" values must be unique strings`);
           u[M] = R;
@@ -5260,13 +5260,13 @@ const Ol = "https://json-schema.org/draft/2020-12/schema", Fl = "https://json-sc
   type: bd,
   properties: wd,
   $defs: _d
-}, Cd = "https://json-schema.org/draft/2020-12/schema", kd = "https://json-schema.org/draft/2020-12/meta/format-annotation", Ed = { "https://json-schema.org/draft/2020-12/vocab/format-annotation": !0 }, xd = "meta", Pd = "Format vocabulary meta-schema for annotation results", Ad = ["object", "boolean"], Rd = { format: { type: "string" } }, Nd = {
+}, Cd = "https://json-schema.org/draft/2020-12/schema", kd = "https://json-schema.org/draft/2020-12/meta/format-annotation", Ed = { "https://json-schema.org/draft/2020-12/vocab/format-annotation": !0 }, xd = "meta", Ad = "Format vocabulary meta-schema for annotation results", Pd = ["object", "boolean"], Rd = { format: { type: "string" } }, Nd = {
   $schema: Cd,
   $id: kd,
   $vocabulary: Ed,
   $dynamicAnchor: xd,
-  title: Pd,
-  type: Ad,
+  title: Ad,
+  type: Pd,
   properties: Rd
 }, Md = "https://json-schema.org/draft/2020-12/schema", Td = "https://json-schema.org/draft/2020-12/meta/meta-data", Od = { "https://json-schema.org/draft/2020-12/vocab/meta-data": !0 }, Fd = "meta", zd = "Meta-data vocabulary meta-schema", Id = ["object", "boolean"], jd = { title: { type: "string" }, description: { type: "string" }, default: !0, deprecated: { type: "boolean", default: !1 }, readOnly: { type: "boolean", default: !1 }, writeOnly: { type: "boolean", default: !1 }, examples: { type: "array", items: !0 } }, Dd = {
   $schema: Md,
@@ -5364,7 +5364,7 @@ function Yd() {
   })(jt, jt.exports)), jt.exports;
 }
 var Xd = /* @__PURE__ */ Yd();
-const Zd = /* @__PURE__ */ Pc(Xd), Qd = "https://json-schema.org/draft/2020-12/schema", eu = "https://raw.githubusercontent.com/omsf-eco-infra/gufe-viz/main/schema/gufe-viz.schema.json", tu = "gufe-viz payload", nu = "Python-to-TypeScript contract bridge for gufe visualizations. Source of truth both languages are downstream of it. This schema is not strictly versioned or published as it is only internally consumed by this codebase. Schema description: one schema object per gufe class: every $def named *Viz is the visualization form of exactly one GufeTokenizable, it carries that object's `gufe-key`. Every reference from one gufe object to another is that object's gufe key, and the objects themselves live in the `registry` on the root payload. So a ligand network's nodes are keys, a chemical system's components and a transformation's protocol are keys and each one resolves to a complete, drawable object. An alchemical network whose forty systems share one protein carries that PDB once and points at it forty times, and the browser can still drill into it, because what it points at is a whole ProteinComponentViz. This is a single-shot dump rather than a conversation with a server, so the registry travels with the payload.", ru = [{ $ref: "#/$defs/SmallMoleculeComponentViz" }, { $ref: "#/$defs/ProteinComponentViz" }, { $ref: "#/$defs/SolvatedPDBComponentViz" }, { $ref: "#/$defs/ProteinMembraneComponentViz" }, { $ref: "#/$defs/SolventComponentViz" }, { $ref: "#/$defs/UnknownComponentViz" }, { $ref: "#/$defs/ProtocolViz" }, { $ref: "#/$defs/LigandAtomMappingViz" }, { $ref: "#/$defs/LigandNetworkViz" }, { $ref: "#/$defs/ChemicalSystemViz" }, { $ref: "#/$defs/TransformationViz" }, { $ref: "#/$defs/AlchemicalNetworkViz" }], ou = /* @__PURE__ */ JSON.parse('{"GufeKey":{"title":"GufeKey","description":"A gufe key: the identity of a GufeTokenizable, of the form \'ClassName-<hex digest>\'. It is deterministic and repeatable within a software environment. Only its non-emptiness is checked","type":"string","minLength":1},"ComponentKey":{"title":"ComponentKey","description":"A gufe key naming a ComponentViz in the registry. Identical to GufeKey at validation time: JSON Schema has no way to say \'this string is the gufe-key of an entry in that array, and that entry has this type\', because that is a join across two parts of the document. What the name buys is that the referent\'s type is stated in the contract and carried into the generated TypeScript, instead of living only in a test and a view.","$ref":"#/$defs/GufeKey"},"SmallMoleculeComponentKey":{"title":"SmallMoleculeComponentKey","description":"A gufe key naming a SmallMoleculeComponentViz in the registry. Resolving it yields the whole molecule, SDF included. See ComponentKey for what the schema can and cannot check about that.","$ref":"#/$defs/GufeKey"},"ChemicalSystemKey":{"title":"ChemicalSystemKey","description":"A gufe key naming a ChemicalSystemViz in the registry. See ComponentKey for what the schema can and cannot check about that.","$ref":"#/$defs/GufeKey"},"ProtocolKey":{"title":"ProtocolKey","description":"A gufe key naming a ProtocolViz in the registry. Every transformation of a network usually names the same one. See ComponentKey for what the schema can and cannot check about that.","$ref":"#/$defs/GufeKey"},"Registry":{"title":"Registry","description":"The pool of gufe objects this payload refers to by key, each a complete payload object in its own right. Entries are unique by `gufe-key` and sorted by (type, gufe-key) so a committed fixture is byte-stable. JSON Schema cannot express \'unique by a property\' or \'every reference resolves\', so both are covered by tests on the Python side and degraded over by the views.","type":"array","items":{"oneOf":[{"$ref":"#/$defs/ComponentViz"},{"$ref":"#/$defs/ProtocolViz"},{"$ref":"#/$defs/ChemicalSystemViz"}]}},"ComponentViz":{"title":"ComponentViz","description":"Any single chemical-system component","oneOf":[{"$ref":"#/$defs/SmallMoleculeComponentViz"},{"$ref":"#/$defs/ProteinComponentViz"},{"$ref":"#/$defs/SolvatedPDBComponentViz"},{"$ref":"#/$defs/ProteinMembraneComponentViz"},{"$ref":"#/$defs/SolventComponentViz"},{"$ref":"#/$defs/UnknownComponentViz"}]},"SmallMoleculeComponentViz":{"title":"SmallMoleculeComponentViz","description":"A small molecule, carried as a complete SDF record.","type":"object","properties":{"type":{"const":"SmallMoleculeComponentViz"},"gufe-key":{"$ref":"#/$defs/GufeKey"},"name":{"type":"string"},"sdf":{"type":"string","minLength":1,"description":"Complete inline SDF record, including the conformer."},"smiles":{"type":"string"},"total_charge":{"type":"integer","description":"Net formal charge. Displayed, never recomputed from the SDF."}},"required":["type","gufe-key","name","sdf","smiles","total_charge"],"additionalProperties":false},"ProteinComponentViz":{"title":"ProteinComponentViz","description":"A protein, carried as a complete PDB record.","type":"object","properties":{"type":{"const":"ProteinComponentViz"},"gufe-key":{"$ref":"#/$defs/GufeKey"},"name":{"type":"string"},"pdb":{"type":"string","minLength":1,"description":"Complete inline PDB representation."}},"required":["type","gufe-key","name","pdb"],"additionalProperties":false},"SolvatedPDBComponentViz":{"title":"SolvatedPDBComponentViz","description":"A protein with explicit solvent. A distinct type rather than a flag on ProteinComponentViz, because the discriminator is what a view dispatches on and the presence of waters changes what a sensible default representation is.","type":"object","properties":{"type":{"const":"SolvatedPDBComponentViz"},"gufe-key":{"$ref":"#/$defs/GufeKey"},"name":{"type":"string"},"pdb":{"type":"string","minLength":1,"description":"Complete inline PDB representation, including explicit solvent."}},"required":["type","gufe-key","name","pdb"],"additionalProperties":false},"ProteinMembraneComponentViz":{"title":"ProteinMembraneComponentViz","description":"A protein embedded in a membrane.","type":"object","properties":{"type":{"const":"ProteinMembraneComponentViz"},"gufe-key":{"$ref":"#/$defs/GufeKey"},"name":{"type":"string"},"pdb":{"type":"string","minLength":1,"description":"Complete inline PDB representation of the protein and membrane system."}},"required":["type","gufe-key","name","pdb"],"additionalProperties":false},"SolventComponentViz":{"title":"SolventComponentViz","description":"Bulk solvent settings. There is no structure to draw, so these are flat fields suitable for rendering as a settings card.","type":"object","properties":{"type":{"const":"SolventComponentViz"},"gufe-key":{"$ref":"#/$defs/GufeKey"},"name":{"type":"string"},"smiles":{"type":"string","minLength":1},"positive_ion":{"type":"string"},"negative_ion":{"type":"string"},"neutralize":{"type":"boolean"},"ion_concentration":{"type":"string","description":"Display-form concentration with units, for example \'0.15 molar\'. A string rather than a number because the unit is part of the value and the view only ever prints it."}},"required":["type","gufe-key","name","smiles","positive_ion","negative_ion","neutralize","ion_concentration"],"additionalProperties":false},"UnknownComponentViz":{"title":"UnknownComponentViz","description":"The graceful fallback for a component type this build does not recognize. gufe supports custom Component subclasses, so meeting one is an expected outcome rather than an error, and the browser answers it with \'sorry, there is no visualization for this\'. This covers an unrecognized type only: a recognized component whose serializer fails is a bug, and raises in Python rather than arriving here wearing a disguise.","type":"object","properties":{"type":{"const":"UnknownComponentViz"},"gufe-key":{"$ref":"#/$defs/GufeKey"},"name":{"type":"string"},"gufe_type":{"type":"string","minLength":1,"description":"The gufe class name, so the panel can say which type it could not draw."}},"required":["type","gufe-key","name","gufe_type"],"additionalProperties":false},"ProtocolViz":{"title":"ProtocolViz","description":"A gufe Protocol, named. Every transformation in an alchemical network usually shares one, so this is a registry entry that many edges point at rather than a class name repeated per edge. Settings are deliberately absent for now: they are large, deeply nested, and nothing draws them yet, adding a `settings` field later is additive and breaks nothing.","type":"object","properties":{"type":{"const":"ProtocolViz"},"gufe-key":{"$ref":"#/$defs/GufeKey"},"name":{"type":"string"},"gufe_type":{"type":"string","minLength":1,"description":"The Protocol\'s class name, which is what identifies it to a reader, a Protocol has no name of its own, so `name` is usually empty."}},"required":["type","gufe-key","name","gufe_type"],"additionalProperties":false},"ChemicalSystemViz":{"title":"ChemicalSystemViz","description":"A gufe ChemicalSystem: labels mapped to the gufe keys of its components.","type":"object","properties":{"type":{"const":"ChemicalSystemViz"},"gufe-key":{"$ref":"#/$defs/GufeKey"},"name":{"type":"string"},"components":{"type":"object","description":"ChemicalSystem labels mapped to the gufe keys of the components in the registry.","additionalProperties":{"$ref":"#/$defs/ComponentKey"}},"registry":{"$ref":"#/$defs/Registry"}},"required":["type","gufe-key","name","components"],"additionalProperties":false},"AtomMapping":{"title":"AtomMapping","description":"Atom index correspondence from molecule A to molecule B, as a list of index pairs. A list rather than an object keyed by A\'s index, because JSON object keys can only be strings: keying by index would put decimal strings such as \'12\' in the payload and leave both languages casting them back to integers, and it is Python\'s dict-of-int shape only by resemblance. As a list, both indices stay integers, and \'an entry has a B index for every A index\' becomes a `required` the schema states rather than a convention a reader has to trust. Pairs are ordered by `index_A` so a committed fixture is byte-stable.","type":"array","items":{"type":"object","properties":{"index_A":{"type":"integer","minimum":0,"description":"An atom index in molecule A."},"index_B":{"type":"integer","minimum":0,"description":"The atom index in molecule B that it maps to."}},"required":["index_A","index_B"],"additionalProperties":false}},"Annotations":{"title":"Annotations","description":"Free-form mapping metadata. gufe puts nothing here by design and every mapper picks its own keys, so this is deliberately open. Values are whatever survived being made JSON-safe. Displayed but never interpreted, with the single exception of \'score\'.","type":"object"},"LigandAtomMappingViz":{"title":"LigandAtomMappingViz","description":"One atom mapping between two small molecules. This is also what an edge of a ligand network is because the two endpoints are gufe keys either way: standalone they resolve in this object\'s own registry, and in a network they resolve in the network\'s, where they are the same entries the nodes name. `componentA` and `componentB` are the molecules the two sides of `componentA_to_componentB` index into: an `index_A` is an atom of the SmallMoleculeComponentViz that `componentA` names, and an `index_B` an atom of `componentB`\'s.","type":"object","properties":{"type":{"const":"LigandAtomMappingViz"},"gufe-key":{"$ref":"#/$defs/GufeKey"},"name":{"type":"string"},"componentA":{"$ref":"#/$defs/SmallMoleculeComponentKey"},"componentB":{"$ref":"#/$defs/SmallMoleculeComponentKey"},"componentA_to_componentB":{"$ref":"#/$defs/AtomMapping"},"score":{"type":["number","null"],"description":"The \'score\' annotation when it is a plain number, otherwise null. This is the one annotation key that is interpreted rather than displayed: it drives the edge colouring and the force layout\'s link distance."},"annotations":{"$ref":"#/$defs/Annotations"},"registry":{"$ref":"#/$defs/Registry"}},"required":["type","gufe-key","name","componentA","componentB","componentA_to_componentB","score","annotations"],"additionalProperties":false},"LigandNetworkViz":{"title":"LigandNetworkViz","description":"A ligand network: the ligands in the registry, the nodes as keys into it, and the mappings as edges. Deliberately not gufe\'s GraphML: that format embeds a gufe to_json moldict per node, so forwarding it would relocate the decoding problem into the browser rather than avoid it.","type":"object","properties":{"type":{"const":"LigandNetworkViz"},"gufe-key":{"$ref":"#/$defs/GufeKey"},"name":{"type":"string"},"registry":{"$ref":"#/$defs/Registry"},"nodes":{"type":"array","description":"The gufe key of each ligand, resolved in `registry`.","items":{"$ref":"#/$defs/SmallMoleculeComponentKey"}},"edges":{"type":"array","description":"The mappings, whose `componentA` and `componentB` name nodes of this network. JSON Schema cannot express that referential constraint, so a Python test covers it, and the view drops a dangling edge with a banner rather than failing.","items":{"$ref":"#/$defs/LigandAtomMappingViz"}}},"required":["type","gufe-key","name","registry","nodes","edges"],"additionalProperties":false},"TransformationViz":{"title":"TransformationViz","description":"A transformation between two chemical systems, both named by gufe key, as is its protocol: `stateA` is the system it starts from, `stateB` the one it ends at, and every edge of a network usually names the same protocol. This is also what an edge of an alchemical network is (there is no separate edge type) because `stateA` and `stateB` are keys either way, and in a network they are the keys the nodes name. NonTransformation uses this type too: it exposes the same stateA and stateB properties, both its single system, so it renders as a diff with no differences.","type":"object","properties":{"type":{"const":"TransformationViz"},"gufe-key":{"$ref":"#/$defs/GufeKey"},"name":{"type":"string"},"protocol":{"$ref":"#/$defs/ProtocolKey"},"stateA":{"$ref":"#/$defs/ChemicalSystemKey"},"stateB":{"$ref":"#/$defs/ChemicalSystemKey"},"mappings":{"type":"array","items":{"$ref":"#/$defs/LigandAtomMappingViz"}},"registry":{"$ref":"#/$defs/Registry"}},"required":["type","gufe-key","name","protocol","stateA","stateB","mappings"],"additionalProperties":false},"AlchemicalNetworkViz":{"title":"AlchemicalNetworkViz","description":"A graph of chemical systems joined by transformations. What repeats here is not the nodes and edges themselves but what they are made of: in practice every system shares one protein and every transformation shares one protocol. Both live in the registry, once, as whole objects so this view can show composition and topology while still letting a reader open a node and see the protein.","type":"object","properties":{"type":{"const":"AlchemicalNetworkViz"},"gufe-key":{"$ref":"#/$defs/GufeKey"},"name":{"type":"string"},"registry":{"$ref":"#/$defs/Registry"},"nodes":{"type":"array","description":"The gufe key of each ChemicalSystem, resolved in `registry`.","items":{"$ref":"#/$defs/ChemicalSystemKey"}},"edges":{"type":"array","description":"The transformations, whose `stateA` and `stateB` name nodes of this network.","items":{"$ref":"#/$defs/TransformationViz"}}},"required":["type","gufe-key","name","registry","nodes","edges"],"additionalProperties":false}}'), ro = {
+const Zd = /* @__PURE__ */ Ac(Xd), Qd = "https://json-schema.org/draft/2020-12/schema", eu = "https://raw.githubusercontent.com/omsf-eco-infra/alchemy-viz/main/schema/alchemy-viz.schema.json", tu = "alchemy-viz payload", nu = "Python-to-TypeScript contract bridge for gufe visualizations. Source of truth both languages are downstream of it. This schema is not strictly versioned or published as it is only internally consumed by this codebase. Schema description: one schema object per gufe class: every $def named *Viz is the visualization form of exactly one GufeTokenizable, it carries that object's `gufe-key`. Every reference from one gufe object to another is that object's gufe key, and the objects themselves live in the `registry` on the root payload. So a ligand network's nodes are keys, a chemical system's components and a transformation's protocol are keys and each one resolves to a complete, drawable object. An alchemical network whose forty systems share one protein carries that PDB once and points at it forty times, and the browser can still drill into it, because what it points at is a whole ProteinComponentViz. This is a single-shot dump rather than a conversation with a server, so the registry travels with the payload.", ru = [{ $ref: "#/$defs/SmallMoleculeComponentViz" }, { $ref: "#/$defs/ProteinComponentViz" }, { $ref: "#/$defs/SolvatedPDBComponentViz" }, { $ref: "#/$defs/ProteinMembraneComponentViz" }, { $ref: "#/$defs/SolventComponentViz" }, { $ref: "#/$defs/UnknownComponentViz" }, { $ref: "#/$defs/ProtocolViz" }, { $ref: "#/$defs/LigandAtomMappingViz" }, { $ref: "#/$defs/LigandNetworkViz" }, { $ref: "#/$defs/ChemicalSystemViz" }, { $ref: "#/$defs/TransformationViz" }, { $ref: "#/$defs/AlchemicalNetworkViz" }], ou = /* @__PURE__ */ JSON.parse('{"GufeKey":{"title":"GufeKey","description":"A gufe key: the identity of a GufeTokenizable, of the form \'ClassName-<hex digest>\'. It is deterministic and repeatable within a software environment. Only its non-emptiness is checked","type":"string","minLength":1},"ComponentKey":{"title":"ComponentKey","description":"A gufe key naming a ComponentViz in the registry. Identical to GufeKey at validation time: JSON Schema has no way to say \'this string is the gufe-key of an entry in that array, and that entry has this type\', because that is a join across two parts of the document. What the name buys is that the referent\'s type is stated in the contract and carried into the generated TypeScript, instead of living only in a test and a view.","$ref":"#/$defs/GufeKey"},"SmallMoleculeComponentKey":{"title":"SmallMoleculeComponentKey","description":"A gufe key naming a SmallMoleculeComponentViz in the registry. Resolving it yields the whole molecule, SDF included. See ComponentKey for what the schema can and cannot check about that.","$ref":"#/$defs/GufeKey"},"ChemicalSystemKey":{"title":"ChemicalSystemKey","description":"A gufe key naming a ChemicalSystemViz in the registry. See ComponentKey for what the schema can and cannot check about that.","$ref":"#/$defs/GufeKey"},"ProtocolKey":{"title":"ProtocolKey","description":"A gufe key naming a ProtocolViz in the registry. Every transformation of a network usually names the same one. See ComponentKey for what the schema can and cannot check about that.","$ref":"#/$defs/GufeKey"},"Registry":{"title":"Registry","description":"The pool of gufe objects this payload refers to by key, each a complete payload object in its own right. Entries are unique by `gufe-key` and sorted by (type, gufe-key) so a committed fixture is byte-stable. JSON Schema cannot express \'unique by a property\' or \'every reference resolves\', so both are covered by tests on the Python side and degraded over by the views.","type":"array","items":{"oneOf":[{"$ref":"#/$defs/ComponentViz"},{"$ref":"#/$defs/ProtocolViz"},{"$ref":"#/$defs/ChemicalSystemViz"}]}},"ComponentViz":{"title":"ComponentViz","description":"Any single chemical-system component","oneOf":[{"$ref":"#/$defs/SmallMoleculeComponentViz"},{"$ref":"#/$defs/ProteinComponentViz"},{"$ref":"#/$defs/SolvatedPDBComponentViz"},{"$ref":"#/$defs/ProteinMembraneComponentViz"},{"$ref":"#/$defs/SolventComponentViz"},{"$ref":"#/$defs/UnknownComponentViz"}]},"SmallMoleculeComponentViz":{"title":"SmallMoleculeComponentViz","description":"A small molecule, carried as a complete SDF record.","type":"object","properties":{"type":{"const":"SmallMoleculeComponentViz"},"gufe-key":{"$ref":"#/$defs/GufeKey"},"name":{"type":"string"},"sdf":{"type":"string","minLength":1,"description":"Complete inline SDF record, including the conformer."},"smiles":{"type":"string"},"total_charge":{"type":"integer","description":"Net formal charge. Displayed, never recomputed from the SDF."}},"required":["type","gufe-key","name","sdf","smiles","total_charge"],"additionalProperties":false},"ProteinComponentViz":{"title":"ProteinComponentViz","description":"A protein, carried as a complete PDB record.","type":"object","properties":{"type":{"const":"ProteinComponentViz"},"gufe-key":{"$ref":"#/$defs/GufeKey"},"name":{"type":"string"},"pdb":{"type":"string","minLength":1,"description":"Complete inline PDB representation."}},"required":["type","gufe-key","name","pdb"],"additionalProperties":false},"SolvatedPDBComponentViz":{"title":"SolvatedPDBComponentViz","description":"A protein with explicit solvent. A distinct type rather than a flag on ProteinComponentViz, because the discriminator is what a view dispatches on and the presence of waters changes what a sensible default representation is.","type":"object","properties":{"type":{"const":"SolvatedPDBComponentViz"},"gufe-key":{"$ref":"#/$defs/GufeKey"},"name":{"type":"string"},"pdb":{"type":"string","minLength":1,"description":"Complete inline PDB representation, including explicit solvent."}},"required":["type","gufe-key","name","pdb"],"additionalProperties":false},"ProteinMembraneComponentViz":{"title":"ProteinMembraneComponentViz","description":"A protein embedded in a membrane.","type":"object","properties":{"type":{"const":"ProteinMembraneComponentViz"},"gufe-key":{"$ref":"#/$defs/GufeKey"},"name":{"type":"string"},"pdb":{"type":"string","minLength":1,"description":"Complete inline PDB representation of the protein and membrane system."}},"required":["type","gufe-key","name","pdb"],"additionalProperties":false},"SolventComponentViz":{"title":"SolventComponentViz","description":"Bulk solvent settings. There is no structure to draw, so these are flat fields suitable for rendering as a settings card.","type":"object","properties":{"type":{"const":"SolventComponentViz"},"gufe-key":{"$ref":"#/$defs/GufeKey"},"name":{"type":"string"},"smiles":{"type":"string","minLength":1},"positive_ion":{"type":"string"},"negative_ion":{"type":"string"},"neutralize":{"type":"boolean"},"ion_concentration":{"type":"string","description":"Display-form concentration with units, for example \'0.15 molar\'. A string rather than a number because the unit is part of the value and the view only ever prints it."}},"required":["type","gufe-key","name","smiles","positive_ion","negative_ion","neutralize","ion_concentration"],"additionalProperties":false},"UnknownComponentViz":{"title":"UnknownComponentViz","description":"The graceful fallback for a component type this build does not recognize. gufe supports custom Component subclasses, so meeting one is an expected outcome rather than an error, and the browser answers it with \'sorry, there is no visualization for this\'. This covers an unrecognized type only: a recognized component whose serializer fails is a bug, and raises in Python rather than arriving here wearing a disguise.","type":"object","properties":{"type":{"const":"UnknownComponentViz"},"gufe-key":{"$ref":"#/$defs/GufeKey"},"name":{"type":"string"},"gufe_type":{"type":"string","minLength":1,"description":"The gufe class name, so the panel can say which type it could not draw."}},"required":["type","gufe-key","name","gufe_type"],"additionalProperties":false},"ProtocolViz":{"title":"ProtocolViz","description":"A gufe Protocol, named. Every transformation in an alchemical network usually shares one, so this is a registry entry that many edges point at rather than a class name repeated per edge. Settings are deliberately absent for now: they are large, deeply nested, and nothing draws them yet, adding a `settings` field later is additive and breaks nothing.","type":"object","properties":{"type":{"const":"ProtocolViz"},"gufe-key":{"$ref":"#/$defs/GufeKey"},"name":{"type":"string"},"gufe_type":{"type":"string","minLength":1,"description":"The Protocol\'s class name, which is what identifies it to a reader, a Protocol has no name of its own, so `name` is usually empty."}},"required":["type","gufe-key","name","gufe_type"],"additionalProperties":false},"ChemicalSystemViz":{"title":"ChemicalSystemViz","description":"A gufe ChemicalSystem: labels mapped to the gufe keys of its components.","type":"object","properties":{"type":{"const":"ChemicalSystemViz"},"gufe-key":{"$ref":"#/$defs/GufeKey"},"name":{"type":"string"},"components":{"type":"object","description":"ChemicalSystem labels mapped to the gufe keys of the components in the registry.","additionalProperties":{"$ref":"#/$defs/ComponentKey"}},"registry":{"$ref":"#/$defs/Registry"}},"required":["type","gufe-key","name","components"],"additionalProperties":false},"AtomMapping":{"title":"AtomMapping","description":"Atom index correspondence from molecule A to molecule B, as a list of index pairs. A list rather than an object keyed by A\'s index, because JSON object keys can only be strings: keying by index would put decimal strings such as \'12\' in the payload and leave both languages casting them back to integers, and it is Python\'s dict-of-int shape only by resemblance. As a list, both indices stay integers, and \'an entry has a B index for every A index\' becomes a `required` the schema states rather than a convention a reader has to trust. Pairs are ordered by `index_A` so a committed fixture is byte-stable.","type":"array","items":{"type":"object","properties":{"index_A":{"type":"integer","minimum":0,"description":"An atom index in molecule A."},"index_B":{"type":"integer","minimum":0,"description":"The atom index in molecule B that it maps to."}},"required":["index_A","index_B"],"additionalProperties":false}},"Annotations":{"title":"Annotations","description":"Free-form mapping metadata. gufe puts nothing here by design and every mapper picks its own keys, so this is deliberately open. Values are whatever survived being made JSON-safe. Displayed but never interpreted, with the single exception of \'score\'.","type":"object"},"LigandAtomMappingViz":{"title":"LigandAtomMappingViz","description":"One atom mapping between two small molecules. This is also what an edge of a ligand network is because the two endpoints are gufe keys either way: standalone they resolve in this object\'s own registry, and in a network they resolve in the network\'s, where they are the same entries the nodes name. `componentA` and `componentB` are the molecules the two sides of `componentA_to_componentB` index into: an `index_A` is an atom of the SmallMoleculeComponentViz that `componentA` names, and an `index_B` an atom of `componentB`\'s.","type":"object","properties":{"type":{"const":"LigandAtomMappingViz"},"gufe-key":{"$ref":"#/$defs/GufeKey"},"name":{"type":"string"},"componentA":{"$ref":"#/$defs/SmallMoleculeComponentKey"},"componentB":{"$ref":"#/$defs/SmallMoleculeComponentKey"},"componentA_to_componentB":{"$ref":"#/$defs/AtomMapping"},"score":{"type":["number","null"],"description":"The \'score\' annotation when it is a plain number, otherwise null. This is the one annotation key that is interpreted rather than displayed: it drives the edge colouring and the force layout\'s link distance."},"annotations":{"$ref":"#/$defs/Annotations"},"registry":{"$ref":"#/$defs/Registry"}},"required":["type","gufe-key","name","componentA","componentB","componentA_to_componentB","score","annotations"],"additionalProperties":false},"LigandNetworkViz":{"title":"LigandNetworkViz","description":"A ligand network: the ligands in the registry, the nodes as keys into it, and the mappings as edges. Deliberately not gufe\'s GraphML: that format embeds a gufe to_json moldict per node, so forwarding it would relocate the decoding problem into the browser rather than avoid it.","type":"object","properties":{"type":{"const":"LigandNetworkViz"},"gufe-key":{"$ref":"#/$defs/GufeKey"},"name":{"type":"string"},"registry":{"$ref":"#/$defs/Registry"},"nodes":{"type":"array","description":"The gufe key of each ligand, resolved in `registry`.","items":{"$ref":"#/$defs/SmallMoleculeComponentKey"}},"edges":{"type":"array","description":"The mappings, whose `componentA` and `componentB` name nodes of this network. JSON Schema cannot express that referential constraint, so a Python test covers it, and the view drops a dangling edge with a banner rather than failing.","items":{"$ref":"#/$defs/LigandAtomMappingViz"}}},"required":["type","gufe-key","name","registry","nodes","edges"],"additionalProperties":false},"TransformationViz":{"title":"TransformationViz","description":"A transformation between two chemical systems, both named by gufe key, as is its protocol: `stateA` is the system it starts from, `stateB` the one it ends at, and every edge of a network usually names the same protocol. This is also what an edge of an alchemical network is (there is no separate edge type) because `stateA` and `stateB` are keys either way, and in a network they are the keys the nodes name. NonTransformation uses this type too: it exposes the same stateA and stateB properties, both its single system, so it renders as a diff with no differences.","type":"object","properties":{"type":{"const":"TransformationViz"},"gufe-key":{"$ref":"#/$defs/GufeKey"},"name":{"type":"string"},"protocol":{"$ref":"#/$defs/ProtocolKey"},"stateA":{"$ref":"#/$defs/ChemicalSystemKey"},"stateB":{"$ref":"#/$defs/ChemicalSystemKey"},"mappings":{"type":"array","items":{"$ref":"#/$defs/LigandAtomMappingViz"}},"registry":{"$ref":"#/$defs/Registry"}},"required":["type","gufe-key","name","protocol","stateA","stateB","mappings"],"additionalProperties":false},"AlchemicalNetworkViz":{"title":"AlchemicalNetworkViz","description":"A graph of chemical systems joined by transformations. What repeats here is not the nodes and edges themselves but what they are made of: in practice every system shares one protein and every transformation shares one protocol. Both live in the registry, once, as whole objects so this view can show composition and topology while still letting a reader open a node and see the protein.","type":"object","properties":{"type":{"const":"AlchemicalNetworkViz"},"gufe-key":{"$ref":"#/$defs/GufeKey"},"name":{"type":"string"},"registry":{"$ref":"#/$defs/Registry"},"nodes":{"type":"array","description":"The gufe key of each ChemicalSystem, resolved in `registry`.","items":{"$ref":"#/$defs/ChemicalSystemKey"}},"edges":{"type":"array","description":"The transformations, whose `stateA` and `stateB` name nodes of this network.","items":{"$ref":"#/$defs/TransformationViz"}}},"required":["type","gufe-key","name","registry","nodes","edges"],"additionalProperties":false}}'), ro = {
   $schema: Qd,
   $id: eu,
   title: tu,
@@ -5431,7 +5431,7 @@ const so = {
 function cu(e) {
   if (e == null || typeof e != "object" || Array.isArray(e))
     return {
-      message: "This does not look like a gufe-viz payload (expected a JSON object)."
+      message: "This does not look like a alchemy-viz payload (expected a JSON object)."
     };
   const { type: t } = e;
   if (typeof t != "string" || !t)
@@ -5441,7 +5441,7 @@ function cu(e) {
   if (!so[t]) return lu(t);
   const { valid: n, issues: r } = su(e);
   return n ? null : {
-    message: `This payload says it is a ${t}, but it does not match the gufe-viz schema.`,
+    message: `This payload says it is a ${t}, but it does not match the alchemy-viz schema.`,
     detail: au(r)
   };
 }
@@ -5494,10 +5494,10 @@ function fu(e) {
   ), n.length ? n.join(`
 `) : null;
 }
-Ne("gufe-view", du);
+Ne("alchemy-view", du);
 function lt(e = "", t) {
-  const n = T("button", Ao.base + e, t);
-  return n.className = Ao.className, n.type = "button", n;
+  const n = T("button", Po.base + e, t);
+  return n.className = Po.className, n.type = "button", n;
 }
 function Ir(e, t) {
   e.setAttribute("aria-pressed", String(t));
@@ -5572,7 +5572,7 @@ function ha(e, t, n, r = {}) {
     o = !o, Ir(i, o), r.remember?.set(o), n(o);
   }, i;
 }
-const He = "gufe-viz:", _t = /* @__PURE__ */ new Map();
+const He = "alchemy-viz:", _t = /* @__PURE__ */ new Map();
 let On = null;
 function hu() {
   const e = globalThis.localStorage;
@@ -5723,7 +5723,7 @@ function po() {
 }
 let bu = null;
 function ga() {
-  return bu ??= po().catch((e) => (console.warn("[gufe-viz] RDKit failed to load:", e instanceof Error ? e.message : String(e)), null));
+  return bu ??= po().catch((e) => (console.warn("[alchemy-viz] RDKit failed to load:", e instanceof Error ? e.message : String(e)), null));
 }
 let Sr = null;
 function wu() {
@@ -5817,9 +5817,9 @@ function xu(e, t = ku) {
     level: i
   };
 }
-const Pu = 2e-3;
+const Au = 2e-3;
 function $a(e) {
-  return Math.exp(-e.deltaY * Pu);
+  return Math.exp(-e.deltaY * Au);
 }
 function or(e, t, n = {}) {
   const r = xu(t, n.bounds), o = ya(e, {
@@ -5833,7 +5833,7 @@ function mo(e, t = "Reset view") {
   return n.title = t, n.setAttribute("aria-label", t), n.onclick = e, n;
 }
 let wt = null;
-function Au(e) {
+function Pu(e) {
   const t = e.getView?.();
   if (!Array.isArray(t) || t.length < 8) return null;
   const n = t.slice(4, 8);
@@ -5841,7 +5841,7 @@ function Au(e) {
 }
 function va(e, t) {
   if (!e) return;
-  const n = Au(e);
+  const n = Pu(e);
   if (!n) return;
   const r = t?.level();
   wt = {
@@ -6328,7 +6328,7 @@ const zu = "rdkit", Iu = !0, ju = !0, Du = !0, Lu = !0, qu = "rdkit", Vu = "fill
   haloWidth: [2, 26],
   haloOpacity: [0.1, 1]
 }, mf = /^#[0-9a-fA-F]{6}$/;
-function At(e, t, n) {
+function Pt(e, t, n) {
   return typeof e == "string" && t.includes(e) ? e : n;
 }
 function We(e, t, n) {
@@ -6341,20 +6341,20 @@ function gf(e) {
   const t = e && typeof e == "object" ? e : {}, n = cf;
   return {
     version: 1,
-    layout: At(t.layout, lf, n.layout),
+    layout: Pt(t.layout, lf, n.layout),
     alignPair: yt(t.alignPair, n.alignPair),
-    style: At(t.style, df, n.style),
+    style: Pt(t.style, df, n.style),
     createdDestroyed: yt(t.createdDestroyed, n.createdDestroyed),
     modified: yt(t.modified, n.modified),
     destroyedColor: Fn(t.destroyedColor, n.destroyedColor),
     createdColor: Fn(t.createdColor, n.createdColor),
     modifiedColor: Fn(t.modifiedColor, n.modifiedColor),
     boundary: yt(t.boundary, n.boundary),
-    circles: At(t.circles, uf, n.circles),
+    circles: Pt(t.circles, uf, n.circles),
     circleRadius: We(t.circleRadius, "circleRadius", n.circleRadius),
     circleStroke: We(t.circleStroke, "circleStroke", n.circleStroke),
-    hydrogens: At(t.hydrogens, ff, n.hydrogens),
-    elementColors: At(t.elementColors, pf, n.elementColors),
+    hydrogens: Pt(t.hydrogens, ff, n.hydrogens),
+    elementColors: Pt(t.elementColors, pf, n.elementColors),
     atomNumbers: yt(t.atomNumbers, n.atomNumbers),
     stereo: yt(t.stereo, n.stereo),
     numScale: We(t.numScale, "numScale", n.numScale),
@@ -6367,7 +6367,7 @@ function gf(e) {
     customColor: Fn(t.customColor, n.customColor)
   };
 }
-const Pe = gf(af);
+const Ae = gf(af);
 function yf(e) {
   const t = /* @__PURE__ */ new Set(), n = /* @__PURE__ */ new Set(), r = 5e3;
   for (const o of String(e || "").split(/[,\s;]+/).filter(Boolean)) {
@@ -6445,7 +6445,7 @@ function bf(e) {
       } catch {
       }
   }
-  return $t || console.warn("[gufe-viz] this RDKit build emits no bond/atom classes - drawing without bond marking"), $t;
+  return $t || console.warn("[alchemy-viz] this RDKit build emits no bond/atom classes - drawing without bond marking"), $t;
 }
 function wf(e, t) {
   return e.style === "rdkit" ? "rdkit" : bf(t) ? e.style : "rdkit";
@@ -6484,7 +6484,7 @@ function Sf(e, t, n, r) {
   try {
     return o = e.get_mol(t, JSON.stringify({ removeHs: !1 })), o ? o.get_svg_with_highlights ? o.get_svg_with_highlights(JSON.stringify(r)) || null : o.get_svg(n, n) || null : null;
   } catch (i) {
-    return console.warn("[gufe-viz] depictStyledSVG threw -", he(i)), null;
+    return console.warn("[alchemy-viz] depictStyledSVG threw -", he(i)), null;
   } finally {
     if (o)
       try {
@@ -6551,7 +6551,7 @@ function xf(e, t, n, r, o) {
         a.stroke = o, a.strokeWidth = `${t.circleStroke}px`;
       }
 }
-function Pf(e, t, n) {
+function Af(e, t, n) {
   if (n.hydrogens !== "show") {
     for (let r = 0; r < t.symbols.length; r++)
       if (t.symbols[r] === "H")
@@ -6561,7 +6561,7 @@ function Pf(e, t, n) {
         }
   }
 }
-function Af(e, t, n, r, o, i) {
+function Pf(e, t, n, r, o, i) {
   if (i !== "rdkit")
     for (const s of r)
       if (i === "recolor") {
@@ -6576,7 +6576,7 @@ function Af(e, t, n, r, o, i) {
         ), n.circles === "outline" ? Ef(e, n, s.atoms, o, s.color) : a && s.edgeOnFill && xf(e, n, s.atoms, o, s.color);
       } else
         kf(e, n, s.bonds, s.color), cs(e, n, s.atoms, s.bonds, s.color, null);
-  Pf(e, t, n);
+  Af(e, t, n);
 }
 const ar = `
 `, Lr = "$$$$";
@@ -6657,7 +6657,7 @@ function $o(e, t, n, r, o, i) {
     }
     return s.get_svg(n, n) || null;
   } catch (a) {
-    return console.warn("[gufe-viz] depictSVG threw -", he(a)), null;
+    return console.warn("[alchemy-viz] depictSVG threw -", he(a)), null;
   } finally {
     if (s)
       try {
@@ -6746,15 +6746,15 @@ class Mf extends Re {
         C = R, h();
       },
       { title: "Toggle continuous rotation", remember: v }
-    ), A = (R) => {
+    ), P = (R) => {
       R ? x.insertBefore(E, x.firstChild) : M.buttons.insertBefore(E, M.buttons.lastElementChild);
     }, M = pa(ls, p, (R) => y(R), {
       remember: f,
-      onLayout: A,
+      onLayout: P,
       fit: { pane: a, bar: x }
     });
-    return x.appendChild(M), A(!1), a.appendChild(x), y(p), !r || !r.trim() ? (c.appendChild(pe("No molecule provided")), l.container.appendChild(pe("No molecule provided")), { cleanup: () => M.cleanup() }) : (c.appendChild(pe("Loading 2D depiction...")), po().then((R) => {
-      const D = sr("cpk"), I = $o(R, r, ds, Pe.layout, void 0, D);
+    return x.appendChild(M), P(!1), a.appendChild(x), y(p), !r || !r.trim() ? (c.appendChild(pe("No molecule provided")), l.container.appendChild(pe("No molecule provided")), { cleanup: () => M.cleanup() }) : (c.appendChild(pe("Loading 2D depiction...")), po().then((R) => {
+      const D = sr("cpk"), I = $o(R, r, ds, Ae.layout, void 0, D);
       I ? Ea(c, I, ds) : c.replaceChildren(pe("Failed to parse molecule", !0));
     }).catch((R) => {
       c.replaceChildren(pe(`RDKit failed to load: ${he(R)}`, !0));
@@ -6792,7 +6792,7 @@ const xa = ["HOH", "WAT", "SOL", "TIP3"], us = { hetflag: !1 }, Tf = { hetflag: 
   /** Above this many atoms a surface is slow enough to be worth warning about. */
   surfaceAtomWarn: 4e4
 };
-function Pa(e) {
+function Aa(e) {
   const t = /* @__PURE__ */ new Set(), n = /* @__PURE__ */ new Set();
   let r = 0, o = 0, i = 0, s = 1 / 0, a = -1 / 0;
   for (const c of e.split(/\r?\n/)) {
@@ -6815,7 +6815,7 @@ function Pa(e) {
     resiMax: a === -1 / 0 ? 0 : a
   };
 }
-function Aa(e) {
+function Pa(e) {
   return [
     `${kt(e.chains)} chains`,
     `${kt(e.residues)} residues`,
@@ -6953,7 +6953,7 @@ function Vf(e) {
     if (t.payload != null) return t;
   return null;
 }
-const Bf = "/gufe-dev-bundle.js";
+const Bf = "/alchemy-dev-bundle.js";
 function Uf() {
   let e = "";
   for (const t of document.querySelectorAll("script[type=module]")) {
@@ -6998,7 +6998,7 @@ function Gf(e) {
     "    if (key.startsWith(prefix) && key.endsWith(menuOpen)) localStorage.removeItem(key);",
     "  }",
     "} catch (e) {",
-    '  console.warn("[gufe-viz] could not clear menu state:", e);',
+    '  console.warn("[alchemy-viz] could not clear menu state:", e);',
     "}"
   ), Object.keys(e.settings).length && t.push(
     "// The settings the page had, written where `settings.ts` looks for them.",
@@ -7006,7 +7006,7 @@ function Gf(e) {
     `  const stored = ${JSON.stringify(e.settings)};`,
     "  for (const key of Object.keys(stored)) localStorage.setItem(key, stored[key]);",
     "} catch (e) {",
-    '  console.warn("[gufe-viz] could not restore settings:", e);',
+    '  console.warn("[alchemy-viz] could not restore settings:", e);',
     "}"
   ), Object.keys(e.views).length && t.push(
     "// Where the camera was, what was selected, where the layout settled.",
@@ -7017,7 +7017,7 @@ function Wf(e, t, n) {
   const r = JSON.stringify(JSON.stringify(t));
   return [
     ...Gf(n),
-    "// Built by gufe-viz's share button from a generated page. The bundle below is",
+    "// Built by alchemy-viz's share button from a generated page. The bundle below is",
     "// that page's own script, unchanged; everything above it exists so the",
     "// bootstrap at the end of it finds the three elements it looks up.",
     'root.innerHTML = "";',
@@ -7030,9 +7030,9 @@ function Wf(e, t, n) {
     'gufePayload.id = "gufe-payload";',
     `gufePayload.textContent = ${r};`,
     "root.appendChild(gufePayload);",
-    'const gufeView = document.createElement("gufe-view");',
-    'gufeView.style.cssText = "display:block;width:100%;height:100%;";',
-    "root.appendChild(gufeView);",
+    'const alchemyView = document.createElement("alchemy-view");',
+    'alchemyView.style.cssText = "display:block;width:100%;height:100%;";',
+    "root.appendChild(alchemyView);",
     "",
     e,
     "",
@@ -7040,8 +7040,8 @@ function Wf(e, t, n) {
     "// own ends at `export` and has not, so this is what draws it there. Reading",
     "// the property rather than tracking which case we are in keeps the two from",
     "// having to agree about anything.",
-    "if (gufeView.payload == null) {",
-    "  gufeView.payload = JSON.parse(gufePayload.textContent);",
+    "if (alchemyView.payload == null) {",
+    "  alchemyView.payload = JSON.parse(gufePayload.textContent);",
     "}"
   ].join(`
 `);
@@ -7093,7 +7093,7 @@ function _o(e) {
       o("Could not find the payload for this view.", !0);
       return;
     }
-    const a = s.payload, c = Jf(s), l = window.open("", "_blank"), d = Kf(), w = String(a.type || "gufe-viz"), g = `${w}. Shared from alchemy-viz`, $ = () => {
+    const a = s.payload, c = Jf(s), l = window.open("", "_blank"), d = Kf(), w = String(a.type || "alchemy-viz"), g = `${w}. Shared from alchemy-viz`, $ = () => {
       n.disabled = !1;
     };
     n.disabled = !0, o("Uploading..."), Hf().then((S) => {
@@ -7161,7 +7161,7 @@ function Ta(e) {
         y
       )
     );
-    for (const A of x) E.appendChild(A);
+    for (const P of x) E.appendChild(P);
     return E;
   }, g = T("div", `display:flex;flex-direction:column;gap:2px;font-size:${Y.small};color:${j.textMuted};`), $ = w({ label: "Contents", controls: [g] });
   $.style.display = "none";
@@ -7184,13 +7184,13 @@ function Ta(e) {
       n
     );
     E.style.cssText += "width:100%;box-sizing:border-box;", y.appendChild(w({ label: "Color", controls: [E] }));
-    const A = T("div", "display:flex;flex-wrap:wrap;gap:4px;"), M = [
+    const P = T("div", "display:flex;flex-wrap:wrap;gap:4px;"), M = [
       ["waters", "Waters", "Show water molecules", r, () => e.restyle()],
       ["hetero", "Hetero", e.heteroTitle, o, () => e.restyle()],
       ["spin", "Spin", "Rotate the view continuously", i, () => a?.spin(s.spin ? "y" : !1)]
     ];
     for (const [D, I, L, W, ne] of M)
-      A.appendChild(
+      P.appendChild(
         ha(
           I,
           s[D],
@@ -7200,7 +7200,7 @@ function Ta(e) {
           { title: L, remember: W }
         )
       );
-    y.appendChild(w({ label: "Show", controls: [A] }));
+    y.appendChild(w({ label: "Show", controls: [P] }));
     const R = mo(() => e.reset ? e.reset() : c?.reset());
     return R.style.cssText += "width:100%;box-sizing:border-box;", y.appendChild(w({ label: "Camera", controls: [...e.camera?.() ?? [], R] })), y.appendChild($), y;
   }, {
@@ -7302,7 +7302,7 @@ class ep extends Re {
     if (!r || !r.trim())
       return s.showStatus("No protein data - waiting for a PDB payload."), {};
     try {
-      o = Pa(r), s.setStats(Aa(o));
+      o = Aa(r), s.setStats(Pa(o));
     } catch (a) {
       s.showStatus(`PDB parse error: ${he(a)}`, "error");
     }
@@ -7382,7 +7382,7 @@ function Ia(e, t, n) {
   const E = () => {
     const [I, L] = [...f.values()];
     return { cx: (I.x + L.x) / 2, cy: (I.y + L.y) / 2, span: Math.max(1, Math.hypot(I.x - L.x, I.y - L.y)) };
-  }, A = (I) => {
+  }, P = (I) => {
     if (I.pointerType === "touch") {
       if (f.set(I.pointerId, { x: I.clientX, y: I.clientY }), f.size !== 2) {
         v = null;
@@ -7405,7 +7405,7 @@ function Ia(e, t, n) {
     const [L] = [...f.values()];
     _ = f.size === 1 && L ? { ...L } : null;
   };
-  e.addEventListener("pointerdown", A, !0), e.addEventListener("pointermove", M, { capture: !0, passive: !1 }), e.addEventListener("pointerup", R, !0), e.addEventListener("pointercancel", R, !0);
+  e.addEventListener("pointerdown", P, !0), e.addEventListener("pointermove", M, { capture: !0, passive: !1 }), e.addEventListener("pointerup", R, !0), e.addEventListener("pointercancel", R, !0);
   const D = _u(e);
   return {
     fit: g,
@@ -7426,7 +7426,7 @@ function Ia(e, t, n) {
       i = I, s = L, a = W, c();
     },
     cleanup() {
-      S.cleanup(), D.cleanup(), e.removeEventListener("pointerdown", h), e.removeEventListener("pointermove", y), e.removeEventListener("pointerup", x), e.removeEventListener("pointercancel", x), e.removeEventListener("pointerleave", x), e.removeEventListener("pointerdown", A, !0), e.removeEventListener("pointermove", M, { capture: !0 }), e.removeEventListener("pointerup", R, !0), e.removeEventListener("pointercancel", R, !0);
+      S.cleanup(), D.cleanup(), e.removeEventListener("pointerdown", h), e.removeEventListener("pointermove", y), e.removeEventListener("pointerup", x), e.removeEventListener("pointercancel", x), e.removeEventListener("pointerleave", x), e.removeEventListener("pointerdown", P, !0), e.removeEventListener("pointermove", M, { capture: !0 }), e.removeEventListener("pointerup", R, !0), e.removeEventListener("pointercancel", R, !0);
     }
   };
 }
@@ -7471,7 +7471,7 @@ function Ur(e, t, n) {
 function Ke(e, t) {
   return t ? e.get(t) : void 0;
 }
-function Ae(e, t, n) {
+function Pe(e, t, n) {
   const r = Ke(e, t);
   return r?.type === n ? r : void 0;
 }
@@ -7491,7 +7491,7 @@ function La(e) {
   const t = [];
   let n = 0;
   for (const s of e.keys) {
-    const a = Ae(e.registry, s, e.nodeType);
+    const a = Pe(e.registry, s, e.nodeType);
     if (!a) {
       n++;
       continue;
@@ -7532,7 +7532,7 @@ function cp(e, t, n, r) {
     }
     return [...a].sort((c, l) => c - l);
   } catch (i) {
-    return console.warn("[gufe-viz] SMARTS match threw -", he(i)), null;
+    return console.warn("[alchemy-viz] SMARTS match threw -", he(i)), null;
   } finally {
     Hr(o);
   }
@@ -7793,7 +7793,7 @@ function Ga(e, t, n, r) {
 function Wa(e) {
   const t = T("div", "flex:1;min-height:0;display:flex;flex-direction:column;");
   e.appendChild(t);
-  const n = document.createElement("gufe-view");
+  const n = document.createElement("alchemy-view");
   return n.style.cssText = "flex:1;min-width:0;min-height:0;display:flex;", {
     show(r) {
       n.payload = r, n.parentNode !== t && t.replaceChildren(n);
@@ -7879,8 +7879,8 @@ function _p(e, t) {
     return { R: [1, 0, 0, 0, 1, 0, 0, 0, 1], t: [r[0] - o[0], r[1] - o[1], r[2] - o[2]], determined: !1 };
   const i = [0, 0, 0, 0, 0, 0, 0, 0, 0];
   for (let _ = 0; _ < n; _++) {
-    const u = e[_][0] - r[0], h = e[_][1] - r[1], y = e[_][2] - r[2], x = t[_][0] - o[0], E = t[_][1] - o[1], A = t[_][2] - o[2];
-    i[0] += u * x, i[1] += u * E, i[2] += u * A, i[3] += h * x, i[4] += h * E, i[5] += h * A, i[6] += y * x, i[7] += y * E, i[8] += y * A;
+    const u = e[_][0] - r[0], h = e[_][1] - r[1], y = e[_][2] - r[2], x = t[_][0] - o[0], E = t[_][1] - o[1], P = t[_][2] - o[2];
+    i[0] += u * x, i[1] += u * E, i[2] += u * P, i[3] += h * x, i[4] += h * E, i[5] += h * P, i[6] += y * x, i[7] += y * E, i[8] += y * P;
   }
   const s = vs(i), a = In(s, i), c = In(i, s);
   let l = bs(a), d = bs(c);
@@ -7898,8 +7898,8 @@ function _p(e, t) {
   l = m(l), d = m(d);
   const w = l.vectors, g = d.vectors;
   for (let _ = 0; _ < 3; _++) {
-    const u = w[_], h = w[3 + _], y = w[6 + _], x = i[0] * u + i[1] * h + i[2] * y, E = i[3] * u + i[4] * h + i[5] * y, A = i[6] * u + i[7] * h + i[8] * y, M = g[_], R = g[3 + _], D = g[6 + _];
-    x * M + E * R + A * D < 0 && (g[_] = -M, g[3 + _] = -R, g[6 + _] = -D);
+    const u = w[_], h = w[3 + _], y = w[6 + _], x = i[0] * u + i[1] * h + i[2] * y, E = i[3] * u + i[4] * h + i[5] * y, P = i[6] * u + i[7] * h + i[8] * y, M = g[_], R = g[3 + _], D = g[6 + _];
+    x * M + E * R + P * D < 0 && (g[_] = -M, g[3 + _] = -R, g[6 + _] = -D);
   }
   const $ = vs(w);
   let S = In(g, $);
@@ -7987,7 +7987,7 @@ function _s(e, t, n) {
   try {
     return r = e.get_mol(t, JSON.stringify({ removeHs: !1 })), !r || !r.get_molblock ? t : (r.set_new_coords(n === "coordgen"), r.get_molblock() || t);
   } catch (o) {
-    return console.warn("[gufe-viz] could not lay out a molecule in 2D -", he(o)), t;
+    return console.warn("[alchemy-viz] could not lay out a molecule in 2D -", he(o)), t;
   } finally {
     if (r)
       try {
@@ -8053,7 +8053,7 @@ function xp(e, t, n) {
     }
   return o.join(ws);
 }
-function Pp(e, t, n) {
+function Ap(e, t, n) {
   try {
     const r = (s) => qr(s).coords.map((a) => [a[0], a[1]]), o = r(t), i = kp(o, r(e), n);
     return i ? xp(
@@ -8062,12 +8062,12 @@ function Pp(e, t, n) {
       i.mirror
     ) : t;
   } catch (r) {
-    return console.warn("[gufe-viz] could not align a depiction to its partner -", he(r)), t;
+    return console.warn("[alchemy-viz] could not align a depiction to its partner -", he(r)), t;
   }
 }
-function Ap(e, t, n, r, o) {
+function Pp(e, t, n, r, o) {
   const i = _s(e, t, r), s = _s(e, n, r);
-  return !o || r === "conformer" ? { left: i, right: s } : { left: i, right: Pp(i, s, o) };
+  return !o || r === "conformer" ? { left: i, right: s } : { left: i, right: Ap(i, s, o) };
 }
 const Rp = {
   core: "0xaaaaaa",
@@ -8075,21 +8075,21 @@ const Rp = {
 }, Np = {
   core: "0x888888",
   pairLine: "0xd9a300"
-}, Ya = () => Gr() === "dark" ? Rp : Np, Pr = 420, Be = {
+}, Ya = () => Gr() === "dark" ? Rp : Np, Ar = 420, Be = {
   stick: 0.15,
   sphere: 0.25,
   markStick: 0.18,
   markSphere: 0.32,
   pairSphere: 0.22,
   lineRadius: 0.04
-}, Ar = { gap: 2.5, minLiftFraction: 0.6 }, Mp = 24, Ss = {
+}, Pr = { gap: 2.5, minLiftFraction: 0.6 }, Mp = 24, Ss = {
   sphereRadius: 0.6,
   sphereAlpha: 0.8
 }, Tp = {
   mapped: null,
-  element: Pe.modifiedColor,
-  uniqueA: Pe.destroyedColor,
-  uniqueB: Pe.createdColor
+  element: Ae.modifiedColor,
+  uniqueA: Ae.destroyedColor,
+  uniqueB: Ae.createdColor
 }, Op = 132;
 function Cs(e) {
   const t = [1 / 0, 1 / 0, 1 / 0], n = [-1 / 0, -1 / 0, -1 / 0];
@@ -8102,11 +8102,11 @@ function Fp(e, t) {
   const n = Cs(e), r = Cs(t);
   let o = 0;
   n.span[1] < n.span[o] && (o = 1), n.span[2] < n.span[o] && (o = 2);
-  const i = Math.max(n.span[0], n.span[1], n.span[2]), s = n.max[o] - r.min[o] + Ar.gap, a = Ar.minLiftFraction * i + Ar.gap;
+  const i = Math.max(n.span[0], n.span[1], n.span[2]), s = n.max[o] - r.min[o] + Pr.gap, a = Pr.minLiftFraction * i + Pr.gap;
   return { axis: o, lift: Math.max(s, a) };
 }
 function Xa(e) {
-  const t = yf(Pe.customSpec);
+  const t = yf(Ae.customSpec);
   return [
     { mol: e.molA, uniques: e.uniquesA, side: "left", custom: t.left },
     { mol: e.molB, uniques: e.uniquesB, side: "right", custom: t.right }
@@ -8123,7 +8123,7 @@ function zp(e, t) {
   e.sync();
 }
 function Ip(e, t) {
-  const n = Pe, r = Ya();
+  const n = Ae, r = Ya();
   for (const o of Xa(t)) {
     const i = e.box(o.mol.name), s = e.open(i, [o.mol]);
     s.setStyle(
@@ -8196,7 +8196,7 @@ function Dp(e, t) {
   m.zoomTo(), c === 2 ? m.rotate(90, "x") : c === 0 && m.rotate(-90, "z"), m.render(), e.settle(a);
 }
 function Lp(e, t) {
-  const n = Pe, r = Xa(t).map((o) => {
+  const n = Ae, r = Xa(t).map((o) => {
     const i = T("div", "flex:1;display:flex;flex-direction:column;position:relative;min-height:0;"), s = T(
       "div",
       `flex:1;min-height:0;display:flex;align-items:center;justify-content:center;padding:8px;background:${wa()};`
@@ -8204,16 +8204,16 @@ function Lp(e, t) {
     return s.appendChild(pe("Loading 2D depiction...")), i.appendChild(s), e.named && i.appendChild(T("div", Wr, o.mol.name)), e.element.appendChild(i), { box: s, side: o };
   });
   po().then((o) => {
-    const i = wf(n, o), s = Ap(o, t.from.sdf, t.to.sdf, n.layout, n.alignPair ? t.pairs : null);
+    const i = wf(n, o), s = Pp(o, t.from.sdf, t.to.sdf, n.layout, n.alignPair ? t.pairs : null);
     for (const { box: a, side: c } of r) {
-      const l = _a(n, c.mol, c.uniques, c.side), d = _f(n, Pr, l, c.custom, i, c.mol.symbols.length), m = Sf(o, c.side === "left" ? s.left : s.right, Pr, d);
+      const l = _a(n, c.mol, c.uniques, c.side), d = _f(n, Ar, l, c.custom, i, c.mol.symbols.length), m = Sf(o, c.side === "left" ? s.left : s.right, Ar, d);
       if (a.replaceChildren(), !m) {
         a.appendChild(pe("Failed to parse molecule", !0));
         continue;
       }
-      Ea(a, m, Pr);
+      Ea(a, m, Ar);
       const w = a.querySelector("svg");
-      w && Af(w, c.mol, n, l, c.custom, i);
+      w && Pf(w, c.mol, n, l, c.custom, i);
     }
   }).catch((o) => {
     for (const { box: i } of r)
@@ -8234,16 +8234,16 @@ function qp(e, t, n) {
   );
   const m = Bp(i, s.symbols, a.symbols), w = T("div", Ve.row), g = [];
   let $ = null;
-  const S = (A, M, R, D) => {
+  const S = (P, M, R, D) => {
     const I = ao(`${Ve.plain}${Ve.button}`, Ve.className);
-    I.appendChild(Ze(A, String(M), D)), I.onclick = () => {
+    I.appendChild(Ze(P, String(M), D)), I.onclick = () => {
       $ = $ === R ? null : R, y();
     }, g.push({ node: I, kinds: R }), w.appendChild(I);
-  }, f = (A, M) => {
+  }, f = (P, M) => {
     const R = T("span", Ve.plain);
-    R.appendChild(Ze(A, M)), w.appendChild(R);
+    R.appendChild(Ze(P, M)), w.appendChild(R);
   };
-  S("mapped atoms", i.size, ["mapped", "element"]), S("element changes", c.elements.length, ["element"], Pe.modifiedColor), S(`unique to ${r}`, c.atoms.length, ["uniqueA"], Pe.destroyedColor), S(`unique to ${o}`, l.atoms.length, ["uniqueB"], Pe.createdColor), f(`atoms in ${r}`, String(s.symbols.length)), f(`atoms in ${o}`, String(a.symbols.length)), f("score", n.score == null ? Je : n.score.toFixed(3)), d.appendChild(w), d.appendChild(T("div", Fr, "Correspondence"));
+  S("mapped atoms", i.size, ["mapped", "element"]), S("element changes", c.elements.length, ["element"], Ae.modifiedColor), S(`unique to ${r}`, c.atoms.length, ["uniqueA"], Ae.destroyedColor), S(`unique to ${o}`, l.atoms.length, ["uniqueB"], Ae.createdColor), f(`atoms in ${r}`, String(s.symbols.length)), f(`atoms in ${o}`, String(a.symbols.length)), f("score", n.score == null ? Je : n.score.toFixed(3)), d.appendChild(w), d.appendChild(T("div", Fr, "Correspondence"));
   const v = T("div", `font-size:${Y.small};line-height:1.6;color:${Ee.faint};`);
   d.appendChild(v);
   const p = T(
@@ -8251,20 +8251,20 @@ function qp(e, t, n) {
     `display:grid;grid-template-columns:repeat(auto-fill,minmax(${Op}px,1fr));gap:${Z.xs} ${Z.md};font-family:${Y.mono};font-size:${Y.small};color:${Ee.primary};`
   );
   d.appendChild(p);
-  const C = String(Math.max(s.symbols.length, a.symbols.length, 1) - 1).length, _ = (A, M) => `${(A == null ? Je : String(A)).padStart(C)} ${M.padEnd(2)}`, u = (A) => {
-    if (A.kind === "uniqueA") return `${r} atom ${A.a} ${A.symbolA} maps to nothing`;
-    if (A.kind === "uniqueB") return `${o} atom ${A.b} ${A.symbolB} maps to nothing`;
-    const M = A.kind === "element" ? ", an element change" : "";
-    return `${r} atom ${A.a} ${A.symbolA} maps to ${o} atom ${A.b} ${A.symbolB}${M}`;
-  }, h = (A) => {
+  const C = String(Math.max(s.symbols.length, a.symbols.length, 1) - 1).length, _ = (P, M) => `${(P == null ? Je : String(P)).padStart(C)} ${M.padEnd(2)}`, u = (P) => {
+    if (P.kind === "uniqueA") return `${r} atom ${P.a} ${P.symbolA} maps to nothing`;
+    if (P.kind === "uniqueB") return `${o} atom ${P.b} ${P.symbolB} maps to nothing`;
+    const M = P.kind === "element" ? ", an element change" : "";
+    return `${r} atom ${P.a} ${P.symbolA} maps to ${o} atom ${P.b} ${P.symbolB}${M}`;
+  }, h = (P) => {
     const M = T(
       "div",
-      `white-space:pre;padding:${Z.xs} ${Z.md};border-radius:${be.sm};background:${zt.card};border-left:3px solid ${Tp[A.kind] ?? "transparent"};`,
-      `${_(A.a, A.symbolA)} -> ${_(A.b, A.symbolB)}`
+      `white-space:pre;padding:${Z.xs} ${Z.md};border-radius:${be.sm};background:${zt.card};border-left:3px solid ${Tp[P.kind] ?? "transparent"};`,
+      `${_(P.a, P.symbolA)} -> ${_(P.b, P.symbolB)}`
     );
-    return M.title = u(A), M.dataset.gufeRelation = A.kind, M;
+    return M.title = u(P), M.dataset.gufeRelation = P.kind, M;
   }, y = () => {
-    const A = $, M = A ? m.filter((R) => A.includes(R.kind)) : m;
+    const P = $, M = P ? m.filter((R) => P.includes(R.kind)) : m;
     p.replaceChildren(...M.map(h)), M.length || p.appendChild(
       T(
         "div",
@@ -8278,12 +8278,12 @@ function qp(e, t, n) {
     }
   };
   y();
-  const x = Object.entries(n.annotations ?? {}).filter(([A]) => A !== "score");
+  const x = Object.entries(n.annotations ?? {}).filter(([P]) => P !== "score");
   if (!x.length) return;
   d.appendChild(T("div", Fr, "Annotations"));
   const E = T("div", `${gc}color:${Ee.faint};`);
-  for (const [A, M] of x)
-    E.appendChild(T("div", "", `${A}: ${String(M)}`));
+  for (const [P, M] of x)
+    E.appendChild(T("div", "", `${P}: ${String(M)}`));
   d.appendChild(E);
 }
 const ks = [
@@ -8330,7 +8330,7 @@ function Bp(e, t, n) {
   return r;
 }
 function Za(e, t) {
-  const n = Ae(t, e.componentA, "SmallMoleculeComponentViz"), r = Ae(t, e.componentB, "SmallMoleculeComponentViz");
+  const n = Pe(t, e.componentA, "SmallMoleculeComponentViz"), r = Pe(t, e.componentB, "SmallMoleculeComponentViz");
   return !n || !r ? null : { ...e, registry: So(t, [e.componentA, e.componentB]) };
 }
 function Up(e, t, n) {
@@ -8362,7 +8362,7 @@ function Kp(e, t) {
   return c;
 }
 function Gp(e, t) {
-  const n = Ae(t, e.componentA, "SmallMoleculeComponentViz"), r = Ae(t, e.componentB, "SmallMoleculeComponentViz");
+  const n = Pe(t, e.componentA, "SmallMoleculeComponentViz"), r = Pe(t, e.componentB, "SmallMoleculeComponentViz");
   if (!n || !r)
     return {
       problem: "This mapping names two molecules, and its registry does not hold them.",
@@ -8446,7 +8446,7 @@ function Xp(e) {
 function Zp(e) {
   return ja(e);
 }
-const Ps = (e) => Math.round(e * 100) / 100;
+const As = (e) => Math.round(e * 100) / 100;
 function Qp(e, t) {
   if (!e || typeof e != "object") return null;
   const n = e, r = (s) => typeof s == "number" && Number.isFinite(s);
@@ -8459,7 +8459,7 @@ function eh(e, t) {
     n.x = t[r][0], n.y = t[r][1], n.fx !== void 0 && (n.fx = n.x), n.fy !== void 0 && (n.fy = n.y);
   });
 }
-const Rt = { initial: 0.58, min: 0.25, max: 0.8 }, xe = 38, As = 1.5, Nr = {
+const Rt = { initial: 0.58, min: 0.25, max: 0.8 }, xe = 38, Ps = 1.5, Nr = {
   /** Where the charge sits while the structure has the middle of the node, as a fraction of the radius. */
   at: 0.55,
   fontSize: 22,
@@ -8575,7 +8575,7 @@ function bh(e) {
       $,
       f.sdf,
       Rs,
-      Pe.layout,
+      Ae.layout,
       v && { atoms: v, color: r, radius: dh },
       n
     );
@@ -8720,8 +8720,8 @@ class _h extends Re {
     );
     let S = /* @__PURE__ */ new Map();
     const f = async (k) => {
-      const P = await $.run(k);
-      return P.status === "superseded" || (S = P.status === "ok" ? P.matched : /* @__PURE__ */ new Map(), z()), P;
+      const A = await $.run(k);
+      return A.status === "superseded" || (S = A.status === "ok" ? A.matched : /* @__PURE__ */ new Map(), z()), A;
     }, v = wo(
       c,
       () => wh({
@@ -8783,7 +8783,7 @@ class _h extends Re {
       u,
       `${s} ligand${s === 1 ? "" : "s"} named by this network are not in its registry`
     ), a && st(u, `${a} mapping${a === 1 ? "" : "s"} name a ligand this network does not contain`);
-    const E = g(), A = mh(u);
+    const E = g(), P = mh(u);
     let M = null;
     const R = Qp(Ec(Jp), o.length);
     let D = R && { scale: R.scale, tx: R.tx, ty: R.ty }, I = R ? R.nodes : null, L = i.length ? { kind: "edge", index: 0 } : null;
@@ -8805,7 +8805,7 @@ class _h extends Re {
       const k = vh(o, i, d, w.text, m.minScore);
       M?.setEmphasis(k?.nodes ?? null, k?.edges ?? null);
     }, z = () => M?.setMatches(S), b = (k = ne) => {
-      const P = M && k === ne ? M.transform() : null;
+      const A = M && k === ne ? M.transform() : null;
       k !== ne && (I = null);
       const V = oe.start();
       ne = k, M?.cleanup(), M = null, u.querySelectorAll("svg").forEach((N) => N.remove());
@@ -8813,9 +8813,9 @@ class _h extends Re {
       Sh(o, H, Q, ne, i), I && eh(o, I);
       const ee = () => {
         if (!V()) return;
-        const N = this.#n(u, o, i, H, Q, O, E, A);
+        const N = this.#n(u, o, i, H, Q, O, E, P);
         M = N, N.setSelected(L), U(), z();
-        const F = D ?? P;
+        const F = D ?? A;
         F ? (N.setTransform(F.scale, F.tx, F.ty), D = null) : N.fit();
       };
       if (ne !== "Force-directed" || X || I) {
@@ -8835,10 +8835,10 @@ class _h extends Re {
     return p = () => b(), b(), G(), {
       onResize: () => b(),
       cleanup: () => {
-        oe.stop(), $.cancel(), A.remove(), M?.cleanup(), M = null, x.cleanup();
+        oe.stop(), $.cancel(), P.remove(), M?.cleanup(), M = null, x.cleanup();
       },
       viewState: () => ({
-        nodes: o.map((k) => [Ps(k.x), Ps(k.y)]),
+        nodes: o.map((k) => [As(k.x), As(k.y)]),
         ...W(),
         selected: L ? L.index : -1,
         selectedKind: L ? L.kind : "edge"
@@ -8951,7 +8951,7 @@ class _h extends Re {
       const z = ae("g", { class: "gufe-edge-label" });
       z.appendChild(U), f.appendChild(z);
     }
-    const p = [], C = [], _ = [], u = [], h = [], y = [], x = [], E = [], A = n.map((L) => {
+    const p = [], C = [], _ = [], u = [], h = [], y = [], x = [], E = [], P = n.map((L) => {
       const W = ae("g", { class: "gufe-node", style: "cursor:grab;" });
       W.addEventListener("mousemove", (b) => {
         c.show(
@@ -8975,7 +8975,7 @@ class _h extends Re {
         r: xe,
         fill: le.netNodeFill,
         stroke: le.netNodeStroke,
-        "stroke-width": As,
+        "stroke-width": Ps,
         "pointer-events": "all"
       });
       W.appendChild(X), C.push(X);
@@ -8984,7 +8984,7 @@ class _h extends Re {
         r: xe,
         fill: jr(),
         stroke: le.netNodeStroke,
-        "stroke-width": As,
+        "stroke-width": Ps,
         display: "none",
         "pointer-events": "none"
       });
@@ -9039,7 +9039,7 @@ class _h extends Re {
           "transform",
           `translate(${(L.from.x + L.to.x) / 2},${(L.from.y + L.to.y) / 2 - 8})`
         );
-      }), n.forEach((L, W) => A[W].setAttribute("transform", `translate(${L.x},${L.y})`));
+      }), n.forEach((L, W) => P[W].setAttribute("transform", `translate(${L.x},${L.y})`));
     };
     M();
     let R = /* @__PURE__ */ new Map();
@@ -9061,7 +9061,7 @@ class _h extends Re {
       l,
       d,
       n,
-      A,
+      P,
       M,
       D.apply,
       (L) => s({ kind: "ligand", index: L })
@@ -9093,7 +9093,7 @@ class _h extends Re {
        * that fades it.
        */
       setEmphasis(L, W) {
-        A.forEach((ne, X) => {
+        P.forEach((ne, X) => {
           const oe = !L || L.has(n[X]["gufe-key"]);
           ne.setAttribute("opacity", oe ? "1" : String(Ft.node));
         }), r.forEach((ne, X) => {
@@ -9211,7 +9211,7 @@ const Ts = [
   { id: "site", label: "Site", title: "Frame the ligand and the site around it" },
   { id: "whole", label: "Whole", title: "Frame the entire complex" }
 ], xh = 0.4;
-class Ph extends Re {
+class Ah extends Re {
   placeholder() {
     return "Waiting for a ChemicalSystem payload...";
   }
@@ -9271,7 +9271,7 @@ class Ph extends Re {
       return l.showStatus("This system has no ligand and structure to draw together."), {};
     l.setStats(Os(r, () => c));
     try {
-      c = Pa(r.structures[0].pdb), l.setStats(Os(r, () => c));
+      c = Aa(r.structures[0].pdb), l.setStats(Os(r, () => c));
     } catch (g) {
       l.showStatus(`PDB parse error: ${he(g)}`, "error");
     }
@@ -9291,10 +9291,10 @@ function Os(e, t) {
     const a = yo(s.sdf);
     return a ? i + a.atoms : i;
   }, 0), r = `${e.ligands.length === 1 ? "ligand" : `${e.ligands.length} ligands`} ${n} atoms`, o = t();
-  return o ? [r, ...Aa(o)] : [r];
+  return o ? [r, ...Pa(o)] : [r];
 }
-Ne("gufe-complex", Ph);
-function Ah(e, t) {
+Ne("gufe-complex", Ah);
+function Ph(e, t) {
   return {
     ...e,
     registry: So(t, Object.values(e.components ?? {}))
@@ -9320,8 +9320,8 @@ class Fh extends Re {
   }
   renderView(t, n) {
     const r = St(n), o = [], i = [];
-    for (const [E, A] of Object.entries(n.components ?? {})) {
-      const M = Ke(r, A);
+    for (const [E, P] of Object.entries(n.components ?? {})) {
+      const M = Ke(r, P);
       M ? o.push([E, M]) : i.push(E);
     }
     const s = n.name || "Chemical system";
@@ -9359,18 +9359,18 @@ class Fh extends Re {
       "flex:1;min-height:0;display:flex;"
     );
     d.appendChild(m);
-    const w = document.createElement("gufe-view");
+    const w = document.createElement("alchemy-view");
     w.style.cssText = "flex:1;min-width:0;min-height:0;", w.setAttribute(zr, ""), m.appendChild(w);
     const g = tc(n, r), $ = Eh(g), S = (E) => $ && g.structures.some(
-      (A) => A === E
-    ), f = o.filter(([, E]) => !S(E)).map(([E, A]) => ({
+      (P) => P === E
+    ), f = o.filter(([, E]) => !S(E)).map(([E, P]) => ({
       key: E,
       title: E,
-      subtitle: Th(A),
-      badge: Oh(A),
+      subtitle: Th(P),
+      badge: Oh(P),
       element: w,
       point: () => {
-        w.payload = A;
+        w.payload = P;
       }
     }));
     if ($) {
@@ -9391,11 +9391,11 @@ class Fh extends Re {
     const p = (E) => {
       v !== E && (m.replaceChildren(E), v = E);
     }, C = Hn(Rh), _ = [], u = (E) => {
-      _.forEach((A, M) => A.setAttribute("aria-pressed", String(M === E))), f[E].point(), p(f[E].element);
+      _.forEach((P, M) => P.setAttribute("aria-pressed", String(M === E))), f[E].point(), p(f[E].element);
     }, h = (E) => {
       C.set(f[E].key), u(E);
     };
-    f.forEach((E, A) => {
+    f.forEach((E, P) => {
       const M = ao(`${Jr.card}width:auto;flex-shrink:0;max-width:100%;box-sizing:border-box;`);
       M.appendChild(
         T("span", `font-weight:700;color:${j.textPrimary};`, E.title)
@@ -9405,7 +9405,7 @@ class Fh extends Re {
           `font-size:${Y.small};color:${j.textMuted};`,
           E.subtitle
         )
-      ), E.badge && M.appendChild(E.badge), M.onclick = () => h(A), _.push(M), l.appendChild(M);
+      ), E.badge && M.appendChild(E.badge), M.onclick = () => h(P), _.push(M), l.appendChild(M);
     });
     const y = f.findIndex((E) => E.key === C.get());
     u(y < 0 ? 0 : y);
@@ -9426,7 +9426,7 @@ class Fh extends Re {
 Ne("gufe-chemical-system", Fh);
 const zh = 210, Ih = "42%";
 function jh(e, t) {
-  const n = Ae(t, e.stateA, "ChemicalSystemViz"), r = Ae(t, e.stateB, "ChemicalSystemViz");
+  const n = Pe(t, e.stateA, "ChemicalSystemViz"), r = Pe(t, e.stateB, "ChemicalSystemViz");
   if (!n || !r) return null;
   const o = [e.stateA, e.stateB, e.protocol];
   for (const i of [n, r]) o.push(...Object.values(i.components ?? {}));
@@ -9507,7 +9507,7 @@ class Uh extends Re {
     return "Waiting for a Transformation payload...";
   }
   renderView(t, n) {
-    const r = St(n), o = Ae(r, n.stateA, "ChemicalSystemViz"), i = Ae(r, n.stateB, "ChemicalSystemViz"), s = Ae(r, n.protocol, "ProtocolViz"), a = n.mappings ?? [], c = n.name || "Transformation";
+    const r = St(n), o = Pe(r, n.stateA, "ChemicalSystemViz"), i = Pe(r, n.stateB, "ChemicalSystemViz"), s = Pe(r, n.protocol, "ProtocolViz"), a = n.mappings ?? [], c = n.name || "Transformation";
     if (!o || !i) {
       const _ = T("div", "padding:12px 14px;flex-shrink:0;");
       return _.appendChild(zs(c)), t.appendChild(_), t.appendChild(
@@ -9693,7 +9693,7 @@ function em(e, t) {
   const n = [], r = [], o = /* @__PURE__ */ new Map(), i = e.map((s) => {
     const a = [];
     for (const c of Object.values(s.components ?? {})) {
-      const l = Ae(t, c, "SmallMoleculeComponentViz");
+      const l = Pe(t, c, "SmallMoleculeComponentViz");
       if (!l) continue;
       let d = o.get(c);
       d === void 0 && (d = n.length, o.set(c, d), n.push(l.sdf ?? ""), r.push(l.total_charge ?? 0)), a.push(d);
@@ -9815,7 +9815,7 @@ class im extends Re {
       edges: n.edges ?? [],
       ends: (b) => [b.stateA, b.stateB]
     }), c = (b) => {
-      const k = Ae(r, b.protocol, "ProtocolViz");
+      const k = Pe(r, b.protocol, "ProtocolViz");
       return k?.gufe_type || k?.name || "";
     }, l = new Set(i.map(c).filter(Boolean)), d = Gn(n.name || "Alchemical network");
     d.statsEl.appendChild(Ze("systems", String(o.length))), d.statsEl.appendChild(Ze("transformations", String(i.length))), l.size && d.statsEl.appendChild(Ze("protocol", [...l].join(", ")));
@@ -9838,20 +9838,20 @@ class im extends Re {
       );
       v?.setEmphasis(b?.nodes ?? null, b?.edges ?? null);
     }, C = o.map((b) => Qh(b, r)), _ = () => ga(), u = em(o, r), h = qa(_, u.sources), y = o.map((b, k) => {
-      const P = u.perNode[k].find((Q) => u.sources[Q]), V = P === void 0 ? null : u.sources[P], H = nc(b, r);
+      const A = u.perNode[k].find((Q) => u.sources[Q]), V = A === void 0 ? null : u.sources[A], H = nc(b, r);
       return {
         colors: m.colorOf(k),
         composition: H.join(" + "),
         besides: tm(H, V !== null, u.perNode[k].length),
         sdf: V,
-        charge: P === void 0 ? 0 : u.charges[P]
+        charge: A === void 0 ? 0 : u.charges[A]
       };
     });
     let x = null, E = () => {
     };
-    const A = async (b) => {
+    const P = async (b) => {
       const k = await h.run(b);
-      return k.status === "superseded" || (x = k.status === "ok" ? new Set(o.flatMap((P, V) => u.perNode[V].some((H) => k.matched.has(H)) ? [V] : [])) : null, E(), p()), k;
+      return k.status === "superseded" || (x = k.status === "ok" ? new Set(o.flatMap((A, V) => u.perNode[V].some((H) => k.matched.has(H)) ? [V] : [])) : null, E(), p()), k;
     }, M = wo(
       d,
       () => nm({
@@ -9866,7 +9866,7 @@ class im extends Re {
         query: f,
         refresh: () => p(),
         matched: () => x,
-        match: (b) => A(b),
+        match: (b) => P(b),
         mounted: (b) => {
           E = b;
         },
@@ -9922,16 +9922,16 @@ class im extends Re {
     const U = (b, k) => {
       X = { kind: b, index: k }, W.show(b === "node" ? o[k] : i[k], b), v?.setSelected(X);
     }, z = () => {
-      const b = oe.start(), k = I.clientWidth || 800, P = I.clientHeight || 600;
-      rm(o, k, P);
+      const b = oe.start(), k = I.clientWidth || 800, A = I.clientHeight || 600;
+      rm(o, k, A);
       const V = () => {
-        b() && (v?.cleanup(), I.querySelectorAll("svg").forEach((H) => H.remove()), v = this.#n(I, o, i, k, P, y, _, U), v.setSelected(X), p());
+        b() && (v?.cleanup(), I.querySelectorAll("svg").forEach((H) => H.remove()), v = this.#n(I, o, i, k, A, y, _, U), v.setSelected(X), p());
       };
       if (ne) {
         V();
         return;
       }
-      om(o, i, k, P).then((H) => {
+      om(o, i, k, A).then((H) => {
         b() && (H || (ne = !0, st(I, "d3 could not be loaded - showing the circular layout instead")), V());
       }, V);
     };
@@ -9990,7 +9990,7 @@ class im extends Re {
       show(o, i) {
         let s;
         if (i === "node")
-          s = Ah(ja(o), n);
+          s = Ph(ja(o), n);
         else {
           const { index: a, from: c, to: l, ...d } = o;
           s = jh(d, n);
@@ -10016,16 +10016,16 @@ class im extends Re {
     const $ = Ia(l, d, {
       bounds: () => za(n, Vs.x, Vs.y),
       hint: "Click the graph or hold Ctrl to zoom",
-      onTransform: (P, V, H) => g(P, V, H)
-    }), S = (P, V) => {
-      $.wasPan() || c(P, V);
-    }, f = [], v = [], p = new Map(n.map((P, V) => [P["gufe-key"], s[V].charge])), C = (P) => (p.get(P.to["gufe-key"]) ?? 0) - (p.get(P.from["gufe-key"]) ?? 0);
-    r.forEach((P, V) => {
-      const H = C(P), Q = ae("line", {
-        x1: P.from.x,
-        y1: P.from.y,
-        x2: P.to.x,
-        y2: P.to.y,
+      onTransform: (A, V, H) => g(A, V, H)
+    }), S = (A, V) => {
+      $.wasPan() || c(A, V);
+    }, f = [], v = [], p = new Map(n.map((A, V) => [A["gufe-key"], s[V].charge])), C = (A) => (p.get(A.to["gufe-key"]) ?? 0) - (p.get(A.from["gufe-key"]) ?? 0);
+    r.forEach((A, V) => {
+      const H = C(A), Q = ae("line", {
+        x1: A.from.x,
+        y1: A.from.y,
+        x2: A.to.x,
+        y2: A.to.y,
         stroke: le.netEdgeLine,
         "stroke-width": Ls(1, !1),
         "stroke-linecap": "round",
@@ -10035,13 +10035,13 @@ class im extends Re {
       });
       gs(
         Q,
-        (P.name || "transformation") + (H ? ` - net charge change ${ot(H)}` : "")
+        (A.name || "transformation") + (H ? ` - net charge change ${ot(H)}` : "")
       ), Q.addEventListener("click", () => S("edge", V)), m.appendChild(Q), f.push(Q);
       const ee = ae("line", {
-        x1: P.from.x,
-        y1: P.from.y,
-        x2: P.to.x,
-        y2: P.to.y,
+        x1: A.from.x,
+        y1: A.from.y,
+        x2: A.to.x,
+        y2: A.to.y,
         stroke: "transparent",
         "stroke-width": Dn.hit,
         "stroke-linecap": "round",
@@ -10050,17 +10050,17 @@ class im extends Re {
       });
       ee.addEventListener("click", () => S("edge", V)), m.appendChild(ee), v.push(ee);
     });
-    const _ = n.map(() => []), u = new Map(n.map((P, V) => [P, V]));
-    r.forEach((P, V) => {
-      const H = u.get(P.from), Q = u.get(P.to);
+    const _ = n.map(() => []), u = new Map(n.map((A, V) => [A, V]));
+    r.forEach((A, V) => {
+      const H = u.get(A.from), Q = u.get(A.to);
       H !== void 0 && _[H].push(V), Q !== void 0 && Q !== H && _[Q].push(V);
     });
-    const h = [], y = [], x = [], E = [], A = [], M = [], R = [], D = [], I = [];
-    n.forEach((P, V) => {
+    const h = [], y = [], x = [], E = [], P = [], M = [], R = [], D = [], I = [];
+    n.forEach((A, V) => {
       const H = s[V], Q = js(H.sdf), ee = ae("g", {
         class: "gufe-node",
         style: "cursor:pointer;",
-        transform: `translate(${P.x},${P.y})`
+        transform: `translate(${A.x},${A.y})`
       });
       x.push(ee);
       const N = ae("rect", {
@@ -10113,7 +10113,7 @@ class im extends Re {
         "font-weight": 700,
         "font-family": "ui-sans-serif,system-ui,sans-serif"
       });
-      F.textContent = jn(Kn(P), qe.nameChars), ee.appendChild(F), E.push(F);
+      F.textContent = jn(Kn(A), qe.nameChars), ee.appendChild(F), E.push(F);
       const K = ae("text", {
         class: "gufe-node-composition",
         x: 0,
@@ -10123,65 +10123,65 @@ class im extends Re {
         "font-size": qe.subSize,
         "font-family": "ui-sans-serif,system-ui,sans-serif"
       });
-      K.textContent = jn(H.composition, qe.subChars), ee.appendChild(K), A.push(K), gs(ee, `${Kn(P)} - ${H.composition}`), w.appendChild(ee);
+      K.textContent = jn(H.composition, qe.subChars), ee.appendChild(K), P.push(K), gs(ee, `${Kn(A)} - ${H.composition}`), w.appendChild(ee);
     });
-    const L = (P) => {
-      const V = n[P];
-      x[P].setAttribute("transform", `translate(${V.x},${V.y})`);
-      for (const H of _[P])
+    const L = (A) => {
+      const V = n[A];
+      x[A].setAttribute("transform", `translate(${V.x},${V.y})`);
+      for (const H of _[A])
         for (const Q of [f[H], v[H]])
           r[H].from === V && (Q.setAttribute("x1", String(V.x)), Q.setAttribute("y1", String(V.y))), r[H].to === V && (Q.setAttribute("x2", String(V.x)), Q.setAttribute("y2", String(V.y)));
-    }, W = new Ka(), ne = sr("cpk"), X = (P, V) => {
+    }, W = new Ka(), ne = sr("cpk"), X = (A, V) => {
       if (!W.wants(V)) return;
       const H = I[V], Q = s[V].sdf;
       if (!H || !Q) return;
-      const ee = $o(P, Q, Ds, Pe.layout, void 0, ne);
+      const ee = $o(A, Q, Ds, Ae.layout, void 0, ne);
       if (!ee || !Ja(H, ee, Ds, ze.size - ze.inset * 2)) {
         W.refused(V);
         return;
       }
       W.drew(V);
-    }, oe = (P, V, H) => {
-      const Q = s[P], ee = V && W.has(P), N = (we) => we * H >= Kh, F = N(qe.nameSize), K = N(qe.subSize);
-      E[P].setAttribute("display", F ? "inline" : "none"), A[P].setAttribute("display", K ? "inline" : "none"), M[P]?.setAttribute("display", ee ? "inline" : "none"), I[P]?.setAttribute("display", ee ? "inline" : "none");
-      const J = js(Q.sdf), te = -J / 2 + ze.pad, re = R[P];
+    }, oe = (A, V, H) => {
+      const Q = s[A], ee = V && W.has(A), N = (we) => we * H >= Kh, F = N(qe.nameSize), K = N(qe.subSize);
+      E[A].setAttribute("display", F ? "inline" : "none"), P[A].setAttribute("display", K ? "inline" : "none"), M[A]?.setAttribute("display", ee ? "inline" : "none"), I[A]?.setAttribute("display", ee ? "inline" : "none");
+      const J = js(Q.sdf), te = -J / 2 + ze.pad, re = R[A];
       re && (re.setAttribute("x", String(ee ? at.width / 2 - Mt.inset : 0)), re.setAttribute(
         "y",
         String(ee ? -J / 2 + Mt.inset : -J * Mt.bigAt)
-      ), re.setAttribute("font-size", String(ee ? Mt.fontSize : Mt.bigFontSize)), re.setAttribute("font-weight", ee ? fe.normal : fe.bold)), M[P]?.setAttribute("y", String(te)), D[P]?.setAttribute("transform", `translate(0,${te + ze.size / 2})`);
+      ), re.setAttribute("font-size", String(ee ? Mt.fontSize : Mt.bigFontSize)), re.setAttribute("font-weight", ee ? fe.normal : fe.bold)), M[A]?.setAttribute("y", String(te)), D[A]?.setAttribute("transform", `translate(0,${te + ze.size / 2})`);
       const ue = J / 2 - qe.bottom;
-      E[P].setAttribute("y", String(ee ? ue - (K ? qe.gap : 0) : -2)), A[P].setAttribute("y", String(ee ? ue : 14)), A[P].textContent = jn(ee ? Q.besides : Q.composition, qe.subChars);
+      E[A].setAttribute("y", String(ee ? ue - (K ? qe.gap : 0) : -2)), P[A].setAttribute("y", String(ee ? ue : 14)), P[A].textContent = jn(ee ? Q.besides : Q.composition, qe.subChars);
     };
     let G = null, O = 1, U = null, z = null;
     const b = () => {
-      h.forEach((P, V) => {
+      h.forEach((A, V) => {
         const H = U === V;
-        P.setAttribute("stroke", H ? le.cardBorderActive : y[V]), P.setAttribute("stroke-width", String(qs(O, H)));
-      }), f.forEach((P, V) => {
+        A.setAttribute("stroke", H ? le.cardBorderActive : y[V]), A.setAttribute("stroke-width", String(qs(O, H)));
+      }), f.forEach((A, V) => {
         const H = z === V;
-        P.setAttribute("stroke", H ? le.netHaloColor : le.netEdgeLine), P.setAttribute("stroke-width", String(Ls(O, H)));
+        A.setAttribute("stroke", H ? le.netHaloColor : le.netEdgeLine), A.setAttribute("stroke-width", String(Ls(O, H)));
       });
     };
-    return g = (P, V, H) => {
-      const Q = Wh(P);
-      G = Q, l.setAttribute("data-detail", Q.id), O = P, b();
-      for (let N = 0; N < n.length; N++) oe(N, Q.structure, P);
+    return g = (A, V, H) => {
+      const Q = Wh(A);
+      G = Q, l.setAttribute("data-detail", Q.id), O = A, b();
+      for (let N = 0; N < n.length; N++) oe(N, Q.structure, A);
       if (!Q.structure) return;
       const ee = Ga(
         n,
-        { scale: P, tx: V, ty: H },
+        { scale: A, tx: V, ty: H },
         { width: o, height: i },
         (N) => !!s[N].sdf && W.wants(N)
       );
       ee.length && a().then((N) => {
         if (!(!N || G !== Q))
           for (const F of ee)
-            X(N, F), oe(F, !0, P);
+            X(N, F), oe(F, !0, A);
       }).catch(() => {
       });
-    }, Ha(x, n, $, { moved: L, clicked: (P) => c("node", P) }), $.fit(), {
-      setSelected(P) {
-        U = P?.kind === "node" ? P.index : null, z = P?.kind === "edge" ? P.index : null, b();
+    }, Ha(x, n, $, { moved: L, clicked: (A) => c("node", A) }), $.fit(), {
+      setSelected(A) {
+        U = A?.kind === "node" ? A.index : null, z = A?.kind === "edge" ? A.index : null, b();
       },
       /**
        * Dim what is not lit rather than hiding it.
@@ -10191,17 +10191,17 @@ class im extends Re {
        * solvent leg does not is the whole point, and removing the rest would
        * take that picture away.
        */
-      setEmphasis(P, V) {
+      setEmphasis(A, V) {
         x.forEach((H, Q) => {
-          const ee = !P || P.has(n[Q]["gufe-key"]);
+          const ee = !A || A.has(n[Q]["gufe-key"]);
           H.setAttribute("opacity", ee ? "1" : String(Ft.node));
         }), f.forEach((H, Q) => {
           const ee = !V || V.has(Q);
           H.setAttribute("opacity", ee ? "1" : String(Ft.edge));
         });
       },
-      focusOn(P) {
-        const V = n[P];
+      focusOn(A) {
+        const V = n[A];
         V && $.centreOn(V.x, V.y, Jh);
       },
       reset: $.reset,
@@ -10345,7 +10345,7 @@ class lm extends Re {
 }
 Ne("gufe-unknown-component", lm);
 Ws();
-typeof globalThis < "u" && (globalThis.gufeViz = { settings: yu, reset: vu });
+typeof globalThis < "u" && (globalThis.alchemyViz = { settings: yu, reset: vu });
 export {
   dm as PAYLOAD_TYPES,
   so as VIEW_TAGS

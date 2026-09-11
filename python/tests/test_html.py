@@ -10,9 +10,9 @@ import json
 import re
 
 import pytest
-from gufe_viz import bundle_source, to_html
-from gufe_viz.cli import main
-from gufe_viz.html import _script_safe, default_output_path
+from alchemy_viz import bundle_source, to_html
+from alchemy_viz.cli import main
+from alchemy_viz.html import _script_safe, default_output_path
 
 from .conftest import read_example
 
@@ -25,7 +25,7 @@ class TestToHtml:
 
         assert html.startswith("<!doctype html>"), name
         assert bundle_source()[:200] in html.replace("<\\/script", "</script")
-        assert "<gufe-view></gufe-view>" in html, name
+        assert "<alchemy-view></alchemy-view>" in html, name
 
     def test_payload_survives_the_round_trip(self, example):
         name, payload = example
@@ -46,7 +46,7 @@ class TestToHtml:
 
     def test_accepts_a_gufe_object_and_a_payload_dict(self):
         import gufe
-        from gufe_viz import payload_for
+        from alchemy_viz import payload_for
 
         solvent = gufe.SolventComponent()
         assert to_html(solvent) == to_html(payload_for(solvent))
@@ -88,16 +88,16 @@ class TestToHtml:
         assert _script_safe("no tags here") == "no tags here"
 
     def test_debug_is_off_unless_asked_for(self):
-        """The `<gufe-view>` a normal page carries has no attributes at all."""
-        assert "<gufe-view></gufe-view>" in to_html(read_example("solvent.json"))
+        """The `<alchemy-view>` a normal page carries has no attributes at all."""
+        assert "<alchemy-view></alchemy-view>" in to_html(read_example("solvent.json"))
 
     def test_debug_marks_the_element_the_bundle_reads(self):
         """A bare `debug` attribute, which is what `debugEnabled` tests for."""
         html = to_html(read_example("solvent.json"), debug=True)
 
-        assert "<gufe-view debug></gufe-view>" in html
+        assert "<alchemy-view debug></alchemy-view>" in html
         # Nothing else about the page changes: same bundle, same payload block.
-        assert html.replace("<gufe-view debug>", "<gufe-view>") == to_html(read_example("solvent.json"))
+        assert html.replace("<alchemy-view debug>", "<alchemy-view>") == to_html(read_example("solvent.json"))
 
     def test_refuses_an_object_it_cannot_visualize(self):
         with pytest.raises(TypeError):
@@ -149,7 +149,7 @@ class TestCli:
         source.write_text(json.dumps(read_example("small_molecule.json")))
 
         assert main([str(source), "--debug", "-o", "-"]) == 0
-        assert "<gufe-view debug></gufe-view>" in capsys.readouterr().out
+        assert "<alchemy-view debug></alchemy-view>" in capsys.readouterr().out
 
     def test_missing_input_is_a_clean_error(self, tmp_path):
         with pytest.raises(SystemExit) as exc:
@@ -172,5 +172,5 @@ class TestCli:
         with pytest.raises(SystemExit) as exc:
             main([str(source)])
         message = str(exc.value)
-        assert "gufe_viz.to_html" in message
+        assert "alchemy_viz.to_html" in message
         assert "examples/" in message

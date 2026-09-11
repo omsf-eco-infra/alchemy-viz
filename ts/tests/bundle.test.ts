@@ -3,7 +3,7 @@
  *
  * Everything else in this suite imports `ts/src/**` and so proves the source is
  * right. It does not prove that what Vite emits into
- * `python/gufe_viz/_assets/gufe-viz.js` (the file that is committed, shipped in
+ * `python/alchemy_viz/_assets/alchemy-viz.js` (the file that is committed, shipped in
  * the wheel, and inlined into every `to_html` page) actually runs. A broken
  * `vite.lib.config.ts` (a stray code-split, an externalised import that should
  * have been bundled) would sail past every other test here and only show up
@@ -20,7 +20,7 @@ import { afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import { clearFakeEngines, flush, readExample, seedFakeEngines } from "./helpers.js";
 
-const BUNDLE = join(import.meta.dirname, "..", "..", "python", "gufe_viz", "_assets", "gufe-viz.js");
+const BUNDLE = join(import.meta.dirname, "..", "..", "python", "alchemy_viz", "_assets", "alchemy-viz.js");
 
 describe("the built bundle", () => {
   beforeAll(async () => {
@@ -44,7 +44,7 @@ describe("the built bundle", () => {
   });
 
   it("registers the elements as a side effect of being loaded", () => {
-    expect(customElements.get("gufe-view")).toBeTruthy();
+    expect(customElements.get("alchemy-view")).toBeTruthy();
     expect(customElements.get("gufe-small-molecule")).toBeTruthy();
     expect(customElements.get("gufe-protein")).toBeTruthy();
     expect(customElements.get("gufe-ligand-network")).toBeTruthy();
@@ -53,9 +53,9 @@ describe("the built bundle", () => {
   it("renders through the same two lines the generated page uses", async () => {
     const engines = seedFakeEngines();
 
-    // Exactly what `python/gufe_viz/html.py`'s bootstrap does.
-    document.body.innerHTML = "<gufe-view></gufe-view>";
-    const view = document.querySelector("gufe-view") as HTMLElement & { payload: unknown };
+    // Exactly what `python/alchemy_viz/html.py`'s bootstrap does.
+    document.body.innerHTML = "<alchemy-view></alchemy-view>";
+    const view = document.querySelector("alchemy-view") as HTMLElement & { payload: unknown };
     view.payload = readExample("small_molecule.json");
     await flush();
 
@@ -78,8 +78,8 @@ describe("the built bundle", () => {
     const undrawn = bundle.PAYLOAD_TYPES.find((type) => !bundle.VIEW_TAGS[type]);
     if (!undrawn) return; // every declared type draws, which is the goal
 
-    document.body.innerHTML = "<gufe-view></gufe-view>";
-    const view = document.querySelector("gufe-view") as HTMLElement & { payload: unknown };
+    document.body.innerHTML = "<alchemy-view></alchemy-view>";
+    const view = document.querySelector("alchemy-view") as HTMLElement & { payload: unknown };
     view.payload = { type: undrawn, "gufe-key": `${undrawn}-0`, name: "" };
     await flush();
 

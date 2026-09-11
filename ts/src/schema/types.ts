@@ -2,7 +2,7 @@
 /**
  * GENERATED - do not edit by hand.
  *
- * Source:  schema/gufe-viz.schema.json  (the source of truth)
+ * Source:  schema/alchemy-viz.schema.json  (the source of truth)
  * Command: pixi run types
  *
  * CI rebuilds this file and fails if it differs from what is committed, so an
@@ -12,7 +12,7 @@
 /**
  * Python-to-TypeScript contract bridge for gufe visualizations. Source of truth both languages are downstream of it. This schema is not strictly versioned or published as it is only internally consumed by this codebase. Schema description: one schema object per gufe class: every $def named *Viz is the visualization form of exactly one GufeTokenizable, it carries that object's `gufe-key`. Every reference from one gufe object to another is that object's gufe key, and the objects themselves live in the `registry` on the root payload. So a ligand network's nodes are keys, a chemical system's components and a transformation's protocol are keys and each one resolves to a complete, drawable object. An alchemical network whose forty systems share one protein carries that PDB once and points at it forty times, and the browser can still drill into it, because what it points at is a whole ProteinComponentViz. This is a single-shot dump rather than a conversation with a server, so the registry travels with the payload.
  */
-export type GufeVizPayload =
+export type AlchemyVizPayload =
   | SmallMoleculeComponentViz
   | ProteinComponentViz
   | SolvatedPDBComponentViz
@@ -251,7 +251,7 @@ export interface AlchemicalNetworkViz {
 }
 
 /** The root union, under the name the rest of the codebase refers to it by. */
-export type Payload = GufeVizPayload;
+export type Payload = AlchemyVizPayload;
 
 /**
  * Every declared `type`, including those whose view has not been built yet.

@@ -418,12 +418,12 @@ export function themeStyleSheet(): string {
 }
 
 /** Where the sheet goes, so a second evaluation of the bundle finds it. */
-const STYLE_ELEMENT_ID = "gufe-viz-theme";
+const STYLE_ELEMENT_ID = "alchemy-viz-theme";
 
 /**
  * Put the palette in the document, once.
  *
- * Called from `GufeElement.connectedCallback`, which every view goes through, so
+ * Called from `AlchemyElement.connectedCallback`, which every view goes through, so
  * no host has to know this exists. Idempotent by id: the bundle can legitimately
  * be evaluated twice on one page, exactly as `defineElement` allows for.
  */

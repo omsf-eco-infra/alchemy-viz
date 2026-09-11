@@ -1,25 +1,25 @@
-"""gufe-viz - interactive browser visualizations for gufe objects.
+"""alchemy-viz - interactive browser visualizations for gufe objects.
 
-    >>> import gufe_viz
-    >>> html = gufe_viz.to_html(small_molecule_component)  # returns a string
-    >>> gufe_viz.view(small_molecule_component)  # the same page, in a notebook
+    >>> import alchemy_viz
+    >>> html = alchemy_viz.to_html(small_molecule_component)  # returns a string
+    >>> alchemy_viz.view(small_molecule_component)  # the same page, in a notebook
 
 :func:`to_html` returns the page and writes nothing; where it goes is the
-caller's decision. ``gufe-viz <input> -o out.html`` is one answer to that, and
+caller's decision. ``alchemy-viz <input> -o out.html`` is one answer to that, and
 a development convenience rather than the OpenFE CLI integration.
 :func:`view` is the notebook's answer to the same question - see
-:mod:`gufe_viz.notebook` for what a cell gets and why it is in an iframe.
+:mod:`alchemy_viz.notebook` for what a cell gets and why it is in an iframe.
 
 The intermediate value is a plain, schema-valid dict:
 
-    >>> payload = gufe_viz.payload_for(small_molecule_component)
+    >>> payload = alchemy_viz.payload_for(small_molecule_component)
 
-``schema/gufe-viz.schema.json`` in this repository is the contract it satisfies,
-and the compiled TypeScript in ``gufe_viz/_assets/`` is what draws it.
+``schema/alchemy-viz.schema.json`` in this repository is the contract it satisfies,
+and the compiled TypeScript in ``alchemy_viz/_assets/`` is what draws it.
 
 This package depends on gufe and gufe never depends on this package. The
 dependency is imported lazily inside :func:`payload_for` rather than at module
-scope, which is what lets ``import gufe_viz`` and :func:`to_html` on an existing
+scope, which is what lets ``import alchemy_viz`` and :func:`to_html` on an existing
 payload dict work in an environment that has the wheel but not gufe.
 """
 
@@ -36,7 +36,7 @@ if TYPE_CHECKING:  # gufe is imported inside payload_for, never at module scope
 try:  # pragma: no cover - the real version comes from setuptools-scm at build time
     from importlib.metadata import PackageNotFoundError, version
 
-    __version__ = version("gufe-viz")
+    __version__ = version("alchemy-viz")
 except PackageNotFoundError:  # pragma: no cover
     __version__ = "0.0.0"
 
@@ -81,7 +81,7 @@ def payload_for(obj: GufeTokenizable) -> dict[str, Any]:
         return protocol_payload(obj)
 
     raise TypeError(
-        f"gufe-viz has no visualization for {type(obj).__name__}. "
+        f"alchemy-viz has no visualization for {type(obj).__name__}. "
         "It can visualize components, chemical systems, atom mappings, ligand "
         "networks, protocols, transformations and alchemical networks."
     )

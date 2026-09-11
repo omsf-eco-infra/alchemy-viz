@@ -23,7 +23,7 @@
 
 import { errText } from "../shared/dom.js";
 import { buttonGroup } from "../shared/controls.js";
-import { defineElement, GufeElement, type ViewHandle } from "../shared/element.js";
+import { defineElement, AlchemyElement, type ViewHandle } from "../shared/element.js";
 import { choice } from "../shared/settings.js";
 import { load3Dmol, ThreeDmol } from "../shared/engines.js";
 import { viewerInteraction } from "../shared/interact.js";
@@ -93,7 +93,7 @@ type Focus = (typeof FOCUS_MODES)[number]["id"];
  */
 const SITE_ZOOM_OUT = 0.4;
 
-export class GufeComplex extends GufeElement<ChemicalSystemViz> {
+export class GufeComplex extends AlchemyElement<ChemicalSystemViz> {
   protected override placeholder(): string {
     return "Waiting for a ChemicalSystem payload...";
   }

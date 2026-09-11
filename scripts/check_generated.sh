@@ -3,10 +3,10 @@
 #
 # Three things in this repo are generated and checked in:
 #
-#   ts/src/schema/types.ts           from schema/gufe-viz.schema.json
-#   ts/src/shared/atom-colors.ts     from gufe and matplotlib, by gen_atom_colors.py
-#   python/gufe_viz/_assets/*.js     from ts/src/**
-#   examples/*.json                  from real gufe objects, by make_examples.py
+#   ts/src/schema/types.ts            from schema/alchemy-viz.schema.json
+#   ts/src/shared/atom-colors.ts      from gufe and matplotlib, by gen_atom_colors.py
+#   python/alchemy_viz/_assets/*.js   from ts/src/**
+#   examples/*.json                   from real gufe objects, by make_examples.py
 #
 # atom-colors.ts is on that list for the same reason as the rest, plus one of its
 # own: atom colours are mirrored from the libraries that already draw them, never
@@ -35,7 +35,7 @@ cd "$(dirname "$0")/.."
 GENERATED=(
   ts/src/schema/types.ts
   ts/src/shared/atom-colors.ts
-  python/gufe_viz/_assets/gufe-viz.js
+  python/alchemy_viz/_assets/alchemy-viz.js
 )
 # Whole directories, compared file by file so an added or removed fixture is
 # caught as well as a changed one.

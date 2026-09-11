@@ -14480,7 +14480,7 @@ packages:
   size: 387535
   timestamp: 1786599623274
 - pypi: ./
-  name: gufe-viz
+  name: alchemy-viz
   requires_dist:
   - gufe>=1.12
   - anywidget>=0.9 ; extra == 'notebook'

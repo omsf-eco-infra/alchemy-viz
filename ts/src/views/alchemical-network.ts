@@ -21,7 +21,7 @@
  * one itself. Every reference in the payload resolves to a complete payload
  * object, so a selected node is a `ChemicalSystemViz` and a selected edge is a
  * `TransformationViz` - which are exactly what `<gufe-chemical-system>` and
- * `<gufe-transformation>` take. The pane mounts one `<gufe-view>` and re-points
+ * `<gufe-transformation>` take. The pane mounts one `<alchemy-view>` and re-points
  * it, so selecting a system gets that view's component list and, through its
  * own nested dispatcher, the ligand depiction or the 3D protein; and selecting
  * a transformation gets the state diff and the atom mapping with all of its
@@ -45,7 +45,7 @@ import { dropdown } from "../shared/controls.js";
 import { centredMessage, floatingWarning, headerStrip, statChip } from "../shared/panels.js";
 import { chromeMenu, orientMenuPanel, splitter } from "../shared/chrome.js";
 import { framejsMenuItem } from "../shared/framejs.js";
-import { defineElement, generations, GufeElement, type ViewHandle } from "../shared/element.js";
+import { defineElement, generations, AlchemyElement, type ViewHandle } from "../shared/element.js";
 import { extentOf, sceneCamera } from "../shared/camera.js";
 import { withoutLayout } from "../shared/layout.js";
 import { optionalRDKit, type RDKitModule } from "../shared/engines.js";
@@ -803,7 +803,7 @@ interface GraphScene {
   cleanup(): void;
 }
 
-export class GufeAlchemicalNetwork extends GufeElement<AlchemicalNetworkViz> {
+export class GufeAlchemicalNetwork extends AlchemyElement<AlchemicalNetworkViz> {
   protected override placeholder(): string {
     return "Waiting for an AlchemicalNetwork payload...";
   }

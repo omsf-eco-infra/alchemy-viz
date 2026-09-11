@@ -6,7 +6,7 @@ ci:
 
 exclude: |
   (?x)^(
-    python/gufe_viz/_assets/gufe-viz\.js|
+    python/alchemy_viz/_assets/alchemy-viz\.js|
     ts/src/schema/types\.ts|
     package-lock\.json|
     pixi\.lock

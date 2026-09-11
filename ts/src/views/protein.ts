@@ -16,7 +16,7 @@
  */
 
 import { errText } from "../shared/dom.js";
-import { defineElement, GufeElement, type ViewHandle } from "../shared/element.js";
+import { defineElement, AlchemyElement, type ViewHandle } from "../shared/element.js";
 import { load3Dmol, ThreeDmol } from "../shared/engines.js";
 import { viewerInteraction } from "../shared/interact.js";
 import { applyProteinStyles, parsePdbStats, proteinStatsParts, type PdbStats } from "../shared/pdb.js";
@@ -31,7 +31,7 @@ import type {
 /** Every payload this view draws: one PDB string and a name, three types. */
 export type PdbPayload = ProteinComponentViz | SolvatedPDBComponentViz | ProteinMembraneComponentViz;
 
-export class GufeProtein extends GufeElement<PdbPayload> {
+export class GufeProtein extends AlchemyElement<PdbPayload> {
   protected override placeholder(): string {
     return "Waiting for a ProteinComponent payload...";
   }

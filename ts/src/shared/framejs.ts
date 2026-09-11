@@ -41,7 +41,7 @@
  *                 them while it is building itself. See `UiState`.
  *
  * The module handed to framejs is the bundle with a preamble in front of it and
- * one line after it. The preamble builds `gufe-view`, `#gufe-payload` and
+ * one line after it. The preamble builds `alchemy-view`, `#gufe-payload` and
  * `#gufe-error`, which is why the script can be copied without being parsed or
  * edited: those are the three things a generated page's bootstrap looks up, so
  * it then runs unchanged. The line after draws the payload if nothing else did,
@@ -51,7 +51,7 @@
  *
  * `ts/index.html` and the gallery carry a two-line module that imports `src/**`,
  * so there is no inlined bundle to lift and no bootstrap to run. Rather than
- * refuse, this falls back to `/gufe-dev-bundle.js`, which the dev server serves
+ * refuse, this falls back to `/alchemy-dev-bundle.js`, which the dev server serves
  * from the last `pixi run build` (see `vite.config.ts`). Two consequences worth
  * knowing: the frame shows what was last *built* rather than the sources on
  * screen, which the status line says out loud, and the payload has to be applied
@@ -107,7 +107,7 @@ interface ViewElement extends HTMLElement {
  * Walks up rather than being handed anything, so the one call site stays two
  * lines and no view has to pass anything down. The nearest one wins, which is
  * also the one worth having: the menu inside an embedded view belongs to that
- * view, and the outer `<gufe-view>` is a dispatcher whose handle knows nothing
+ * view, and the outer `<alchemy-view>` is a dispatcher whose handle knows nothing
  * about cameras.
  */
 function nearestView(node: HTMLElement): ViewElement | null {
@@ -121,7 +121,7 @@ function nearestView(node: HTMLElement): ViewElement | null {
  * Where the dev server serves the last built bundle. Nothing answers this
  * outside `pixi run dev`, which is what keeps the fallback to the dev pages.
  */
-const DEV_BUNDLE_URL = "/gufe-dev-bundle.js";
+const DEV_BUNDLE_URL = "/alchemy-dev-bundle.js";
 
 /** A bundle, and anything the person clicking should know about where it came from. */
 interface FoundBundle {
@@ -228,7 +228,7 @@ function restoreLines(state: UiState): string[] {
     "    if (key.startsWith(prefix) && key.endsWith(menuOpen)) localStorage.removeItem(key);",
     "  }",
     "} catch (e) {",
-    '  console.warn("[gufe-viz] could not clear menu state:", e);',
+    '  console.warn("[alchemy-viz] could not clear menu state:", e);',
     "}",
   );
   if (Object.keys(state.settings).length) {
@@ -238,7 +238,7 @@ function restoreLines(state: UiState): string[] {
       `  const stored = ${JSON.stringify(state.settings)};`,
       "  for (const key of Object.keys(stored)) localStorage.setItem(key, stored[key]);",
       "} catch (e) {",
-      '  console.warn("[gufe-viz] could not restore settings:", e);',
+      '  console.warn("[alchemy-viz] could not restore settings:", e);',
       "}",
     );
   }
@@ -265,7 +265,7 @@ export function framejsModule(bundle: string, payload: unknown, state: UiState):
   const payloadJson = JSON.stringify(JSON.stringify(payload));
   return [
     ...restoreLines(state),
-    "// Built by gufe-viz's share button from a generated page. The bundle below is",
+    "// Built by alchemy-viz's share button from a generated page. The bundle below is",
     "// that page's own script, unchanged; everything above it exists so the",
     "// bootstrap at the end of it finds the three elements it looks up.",
     'root.innerHTML = "";',
@@ -279,9 +279,9 @@ export function framejsModule(bundle: string, payload: unknown, state: UiState):
     'gufePayload.id = "gufe-payload";',
     `gufePayload.textContent = ${payloadJson};`,
     "root.appendChild(gufePayload);",
-    'const gufeView = document.createElement("gufe-view");',
-    'gufeView.style.cssText = "display:block;width:100%;height:100%;";',
-    "root.appendChild(gufeView);",
+    'const alchemyView = document.createElement("alchemy-view");',
+    'alchemyView.style.cssText = "display:block;width:100%;height:100%;";',
+    "root.appendChild(alchemyView);",
     "",
     bundle,
     "",
@@ -289,8 +289,8 @@ export function framejsModule(bundle: string, payload: unknown, state: UiState):
     "// own ends at `export` and has not, so this is what draws it there. Reading",
     "// the property rather than tracking which case we are in keeps the two from",
     "// having to agree about anything.",
-    "if (gufeView.payload == null) {",
-    "  gufeView.payload = JSON.parse(gufePayload.textContent);",
+    "if (alchemyView.payload == null) {",
+    "  alchemyView.payload = JSON.parse(gufePayload.textContent);",
     "}",
   ].join("\n");
 }
@@ -434,7 +434,7 @@ export function framejsMenuItem(panel: HTMLElement): void {
     // is what kind of picture it is, and a payload's name is often a hash or a
     // filename that says nothing.
     const named = payload as { type?: unknown };
-    const title = String(named.type || "gufe-viz");
+    const title = String(named.type || "alchemy-viz");
     const description = `${title}. Shared from alchemy-viz`;
     const done = (): void => {
       share.disabled = false;

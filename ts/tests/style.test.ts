@@ -190,7 +190,7 @@ describe("the palette as custom properties", () => {
     // view calls this from `connectedCallback`.
     installTheme();
     installTheme();
-    expect(document.querySelectorAll("style#gufe-viz-theme")).toHaveLength(1);
+    expect(document.querySelectorAll("style#alchemy-viz-theme")).toHaveLength(1);
   });
 
   it("switches the palette for the chrome and for what is drawn next", () => {

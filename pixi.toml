@@ -1,5 +1,5 @@
 [workspace]
-name = "gufe-viz"
+name = "alchemy-viz"
 description = "Visualization tools for gufe"
 authors = ["The OpenFE developers <openfe@omsf.io>"]
 channels = ["conda-forge"]
@@ -22,7 +22,7 @@ ruff = "*"
 pip = "*"
 
 [pypi-dependencies]
-gufe-viz = { path = ".", editable = true }
+alchemy-viz = { path = ".", editable = true }
 
 # --------------------------------------------------------------------------- #
 # Node                                                                          #
@@ -40,7 +40,7 @@ cmd = "npm run dev"
 depends-on = ["npm-install"]
 
 [tasks.build]
-description = "Bundle the TypeScript into python/gufe_viz/_assets/gufe-viz.js."
+description = "Bundle the TypeScript into python/alchemy_viz/_assets/alchemy-viz.js."
 cmd = "npm run build"
 depends-on = ["npm-install"]
 
@@ -88,7 +88,7 @@ marimo = "*"
 
 [feature.notebook.tasks.notebook]
 description = "JupyterLab on the demo notebook: every visualization type, every delivery mode."
-cmd = "jupyter lab examples/notebooks/gufe-viz-demo.ipynb"
+cmd = "jupyter lab examples/notebooks/alchemy-viz-demo.ipynb"
 depends-on = ["build"]
 
 [feature.notebook.tasks.marimo]
@@ -98,7 +98,7 @@ description = "The same demo, converted and opened in marimo."
 cmd = """
 rm -rf examples/notebooks/.marimo &&
 mkdir -p examples/notebooks/.marimo &&
-marimo convert examples/notebooks/gufe-viz-demo.ipynb -o examples/notebooks/.marimo/demo.py &&
+marimo convert examples/notebooks/alchemy-viz-demo.ipynb -o examples/notebooks/.marimo/demo.py &&
 marimo edit examples/notebooks/.marimo/demo.py
 """
 depends-on = ["build"]
@@ -114,18 +114,18 @@ notebook = ["notebook"]
 # Rendering                                                                     #
 # --------------------------------------------------------------------------- #
 #
-# `gufe-viz` is a console script from pyproject.toml, so it is already on PATH
-# inside this environment and `pixi run gufe-viz ...` would work with no task at
+# `alchemy-viz` is a console script from pyproject.toml, so it is already on PATH
+# inside this environment and `pixi run alchemy-viz ...` would work with no task at
 # all. It is declared anyway, because I use 'pixi run' by default, so it's a nice
 # convenience. Arguments after the task name are appended to `cmd`
 
-[tasks.gufe-viz]
-description = "Render a payload or gufe object as one page: `pixi run gufe-viz examples/small_molecule.json -o /tmp/mol.html`"
-cmd = "python -m gufe_viz.cli"
+[tasks.alchemy-viz]
+description = "Render a payload or gufe object as one page: `pixi run alchemy-viz examples/small_molecule.json -o /tmp/mol.html`"
+cmd = "python -m alchemy_viz.cli"
 
-[tasks.gufe-viz-debug]
+[tasks.alchemy-viz-debug]
 description = "The same, with the payload printed to the browser console (also reachable as <url>?debug)."
-cmd = "python -m gufe_viz.cli --debug"
+cmd = "python -m alchemy_viz.cli --debug"
 
 # --------------------------------------------------------------------------- #
 # Checks                                                                        #

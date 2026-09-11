@@ -14,7 +14,7 @@ import pytest
 
 REPO = pathlib.Path(__file__).resolve().parent.parent.parent
 EXAMPLES_DIR = REPO / "examples"
-SCHEMA_PATH = REPO / "schema" / "gufe-viz.schema.json"
+SCHEMA_PATH = REPO / "schema" / "alchemy-viz.schema.json"
 MUTATIONS_PATH = REPO / "python" / "tests" / "mutations.json"
 
 
@@ -65,8 +65,8 @@ def every_payload_type() -> dict[str, dict]:
     import warnings
 
     import gufe
-    from gufe_viz import payload_for
-    from gufe_viz.components import component_payload
+    from alchemy_viz import payload_for
+    from alchemy_viz.components import component_payload
     from rdkit import Chem
     from rdkit.Chem import AllChem
 

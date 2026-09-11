@@ -13,7 +13,7 @@ import "../src/index.js";
 import { DEBUG_GLOBAL, debugEnabled, debugQuery, payloadJson, withDebugFlag } from "../src/shared/debug.js";
 import { readExample } from "./helpers.js";
 
-type DebugGlobal = { GUFE_VIZ_DEBUG?: unknown };
+type DebugGlobal = { ALCHEMY_VIZ_DEBUG?: unknown };
 
 /** Everything the console prints in one call, as one string. */
 function captured(spies: { log: ReturnType<typeof vi.spyOn> }): string {
@@ -29,7 +29,7 @@ function spyOnConsole() {
 }
 
 function mountView(payload: unknown, attributes: Record<string, string> = {}): HTMLElement & { payload: unknown } {
-  const view = document.createElement("gufe-view") as HTMLElement & { payload: unknown };
+  const view = document.createElement("alchemy-view") as HTMLElement & { payload: unknown };
   for (const [name, value] of Object.entries(attributes)) view.setAttribute(name, value);
   document.body.appendChild(view);
   view.payload = payload;
@@ -38,11 +38,11 @@ function mountView(payload: unknown, attributes: Record<string, string> = {}): H
 
 describe("debugEnabled", () => {
   beforeEach(() => {
-    delete (globalThis as DebugGlobal).GUFE_VIZ_DEBUG;
+    delete (globalThis as DebugGlobal).ALCHEMY_VIZ_DEBUG;
     history.replaceState({}, "", "/");
   });
   afterEach(() => {
-    delete (globalThis as DebugGlobal).GUFE_VIZ_DEBUG;
+    delete (globalThis as DebugGlobal).ALCHEMY_VIZ_DEBUG;
     history.replaceState({}, "", "/");
     document.body.replaceChildren();
     vi.restoreAllMocks();
@@ -50,7 +50,7 @@ describe("debugEnabled", () => {
 
   it("is off by default", () => {
     expect(debugEnabled()).toBe(false);
-    expect(debugEnabled(document.createElement("gufe-view"))).toBe(false);
+    expect(debugEnabled(document.createElement("alchemy-view"))).toBe(false);
   });
 
   it("answers to ?debug in the URL, so a written page needs no rebuild", () => {
@@ -69,7 +69,7 @@ describe("debugEnabled", () => {
   });
 
   it("answers to the attribute `to_html(debug=True)` writes", () => {
-    const view = document.createElement("gufe-view");
+    const view = document.createElement("alchemy-view");
     view.setAttribute("debug", "");
     expect(debugEnabled(view)).toBe(true);
   });
@@ -147,13 +147,13 @@ describe("payloadJson", () => {
   });
 });
 
-describe("<gufe-view> payload logging", () => {
+describe("<alchemy-view> payload logging", () => {
   beforeEach(() => {
-    delete (globalThis as DebugGlobal).GUFE_VIZ_DEBUG;
+    delete (globalThis as DebugGlobal).ALCHEMY_VIZ_DEBUG;
     history.replaceState({}, "", "/");
   });
   afterEach(() => {
-    delete (globalThis as DebugGlobal).GUFE_VIZ_DEBUG;
+    delete (globalThis as DebugGlobal).ALCHEMY_VIZ_DEBUG;
     history.replaceState({}, "", "/");
     document.body.replaceChildren();
     vi.restoreAllMocks();
@@ -178,7 +178,7 @@ describe("<gufe-view> payload logging", () => {
     expect(JSON.parse(json!)).toEqual(payload);
     // ...and the live object too, for a console that can expand it.
     expect(printed).toContainEqual(payload);
-    expect(spies.group.mock.calls[0]?.[0]).toContain("gufe-viz");
+    expect(spies.group.mock.calls[0]?.[0]).toContain("alchemy-viz");
   });
 
   it("prints a payload that will not validate, which is the case it is for", () => {

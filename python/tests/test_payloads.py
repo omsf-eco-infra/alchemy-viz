@@ -11,8 +11,8 @@ import json
 import re
 
 import pytest
-from gufe_viz import payload_for
-from gufe_viz.components import component_payload
+from alchemy_viz import payload_for
+from alchemy_viz.components import component_payload
 
 from .conftest import REPO, SCHEMA_PATH
 
@@ -119,9 +119,9 @@ class TestContractParity:
         renders the "no visualization for X yet" panel, which is what a build
         should do when handed a payload whose view has not been written.
         """
-        source = (REPO / "ts" / "src" / "gufe-view.ts").read_text(encoding="utf-8")
+        source = (REPO / "ts" / "src" / "alchemy-view.ts").read_text(encoding="utf-8")
         table = re.search(r"VIEW_TAGS[^=]*=\s*\{(.*?)\}", source, re.S)
-        assert table, "could not find VIEW_TAGS in ts/src/gufe-view.ts"
+        assert table, "could not find VIEW_TAGS in ts/src/alchemy-view.ts"
 
         ts_types = set(re.findall(r"^\s*(\w+):", table.group(1), re.M))
         assert ts_types, "VIEW_TAGS parsed as empty - has its shape changed?"
@@ -189,7 +189,7 @@ class TestDispatch:
         Derived from the live class hierarchy so that a future gufe inserting a
         new subclass fails this rather than passing quietly.
         """
-        from gufe_viz.components import COMPONENT_BUILDERS
+        from alchemy_viz.components import COMPONENT_BUILDERS
 
         classes = [klass for klass, _ in COMPONENT_BUILDERS]
         for later, klass in enumerate(classes):
@@ -461,7 +461,7 @@ class TestBuilders:
 
     def test_a_score_annotation_becomes_the_edge_score(self):
         """`score` is the one annotation key the edge colouring reads."""
-        from gufe_viz.networks import mapping_score
+        from alchemy_viz.networks import mapping_score
 
         assert mapping_score({"score": 0.0}) == 0.0
         assert mapping_score({"score": 1}) == 1.0

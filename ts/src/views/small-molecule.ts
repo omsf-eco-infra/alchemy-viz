@@ -28,7 +28,7 @@
 import { el, NO_VALUE, errText } from "../shared/dom.js";
 import { switcher, toggleButton } from "../shared/controls.js";
 import { centredMessage, nameWanted, viewerHost } from "../shared/panels.js";
-import { defineElement, GufeElement, type ViewHandle } from "../shared/element.js";
+import { defineElement, AlchemyElement, type ViewHandle } from "../shared/element.js";
 import { choice, flag } from "../shared/settings.js";
 import { load3Dmol, loadRDKit, releaseViewer, ThreeDmol, type ThreeDmolViewer } from "../shared/engines.js";
 import { viewerInteraction, type BoundedZoom, type Interaction } from "../shared/interact.js";
@@ -64,7 +64,7 @@ const DEPICT_SIZE = 400;
 /** A pane of the stage: the whole of it, and invisible until it is the one in force. */
 const PANE = "position:absolute;inset:0;min-width:0;min-height:0;";
 
-export class GufeSmallMolecule extends GufeElement<SmallMoleculeComponentViz> {
+export class GufeSmallMolecule extends AlchemyElement<SmallMoleculeComponentViz> {
   protected override placeholder(): string {
     return "Waiting for a SmallMoleculeComponent payload...";
   }

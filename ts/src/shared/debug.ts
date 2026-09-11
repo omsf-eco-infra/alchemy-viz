@@ -12,8 +12,8 @@
  *
  *   `?debug` in the URL      an already-written page, without regenerating it
  *                            (`file:///.../out.html?debug` works too)
- *   `<gufe-view debug>`      baked in at export time: `to_html(obj, debug=True)`
- *   `window.GUFE_VIZ_DEBUG`  a host that mounts the element itself, such as a
+ *   `<alchemy-view debug>`      baked in at export time: `to_html(obj, debug=True)`
+ *   `window.ALCHEMY_VIZ_DEBUG`  a host that mounts the element itself, such as a
  *                            notebook widget: set it before setting `.payload`
  *
  * Nothing here is on any render path when the switch is off beyond one attribute
@@ -29,7 +29,7 @@ const URL_FLAGS = ["debug", "gufe-debug"];
 const DEBUG_ATTRIBUTE = "debug";
 
 /** The global a notebook widget or a console session can set. */
-export const DEBUG_GLOBAL = "GUFE_VIZ_DEBUG";
+export const DEBUG_GLOBAL = "ALCHEMY_VIZ_DEBUG";
 
 function globalFlag(): boolean {
   return Boolean((globalThis as Record<string, unknown>)[DEBUG_GLOBAL]);
@@ -79,7 +79,7 @@ export function logPayload(label: string, payload: unknown, element?: Element | 
 
   const json = payloadJson(payload);
   const type = (payload as { type?: unknown } | null)?.type;
-  const heading = `[gufe-viz] ${label}${typeof type === "string" ? ` ${type}` : ""} (${json.length} chars)`;
+  const heading = `[alchemy-viz] ${label}${typeof type === "string" ? ` ${type}` : ""} (${json.length} chars)`;
 
   // `groupCollapsed` keeps a megabyte of PDB out of the way until it is wanted,
   // and degrades to a plain log in consoles that do not implement it.

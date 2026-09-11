@@ -8,7 +8,7 @@ When the input is a saved gufe ``.json`` file, Python deserializes it into live
 gufe objects *first* and then builds the payload from those. TypeScript never
 sees gufe JSON.
 
-Builders return **plain dicts**. ``schema/gufe-viz.schema.json`` is the source of
+Builders return **plain dicts**. ``schema/alchemy-viz.schema.json`` is the source of
 truth for their shape, and it is hand-written rather than generated from
 anything here: a schema derived from Python carries across only what the
 derivation step happens to translate, so a rule can be enforced in the code and

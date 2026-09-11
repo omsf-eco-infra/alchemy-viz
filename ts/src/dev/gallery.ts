@@ -2,7 +2,7 @@
  * The gallery: every component, every example payload, one scrolling page.
  *
  * The point is that a change in one place can be checked everywhere it shows up,
- * in one reload. Each example renders through `<gufe-view>` the real dispatch
+ * in one reload. Each example renders through `<alchemy-view>` the real dispatch
  * path, and once the shared components exist this will also render them in
  * their *embedded* contexts, so the atom-mapping viewer can be checked
  * standalone, inside the ligand network and inside the transformation view at
@@ -61,9 +61,9 @@ export async function buildGallery(host: HTMLElement): Promise<void> {
   header.style.cssText =
     "padding:16px 20px 4px;font:13px/1.5 ui-sans-serif,system-ui,sans-serif;" + `color:${V.textMuted};`;
   header.innerHTML =
-    `<h1 style="margin:0 0 4px;font-size:18px;color:${V.titleColor};">gufe-viz gallery</h1>` +
+    `<h1 style="margin:0 0 4px;font-size:18px;color:${V.titleColor};">alchemy-viz gallery</h1>` +
     `<div>${paths.length} example payload${paths.length === 1 ? "" : "s"} from <code>examples/</code>, ` +
-    "each rendered through <code>&lt;gufe-view&gt;</code>. " +
+    "each rendered through <code>&lt;alchemy-view&gt;</code>. " +
     `<a href="${withDebugFlag("./parity.html")}" style="color:${V.titleColor};">mapping parity -&gt;</a></div>`;
   host.appendChild(header);
 

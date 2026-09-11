@@ -23,7 +23,7 @@ import { dropdown } from "../shared/controls.js";
 import { centredMessage, floatingWarning, headerStrip, statChip } from "../shared/panels.js";
 import { chromeMenu, orientMenuPanel, splitter } from "../shared/chrome.js";
 import { framejsMenuItem } from "../shared/framejs.js";
-import { defineElement, generations, GufeElement, seededViewState, type ViewHandle } from "../shared/element.js";
+import { defineElement, generations, AlchemyElement, seededViewState, type ViewHandle } from "../shared/element.js";
 import { choice, flag, num, type Setting } from "../shared/settings.js";
 import { svg } from "../shared/svg.js";
 import { resetControl } from "../shared/interact.js";
@@ -969,7 +969,7 @@ interface NetworkScene {
   cleanup(): void;
 }
 
-export class GufeLigandNetwork extends GufeElement<LigandNetworkViz> {
+export class GufeLigandNetwork extends AlchemyElement<LigandNetworkViz> {
   protected override placeholder(): string {
     return "Waiting for a LigandNetwork payload...";
   }

@@ -749,7 +749,7 @@ def _stabilise(payload: dict) -> dict:
 
 
 def main() -> int:
-    from gufe_viz import payload_for
+    from alchemy_viz import payload_for
 
     OUT.mkdir(parents=True, exist_ok=True)
 

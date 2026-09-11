@@ -70,7 +70,7 @@ export function laidOut(RDKit: RDKitModule, sdf: string, layout: Layout2D): stri
     rdmol.set_new_coords(layout === "coordgen");
     return rdmol.get_molblock() || sdf;
   } catch (e) {
-    console.warn("[gufe-viz] could not lay out a molecule in 2D -", errText(e));
+    console.warn("[alchemy-viz] could not lay out a molecule in 2D -", errText(e));
     return sdf;
   } finally {
     if (rdmol) {
@@ -224,7 +224,7 @@ export function alignedToPartner(left: string, right: string, pairs: Iterable<re
       turn.mirror,
     );
   } catch (e) {
-    console.warn("[gufe-viz] could not align a depiction to its partner -", errText(e));
+    console.warn("[alchemy-viz] could not align a depiction to its partner -", errText(e));
     return right;
   }
 }

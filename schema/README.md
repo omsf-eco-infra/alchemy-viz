@@ -4,13 +4,13 @@ Two schemas live here, and they answer different questions.
 
 | file | says | written by |
 |---|---|---|
-| `gufe-viz.schema.json` | what a gufe object **is** | a Python payload builder |
+| `alchemy-viz.schema.json` | what a gufe object **is** | a Python payload builder |
 | `depict-style.schema.json` | how a ligand pair is **drawn** in 2D | a person, in the editor linked below |
 
 Everything below is about the first one. The second is described in
 [Depiction style](#depiction-style) at the end.
 
-`gufe-viz.schema.json` **is the gate between Python and TypeScript.** Nothing
+`alchemy-viz.schema.json` **is the gate between Python and TypeScript.** Nothing
 reaches the browser except data that validates against it.
 
 Python builds a payload and validates it here; TypeScript validates
@@ -20,7 +20,7 @@ gets to assume the other's shape.
 ## Hand-written - edit this file directly
 
 ```
-schema/gufe-viz.schema.json   <- this file. The source of truth.
+schema/alchemy-viz.schema.json   <- this file. The source of truth.
         |                     Nothing generates it.
         |  pixi run types
         v
@@ -240,7 +240,7 @@ If you change this file, add the row that proves the change does what you meant.
 how `<gufe-atom-mapping>` draws a ligand pair in 2D. Marking style, ring shape,
 hydrogen treatment, letter and bond sizes, every colour.
 
-It is deliberately **not** part of `gufe-viz.schema.json`. That schema describes
+It is deliberately **not** part of `alchemy-viz.schema.json`. That schema describes
 what a gufe object is, and every field in it is written by a payload builder
 from a real object. Nothing in this one is: it is entirely taste, it describes no
 gufe object, and a transformation drawn twice with two different styles is the

@@ -208,8 +208,8 @@ def build(count: int, edges_per_node: int, seed: int) -> tuple[list, dict]:
     The molecules come back as well as the payload because `--sdf` freezes them,
     and they are the half of this network that is real.
     """
+    from alchemy_viz import payload_for
     from gufe import LigandNetwork
-    from gufe_viz import payload_for
 
     print(f"building a {count}-ligand network")
     mols = _molecules(count, seed)
@@ -305,7 +305,7 @@ def main(argv: list[str] | None = None) -> int:
 
     html_bytes = None
     if args.html is not None:
-        from gufe_viz import to_html
+        from alchemy_viz import to_html
 
         page = destination.with_suffix(".html") if args.html is True else args.html
         html = to_html(payload)

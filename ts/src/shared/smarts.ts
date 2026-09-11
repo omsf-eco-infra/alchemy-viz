@@ -118,7 +118,7 @@ function matchAtoms(RDKit: RDKitModule, query: RDKitMol, source: string, removeH
     }
     return [...atoms].sort((a, b) => a - b);
   } catch (e) {
-    console.warn("[gufe-viz] SMARTS match threw -", errText(e));
+    console.warn("[alchemy-viz] SMARTS match threw -", errText(e));
     return null;
   } finally {
     release(mol);

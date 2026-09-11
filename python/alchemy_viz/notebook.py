@@ -1,9 +1,9 @@
-"""``gufe_viz.view(obj)`` - the visualization page in a notebook cell.
+"""``alchemy_viz.view(obj)`` - the visualization page in a notebook cell.
 
 Two layers come out of one call, because two different things are being asked
 for and they are not the same thing:
 
-* **static** - the page :func:`gufe_viz.to_html` produces, in an
+* **static** - the page :func:`alchemy_viz.to_html` produces, in an
   ``<iframe srcdoc>``, offered as ``text/html``. Needs no dependency and no
   kernel, so a saved notebook still draws when it is mailed, exported by
   nbconvert, or opened by someone who has none of this installed.
@@ -12,7 +12,7 @@ for and they are not the same thing:
   which is the update beat of the element lifecycle.
 
 Both end at the same two lines the HTML export ends at: create a
-``<gufe-view>``, set its ``.payload``. The frontend chooses which layer it
+``<alchemy-view>``, set its ``.payload``. The frontend chooses which layer it
 renders; a live kernel with a widget manager takes the widget, everything else
 falls back to the page.
 
@@ -21,7 +21,7 @@ CSS pollution and other javascript and DOM errors. Third party modules for
 visualization will also likely conflict with notebook webpage logic, so keeping
 things cleanly separate as an Iframe is necessary and costs nothing.
 
-anywidget is an optional dependency (``pip install gufe-viz[notebook]``).
+anywidget is an optional dependency (``pip install alchemy-viz[notebook]``).
 Without it, :func:`view` returns the static layer alone and says nothing about
 it - a picture is a picture.
 """
@@ -41,7 +41,7 @@ DEFAULT_HEIGHT = "600px"
 # `srcdoc` iframe is same-origin and the parent can simply reach in.
 #
 # `load` is the handshake: a module script delays it, so by the time it fires
-# the custom elements are defined and `<gufe-view>` has been upgraded. Setting
+# the custom elements are defined and `<alchemy-view>` has been upgraded. Setting
 # `.payload` earlier would create an own property shadowing the class accessor,
 # and the view would never draw.
 _ESM = """
@@ -56,7 +56,7 @@ function render({ model, el }) {
   };
 
   iframe.addEventListener("load", () => {
-    view = iframe.contentDocument.querySelector("gufe-view");
+    view = iframe.contentDocument.querySelector("alchemy-view");
     draw();
   });
 
@@ -91,7 +91,7 @@ def _iframe(page: str, height: str) -> str:
 def _summary(payload: dict[str, Any]) -> str:
     """One line for a frontend that renders no HTML at all."""
     name = payload.get("name")
-    kind = payload.get("type", "gufe-viz")
+    kind = payload.get("type", "alchemy-viz")
     return f"<{kind}{': ' + name if name else ''}>"
 
 
@@ -102,7 +102,7 @@ class StaticView:
     it as :attr:`page` for anyone who wants to write it somewhere.
     """
 
-    def __init__(self, page: str, *, height: str = DEFAULT_HEIGHT, summary: str = "gufe-viz") -> None:
+    def __init__(self, page: str, *, height: str = DEFAULT_HEIGHT, summary: str = "alchemy-viz") -> None:
         self.page = page
         self.height = height
         self._summary = summary
@@ -126,7 +126,7 @@ def _widget_type():
     """The anywidget subclass, built on first use.
 
     Defined inside a function because ``anywidget`` is optional: importing it at
-    module scope would make ``import gufe_viz`` fail without it, which is the
+    module scope would make ``import alchemy_viz`` fail without it, which is the
     opposite of what an optional dependency means.
     """
     global _widget_class
@@ -137,12 +137,12 @@ def _widget_type():
     import traitlets
 
     class GufeWidget(anywidget.AnyWidget):
-        """One ``<gufe-view>``, live.
+        """One ``<alchemy-view>``, live.
 
         Assign a new payload - or a new gufe object, which is coerced - and the
         view redraws in place::
 
-            w = gufe_viz.view(ligand)
+            w = alchemy_viz.view(ligand)
             w.payload = other_ligand
         """
 
@@ -161,7 +161,7 @@ def _widget_type():
         static_page = traitlets.Unicode("")
 
         #: What a frontend shows when it renders neither.
-        summary = traitlets.Unicode("gufe-viz")
+        summary = traitlets.Unicode("alchemy-viz")
 
         @traitlets.validate("payload")
         def _coerce_payload(self, proposal):
@@ -238,7 +238,7 @@ def view(
     Raises
     ------
     TypeError
-        If ``obj`` is not something gufe-viz can visualize.
+        If ``obj`` is not something alchemy-viz can visualize.
     """
     payload = _as_payload_dict(obj)
     summary = _summary(payload)
@@ -251,7 +251,7 @@ def view(
 
         if widget_type is not None:
             return widget_type(
-                _shell=shell_html(title=title or "gufe-viz"),
+                _shell=shell_html(title=title or "alchemy-viz"),
                 payload=payload,
                 height=height,
                 static_page=to_html(payload, title=title) if static else "",

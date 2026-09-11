@@ -1,8 +1,8 @@
 /**
- * `<gufe-view>`: the dispatcher, and the browser end of the contract.
+ * `<alchemy-view>`: the dispatcher, and the browser end of the contract.
  *
  * Set `.payload` and it does two things in order: validate against
- * `schema/gufe-viz.schema.json`, then mount the `<gufe-*>` element that claims
+ * `schema/alchemy-viz.schema.json`, then mount the `<gufe-*>` element that claims
  * the payload's `type`.
  *
  * There is no version check, because a payload carries no version field. Every
@@ -18,7 +18,7 @@
  * that names what happened and where.
  *
  * When the debug switch is on (`?debug` in the URL, a `debug` attribute on the
- * element, or `window.GUFE_VIZ_DEBUG`) the payload is also printed to the
+ * element, or `window.ALCHEMY_VIZ_DEBUG`) the payload is also printed to the
  * console verbatim, before it is validated. That is the answer to "what JSON did
  * the browser actually get?", which is otherwise unreadable inside the page.
  */
@@ -28,7 +28,7 @@ import { centredMessage } from "./shared/panels.js";
 import { logPayload } from "./shared/debug.js";
 import {
   defineElement,
-  GufeElement,
+  AlchemyElement,
   type ViewHandle,
 } from "./shared/element.js";
 import { V } from "./shared/theme.js";
@@ -82,7 +82,7 @@ export function describeProblem(payload: unknown): DispatchProblem | null {
   ) {
     return {
       message:
-        "This does not look like a gufe-viz payload (expected a JSON object).",
+        "This does not look like a alchemy-viz payload (expected a JSON object).",
     };
   }
 
@@ -103,7 +103,7 @@ export function describeProblem(payload: unknown): DispatchProblem | null {
   const { valid, issues } = validatePayload(payload);
   if (!valid) {
     return {
-      message: `This payload says it is a ${type}, but it does not match the gufe-viz schema.`,
+      message: `This payload says it is a ${type}, but it does not match the alchemy-viz schema.`,
       detail: formatIssues(issues),
     };
   }
@@ -117,7 +117,7 @@ function noVisualization(type: string): DispatchProblem {
   };
 }
 
-export class GufeView extends GufeElement<unknown> {
+export class AlchemyView extends AlchemyElement<unknown> {
   protected override placeholder(): string {
     return "Waiting for data...";
   }
@@ -212,4 +212,4 @@ function describePayload(payload: unknown): string | null {
   return bits.length ? bits.join("\n") : null;
 }
 
-defineElement("gufe-view", GufeView);
+defineElement("alchemy-view", AlchemyView);

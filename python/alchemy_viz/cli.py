@@ -1,10 +1,10 @@
-"""``gufe-viz <input> [-o out.html]`` - a development convenience.
+"""``alchemy-viz <input> [-o out.html]`` - a development convenience.
 
 **This is not the OpenFE CLI integration.** It exists so the edit -> rebuild ->
 reload loop is one command, and so that when `openfe view` is wired up later
 there is a working reference implementation to point it at.
 
-Input may be either a gufe-viz payload JSON - the files in ``examples/`` - or a
+Input may be either a alchemy-viz payload JSON - the files in ``examples/`` - or a
 serialized gufe object, which is deserialized into live gufe objects first and
 only then turned into a payload. TypeScript never sees gufe's JSON.
 """
@@ -34,9 +34,9 @@ def _looks_like_payload(value: object) -> bool:
 
 
 def load(path: Path) -> GufeTokenizable:
-    """Return something :func:`gufe_viz.to_html` can render.
+    """Return something :func:`alchemy_viz.to_html` can render.
 
-    Tries, in order: a gufe-viz payload, then a serialized gufe object.
+    Tries, in order: a alchemy-viz payload, then a serialized gufe object.
     """
     text = path.read_text(encoding="utf-8")
 
@@ -59,13 +59,13 @@ def _load_gufe_object(text: str, path: Path) -> GufeTokenizable:
     other paths write ``to_json``, and the keyed-chain form is different again.
     Rather than guess, this tries the documented entry point and, on failure,
     says exactly that: the payload path above always works, and building the
-    object in Python and calling ``gufe_viz.to_html`` directly always works.
+    object in Python and calling ``alchemy_viz.to_html`` directly always works.
     """
     try:
         from gufe.tokenization import JSON_HANDLER, GufeTokenizable
     except ImportError as e:
         raise SystemExit(
-            f"{path} is not a gufe-viz payload, and gufe is not installed to read it as a gufe object. "
+            f"{path} is not a alchemy-viz payload, and gufe is not installed to read it as a gufe object. "
             f"Install gufe from conda-forge - `conda install -c conda-forge gufe` - not from PyPI, "
             f"where it is stuck at a pre-1.0 release. ({e})"
         ) from e
@@ -74,23 +74,23 @@ def _load_gufe_object(text: str, path: Path) -> GufeTokenizable:
         return GufeTokenizable.from_dict(json.loads(text, cls=JSON_HANDLER.decoder))
     except Exception as e:  # noqa: BLE001 - every failure mode gets the same advice
         raise SystemExit(
-            f"{path}: could not read this as a gufe-viz payload or as a serialized gufe object "
+            f"{path}: could not read this as a alchemy-viz payload or as a serialized gufe object "
             f"({type(e).__name__}: {e}).\n"
             f"\n"
             f"gufe has more than one serialization form and which of them round-trips is still an "
             f"open question. Two things that always work:\n"
-            f"  - point this at a gufe-viz payload, such as the files in examples/;\n"
-            f"  - build the object in Python and call gufe_viz.to_html(obj) yourself."
+            f"  - point this at a alchemy-viz payload, such as the files in examples/;\n"
+            f"  - build the object in Python and call alchemy_viz.to_html(obj) yourself."
         ) from e
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        prog="gufe-viz",
-        description="Render a gufe object or a gufe-viz payload as one self-contained HTML file.",
+        prog="alchemy-viz",
+        description="Render a gufe object or a alchemy-viz payload as one self-contained HTML file.",
         epilog="A development convenience, not the OpenFE CLI integration.",
     )
-    parser.add_argument("input", type=Path, help="a gufe-viz payload JSON, or a serialized gufe object")
+    parser.add_argument("input", type=Path, help="a alchemy-viz payload JSON, or a serialized gufe object")
     parser.add_argument(
         "-o",
         "--output",

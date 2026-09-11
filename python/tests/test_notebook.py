@@ -1,4 +1,4 @@
-"""``gufe_viz.view``: what a notebook cell actually receives.
+"""``alchemy_viz.view``: what a notebook cell actually receives.
 
 Two things are tested here:
  - a cell shows the same page the CLI writes
@@ -12,8 +12,8 @@ from __future__ import annotations
 import html as _stdlib_html
 
 import pytest
-from gufe_viz import StaticView, shell_html, to_html, view
-from gufe_viz.notebook import DEFAULT_HEIGHT
+from alchemy_viz import StaticView, shell_html, to_html, view
+from alchemy_viz.notebook import DEFAULT_HEIGHT
 
 WIDGET_MIME = "application/vnd.jupyter.widget-view+json"
 
@@ -70,7 +70,7 @@ class TestTheShell:
         shell = shell_html()
 
         assert shell.startswith("<!doctype html>")
-        assert "<gufe-view></gufe-view>" in shell
+        assert "<alchemy-view></alchemy-view>" in shell
         assert 'id="gufe-payload"' not in shell
         # ...and so the bootstrap that reads it is gone too.
         assert 'getElementById("gufe-payload")' not in shell
@@ -78,7 +78,7 @@ class TestTheShell:
     def test_it_carries_the_same_bundle_as_the_page(self, example):
         _, payload = example
         # Same title, so the only differences left are the two deliberate ones.
-        page = to_html(payload, title="gufe-viz")
+        page = to_html(payload, title="alchemy-viz")
         shell = shell_html()
 
         # The shell is a strict subset: everything in it that is not the payload

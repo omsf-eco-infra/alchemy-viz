@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://raw.githubusercontent.com/omsf-eco-infra/gufe-viz/main/schema/depict-style.schema.json",
-  "title": "gufe-viz 2D depiction style",
-  "description": "How a ligand pair is drawn in 2D. Separate from gufe-viz.schema.json on purpose: that schema describes what a payload IS, and nothing in it comes from a person's taste. This one is entirely taste, it describes no gufe object, and it is authored by hand in the editor at https://framejs.app/j/5df86d91e8824b20a02908b52a6f07c3 rather than written by a payload builder. The editor draws real transformation pairs with these values live, then exports this document; drop the exported file over ts/src/shared/depict-style.json and it is compiled into the bundle. The editor's own panel is the reference for what each key does to the picture. Every key is optional: what is absent takes the built-in default. The built-in defaults reproduce the picture gufe-viz drew before this document existed, with the exception of `layout` and `alignPair`, which default to what gufe itself does: gufe regenerates 2D coordinates and aligns the pair before drawing, and gufe-viz did neither.",
+  "$id": "https://raw.githubusercontent.com/omsf-eco-infra/alchemy-viz/main/schema/depict-style.schema.json",
+  "title": "alchemy-viz 2D depiction style",
+  "description": "How a ligand pair is drawn in 2D. Separate from alchemy-viz.schema.json on purpose: that schema describes what a payload IS, and nothing in it comes from a person's taste. This one is entirely taste, it describes no gufe object, and it is authored by hand in the editor at https://framejs.app/j/5df86d91e8824b20a02908b52a6f07c3 rather than written by a payload builder. The editor draws real transformation pairs with these values live, then exports this document; drop the exported file over ts/src/shared/depict-style.json and it is compiled into the bundle. The editor's own panel is the reference for what each key does to the picture. Every key is optional: what is absent takes the built-in default. The built-in defaults reproduce the picture alchemy-viz drew before this document existed, with the exception of `layout` and `alignPair`, which default to what gufe itself does: gufe regenerates 2D coordinates and aligns the pair before drawing, and alchemy-viz did neither.",
   "type": "object",
   "additionalProperties": false,
   "required": ["version"],
@@ -29,7 +29,7 @@
 
     "style": {
       "title": "style",
-      "description": "How a marked atom's bonds are drawn. `rdkit` hands RDKit both the marked atoms and their bonds and post-processes nothing, which is what gufe-viz drew before this document existed and is the default. `recolor` takes RDKit's plain drawing and swaps the stroke of the affected bond paths to the marker colour, so there is no black bond underneath and the coloured line is a normal bond width. `halo` puts a wide translucent band under the bond instead, and repaints the black centre line on top of it. `recolor` and `halo` both need RDKit to tag its SVG with `class=\"bond-K atom-A atom-B\"`; a build that does not falls back to `rdkit`.",
+      "description": "How a marked atom's bonds are drawn. `rdkit` hands RDKit both the marked atoms and their bonds and post-processes nothing, which is what alchemy-viz drew before this document existed and is the default. `recolor` takes RDKit's plain drawing and swaps the stroke of the affected bond paths to the marker colour, so there is no black bond underneath and the coloured line is a normal bond width. `halo` puts a wide translucent band under the bond instead, and repaints the black centre line on top of it. `recolor` and `halo` both need RDKit to tag its SVG with `class=\"bond-K atom-A atom-B\"`; a build that does not falls back to `rdkit`.",
       "enum": ["rdkit", "recolor", "halo"],
       "default": "rdkit"
     },

@@ -33,7 +33,7 @@
 import { el, NO_VALUE, onNarrow } from "../shared/dom.js";
 import { buttonGroup } from "../shared/controls.js";
 import { centredMessage, statChip, typeBadge } from "../shared/panels.js";
-import { defineElement, GufeElement, type ViewHandle } from "../shared/element.js";
+import { defineElement, AlchemyElement, type ViewHandle } from "../shared/element.js";
 import { FONT, PANE_LABEL, RADIUS, SPACE, WEIGHT } from "../shared/style.js";
 import { V } from "../shared/theme.js";
 import { buildRegistry, entriesFor, entryLabel, lookup, lookupOfType, type RegistryIndex } from "../schema/registry.js";
@@ -250,7 +250,7 @@ function metaLine(label: string, value: string): HTMLDivElement {
   return row;
 }
 
-export class GufeTransformation extends GufeElement<TransformationViz> {
+export class GufeTransformation extends AlchemyElement<TransformationViz> {
   protected override placeholder(): string {
     return "Waiting for a Transformation payload...";
   }

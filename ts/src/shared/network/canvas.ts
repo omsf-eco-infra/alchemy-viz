@@ -10,7 +10,7 @@
  *   `draggableNodes` dragging a node, and telling a drag from a click
  *   `Depictions`     which structures are drawn, which failed, which are stale
  *   `visibleAt`      the nodes on screen, plus a margin so panning does not tear
- *   `detailPane`     one `<gufe-view>`, re-pointed rather than rebuilt
+ *   `detailPane`     one `<alchemy-view>`, re-pointed rather than rebuilt
  *
  * Each of those carries a rule that is invisible when it holds and expensive
  * when it does not: a pinch must abandon a drag in progress, a molecule RDKit
@@ -237,7 +237,7 @@ export interface DetailPane {
  * The pane beside a graph: whatever is selected, drawn by the view that draws
  * that kind of thing.
  *
- * One `<gufe-view>`, created once and re-pointed. Two reasons the nested
+ * One `<alchemy-view>`, created once and re-pointed. Two reasons the nested
  * dispatcher is better than naming the elements here: clicking along a row of
  * edges is then an update rather than a rebuild, so a mapping's own 3D viewers
  * are not torn down and rebuilt on every click; and which element draws a
@@ -253,7 +253,7 @@ export function detailPane(host: HTMLElement): DetailPane {
   const body = el("div", "flex:1;min-height:0;display:flex;flex-direction:column;");
   host.appendChild(body);
 
-  const child = document.createElement("gufe-view") as HTMLElement & { payload: unknown };
+  const child = document.createElement("alchemy-view") as HTMLElement & { payload: unknown };
   child.style.cssText = "flex:1;min-width:0;min-height:0;display:flex;";
 
   return {

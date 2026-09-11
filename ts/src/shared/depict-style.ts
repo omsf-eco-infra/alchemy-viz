@@ -22,7 +22,7 @@
  *
  * ## Why it is not part of the payload
  *
- * `schema/gufe-viz.schema.json` describes what a gufe object *is*, and every
+ * `schema/alchemy-viz.schema.json` describes what a gufe object *is*, and every
  * field in it is written by a payload builder from a real object. Nothing in
  * this file is: it is entirely taste, it describes no gufe object, and a
  * transformation drawn twice with two different styles is the same
@@ -433,7 +433,7 @@ export function svgClassesSupported(RDKit: RDKitModule): boolean {
     }
   }
   if (!svgClassSupport) {
-    console.warn("[gufe-viz] this RDKit build emits no bond/atom classes - drawing without bond marking");
+    console.warn("[alchemy-viz] this RDKit build emits no bond/atom classes - drawing without bond marking");
   }
   return svgClassSupport;
 }
@@ -538,7 +538,7 @@ export function depictStyledSVG(
     if (!rdmol.get_svg_with_highlights) return rdmol.get_svg(size, size) || null;
     return rdmol.get_svg_with_highlights(JSON.stringify(details)) || null;
   } catch (e) {
-    console.warn("[gufe-viz] depictStyledSVG threw -", errText(e));
+    console.warn("[alchemy-viz] depictStyledSVG threw -", errText(e));
     return null;
   } finally {
     if (rdmol) {

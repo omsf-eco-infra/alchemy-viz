@@ -8,12 +8,12 @@ Two files: one to run in a real notebook environment with kernel, the other is g
 
 | file | outputs in git | what it is |
 |---|---|---|
-| [`gufe-viz-demo.ipynb`](./gufe-viz-demo.ipynb) | **none** | Run it this locally |
-| [`gufe-viz-gallery.ipynb`](./gufe-viz-gallery.ipynb) | screenshots, ~660 kB | Renders on GitHub. |
+| [`alchemy-viz-demo.ipynb`](./alchemy-viz-demo.ipynb) | **none** | Run it this locally |
+| [`alchemy-viz-gallery.ipynb`](./alchemy-viz-gallery.ipynb) | screenshots, ~660 kB | Renders on GitHub. |
 
 ---
 
-## `gufe-viz-demo.ipynb` - real notebook to run
+## `alchemy-viz-demo.ipynb` - real notebook to run
 
 Every payload type, the live-gufe-object path, and every way of delivering a
 view: static only, live with update-in-place, `static=False`, `to_html` to a
@@ -30,7 +30,7 @@ It is committed **with no outputs**, and should stay that way. Its outputs are
 quarter of a megabyte per view to a file that is otherwise 20 kB - and none of
 it renders on GitHub anyway. Clear outputs before committing.
 
-## `gufe-viz-gallery.ipynb` - the one you look at online
+## `alchemy-viz-gallery.ipynb` - the one you look at online
 
 The same views, as pictures, so that **the visualizations are visible on GitHub
 to someone who is not going to install anything** - a reviewer on a pull
@@ -39,7 +39,7 @@ request, mostly.
 ### Why it has to exist
 
 GitHub's notebook renderer strips `<iframe>` and `<script>` from cell outputs.
-That is everything `gufe_viz.view()` emits: the static layer is an
+That is everything `alchemy_viz.view()` emits: the static layer is an
 `<iframe srcdoc>` holding the page, and the live layer is a widget that needs a
 kernel and a widget manager, neither of which GitHub has. So an executed copy of
 the demo notebook shows a blank under every single cell there, however well it
@@ -49,7 +49,7 @@ works in a browser.
 
 ### It is a picture of the truth, not the truth
 
-The cells hold the **real** `gufe_viz.view(payloads[...])` call. Run the gallery
+The cells hold the **real** `alchemy_viz.view(payloads[...])` call. Run the gallery
 notebook and every screenshot is replaced by the live, interactive view - which
 is a fine way to check that a picture is honest, and a bad way to leave the file.
 

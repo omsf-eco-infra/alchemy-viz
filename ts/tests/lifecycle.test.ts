@@ -9,13 +9,13 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import "../src/index.js";
-import { defineElement, GufeElement, type ViewHandle } from "../src/shared/element.js";
+import { defineElement, AlchemyElement, type ViewHandle } from "../src/shared/element.js";
 import { clearFakeEngines, flush, readExample, seedFakeEngines, type SeededEnginesResult } from "./helpers.js";
 
 // A minimal element that records every beat of its own lifecycle.
 const log: string[] = [];
 
-class ProbeElement extends GufeElement<{ id: string }> {
+class ProbeElement extends AlchemyElement<{ id: string }> {
   protected renderView(host: HTMLDivElement, payload: { id: string }): ViewHandle {
     log.push(`create:${payload.id}`);
     host.appendChild(document.createElement("span")).textContent = payload.id;
@@ -27,7 +27,7 @@ class ProbeElement extends GufeElement<{ id: string }> {
 }
 defineElement("probe-element", ProbeElement);
 
-describe("GufeElement lifecycle", () => {
+describe("AlchemyElement lifecycle", () => {
   beforeEach(() => {
     log.length = 0;
   });
@@ -112,8 +112,8 @@ describe("view teardown releases its engine handles", () => {
     expect(engines.viewers[0].cleared).toBe(true);
   });
 
-  it("<gufe-view> tears the child element down when the payload changes kind", async () => {
-    const view = document.createElement("gufe-view") as HTMLElement & { payload: unknown };
+  it("<alchemy-view> tears the child element down when the payload changes kind", async () => {
+    const view = document.createElement("alchemy-view") as HTMLElement & { payload: unknown };
     document.body.appendChild(view);
 
     view.payload = readExample("small_molecule.json");

@@ -9,9 +9,9 @@
  *
  * The whole of the browser-facing contract is two lines a host writes:
  *
- *     document.querySelector("gufe-view").payload = payload;
+ *     document.querySelector("alchemy-view").payload = payload;
  *
- * That is what `python/gufe_viz/html.py` does, what `notebook.py` does, and what
+ * That is what `python/alchemy_viz/html.py` does, what `notebook.py` does, and what
  * `ts/tests/bundle.test.ts` drives the built artifact through. Every test in the
  * suite imports this file for its side effects alone and then reaches into
  * `src/**` directly for anything it needs to inspect.
@@ -27,7 +27,7 @@
  * to add back, with a caller to justify it.
  */
 
-import "./gufe-view.js";
+import "./alchemy-view.js";
 import "./views/small-molecule.js";
 import "./views/protein.js";
 import "./views/ligand-network.js";
@@ -46,7 +46,7 @@ import { installTheme } from "./shared/theme.js";
 /**
  * The palette, as soon as the bundle is evaluated.
  *
- * `GufeElement.connectedCallback` installs it too, which covers a host that
+ * `AlchemyElement.connectedCallback` installs it too, which covers a host that
  * builds an element without going through this file. This call is for everything
  * *around* the elements: the dev pages build their own chrome out of `V` and may
  * draw it before any `<gufe-*>` has connected - a dropzone with nothing dropped
@@ -56,7 +56,7 @@ import { installTheme } from "./shared/theme.js";
 installTheme();
 
 /** The dispatch table, for a caller asking the bundle what it can draw. */
-export { VIEW_TAGS } from "./gufe-view.js";
+export { VIEW_TAGS } from "./alchemy-view.js";
 
 /** Every `type` the schema declares, drawn or not. */
 export { PAYLOAD_TYPES } from "./schema/validate.js";
@@ -64,7 +64,7 @@ export { PAYLOAD_TYPES } from "./schema/validate.js";
 /**
  * The settings a view has remembered, on the console.
  *
- * `window.gufeViz.settings()` answers "what state was this actually in" without
+ * `window.alchemyViz.settings()` answers "what state was this actually in" without
  * a hunt through a storage inspector, and `reset()` puts every view back to how
  * a new reader would find it. Attached the same way the debug switch is: a
  * global, because the thing you need it for is a page you are already looking
@@ -72,9 +72,9 @@ export { PAYLOAD_TYPES } from "./schema/validate.js";
  */
 declare global {
   // eslint-disable-next-line no-var
-  var gufeViz: { settings: typeof settings; reset: typeof resetSettings } | undefined;
+  var alchemyViz: { settings: typeof settings; reset: typeof resetSettings } | undefined;
 }
 
 if (typeof globalThis !== "undefined") {
-  globalThis.gufeViz = { settings, reset: resetSettings };
+  globalThis.alchemyViz = { settings, reset: resetSettings };
 }

@@ -233,7 +233,7 @@ describe("<gufe-chemical-system> with a bound complex", () => {
     // The whole scene is what a reader who has never opened one of these
     // should land on, so the per-component dispatcher is not even mounted yet.
     expect(node.querySelector("gufe-complex")).toBeTruthy();
-    expect(node.querySelector("gufe-view")).toBeNull();
+    expect(node.querySelector("alchemy-view")).toBeNull();
   });
 
   it("gives the structure it draws no pane of its own, and leaves the rest theirs", async () => {
@@ -257,7 +257,7 @@ describe("<gufe-chemical-system> with a bound complex", () => {
     )!;
     ligand.click();
     await flush();
-    expect(node.querySelector("gufe-view gufe-small-molecule")).toBeTruthy();
+    expect(node.querySelector("alchemy-view gufe-small-molecule")).toBeTruthy();
     expect(node.querySelector("gufe-complex")).toBeNull();
   });
 
@@ -273,7 +273,7 @@ describe("<gufe-chemical-system> with a bound complex", () => {
     const titles = Array.from(node.querySelectorAll("button"), (b) => b.querySelector("span")?.textContent);
     expect(titles).toContain("protein");
     expect(titles).not.toContain("Complex");
-    expect(node.querySelector("gufe-view gufe-protein")).toBeTruthy();
+    expect(node.querySelector("alchemy-view gufe-protein")).toBeTruthy();
   });
 
   it("offers no complex pane for a system that is not one", async () => {

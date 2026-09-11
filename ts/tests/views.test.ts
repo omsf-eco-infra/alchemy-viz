@@ -826,7 +826,7 @@ describe("<gufe-unknown-component>", () => {
   });
 
   it("is what the dispatcher chooses for the type", () => {
-    const node = mount("gufe-view", readExample("unknown_component.json"));
+    const node = mount("alchemy-view", readExample("unknown_component.json"));
     expect(node.querySelector("gufe-unknown-component")).toBeTruthy();
     // Both this view and the dispatcher's fallback say "no visualization for",
     // which is the point: one is a considered answer and the other is a
@@ -869,7 +869,7 @@ describe("<gufe-chemical-system>", () => {
     // stacked above either, and no count where the name used to sit.
     const split = column.parentElement!;
     expect(split.children).toHaveLength(2);
-    expect(split.children[1].querySelector("gufe-view")).toBeTruthy();
+    expect(split.children[1].querySelector("alchemy-view")).toBeTruthy();
     expect(node.textContent).not.toContain("components");
   });
 
@@ -877,8 +877,8 @@ describe("<gufe-chemical-system>", () => {
     const node = mount("gufe-chemical-system", readExample("chemical_system.json"));
     await flush();
     // Composition made structural: this view picks which component, and
-    // <gufe-view> decides how to draw it, exactly as at the top level.
-    const nested = node.querySelector("gufe-view");
+    // <alchemy-view> decides how to draw it, exactly as at the top level.
+    const nested = node.querySelector("alchemy-view");
     expect(nested).toBeTruthy();
     expect(nested!.querySelector("gufe-small-molecule, gufe-solvent, gufe-protein")).toBeTruthy();
   });
@@ -888,7 +888,7 @@ describe("<gufe-chemical-system>", () => {
     // molecule view below must not write the name over its own picture too.
     const node = mount("gufe-chemical-system", readExample("chemical_system.json"));
     await flush();
-    const nested = node.querySelector("gufe-view")!;
+    const nested = node.querySelector("alchemy-view")!;
     expect(nested.getAttribute(HIDE_NAME_ATTRIBUTE)).toBe("");
 
     const molecule = nested.querySelector("gufe-small-molecule")!;
@@ -903,13 +903,13 @@ describe("<gufe-chemical-system>", () => {
   it("switches component without rebuilding the nested view", async () => {
     const node = mount("gufe-chemical-system", readExample("chemical_system.json"));
     await flush();
-    const before = node.querySelector("gufe-view");
+    const before = node.querySelector("alchemy-view");
 
     const buttons = Array.from(node.querySelectorAll("button"));
     buttons[buttons.length - 1].click();
     await flush();
 
-    expect(node.querySelector("gufe-view")).toBe(before);
+    expect(node.querySelector("alchemy-view")).toBe(before);
   });
 
   it("opens on the label last opened, and on the first where it has none", async () => {
@@ -924,7 +924,7 @@ describe("<gufe-chemical-system>", () => {
     const first = mount("gufe-chemical-system", readExample("chemical_system.json"));
     await flush();
     const openOn = (node: Element): unknown =>
-      (node.querySelector("gufe-view") as HTMLElement & { payload?: { "gufe-key"?: string } }).payload?.["gufe-key"];
+      (node.querySelector("alchemy-view") as HTMLElement & { payload?: { "gufe-key"?: string } }).payload?.["gufe-key"];
     // The component strip's own buttons, not the mode switcher of whatever it
     // has drawn below them.
     const strip = (node: Element): HTMLButtonElement[] =>
@@ -956,7 +956,7 @@ describe("<gufe-chemical-system>", () => {
     const narrowed = mount("gufe-chemical-system", other);
     await flush();
     expect(narrowed.textContent).toContain(labels[0]);
-    expect(narrowed.querySelector("gufe-view")).toBeTruthy();
+    expect(narrowed.querySelector("alchemy-view")).toBeTruthy();
 
     document.body.replaceChildren();
     const back = mount("gufe-chemical-system", readExample("chemical_system.json"));
@@ -1003,7 +1003,7 @@ describe("<gufe-chemical-system>", () => {
     await flush();
 
     // The rest of the system still draws; the missing one is reported.
-    expect(node.querySelector("gufe-view")).toBeTruthy();
+    expect(node.querySelector("alchemy-view")).toBeTruthy();
     expect(node.textContent).toContain("not in its registry");
     expect(node.textContent).toContain(labels[0]);
   });
@@ -1644,7 +1644,7 @@ describe("<gufe-atom-mapping>", () => {
   });
 
   it("is what the dispatcher chooses for the type", async () => {
-    const node = mount("gufe-view", readExample("ligand_atom_mapping.json"));
+    const node = mount("alchemy-view", readExample("ligand_atom_mapping.json"));
     await flush();
     expect(node.querySelector("gufe-atom-mapping")).toBeTruthy();
     expect(node.textContent).not.toContain("This build can draw");
@@ -1957,14 +1957,14 @@ describe("<gufe-alchemical-network>", () => {
     system.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     await flush();
 
-    const pane = node.querySelector("gufe-view") as HTMLElement & { payload: Record<string, unknown> };
+    const pane = node.querySelector("alchemy-view") as HTMLElement & { payload: Record<string, unknown> };
     expect(pane).toBeTruthy();
     for (const stapled of ["x", "y", "index", "vx", "vy"]) {
       expect(pane.payload[stapled], `the layout's ${stapled} was handed on`).toBeUndefined();
     }
     const { valid, issues } = validatePayload(pane.payload);
     expect(valid, formatIssues(issues)).toBe(true);
-    expect(node.textContent).not.toContain("does not match the gufe-viz schema");
+    expect(node.textContent).not.toContain("does not match the alchemy-viz schema");
   });
 
   it("hands on a clicked transformation with none of it either, states included", async () => {
@@ -1976,10 +1976,10 @@ describe("<gufe-alchemical-network>", () => {
     (node.querySelector("line") as SVGLineElement).dispatchEvent(new MouseEvent("click", { bubbles: true }));
     await flush();
 
-    const pane = node.querySelector("gufe-view") as HTMLElement & { payload: Record<string, unknown> };
+    const pane = node.querySelector("alchemy-view") as HTMLElement & { payload: Record<string, unknown> };
     const { valid, issues } = validatePayload(pane.payload);
     expect(valid, formatIssues(issues)).toBe(true);
-    expect(node.textContent).not.toContain("does not match the gufe-viz schema");
+    expect(node.textContent).not.toContain("does not match the alchemy-viz schema");
   });
 
   it("cuts a node and an edge loose as payloads that validate on their own", async () => {
@@ -2343,7 +2343,7 @@ describe("<gufe-alchemical-network>", () => {
   });
 
   it("is what the dispatcher chooses for the type", async () => {
-    const node = mount("gufe-view", readExample("alchemical_network.json"));
+    const node = mount("alchemy-view", readExample("alchemical_network.json"));
     await flush();
     expect(node.querySelector("gufe-alchemical-network")).toBeTruthy();
     expect(node.textContent).not.toContain("This build can draw");
@@ -2364,7 +2364,7 @@ describe("the three PDB types", () => {
     "%s draws through the protein view, under its own name",
     async (fixture) => {
       const payload = readExample(fixture);
-      const node = mount("gufe-view", payload);
+      const node = mount("alchemy-view", payload);
       await flush();
       expect(node.querySelector("gufe-protein")).toBeTruthy();
       expect(node.textContent).toContain(payload.name as string);
@@ -2428,7 +2428,7 @@ describe("every declared type", () => {
   it("draws, with no unsupported panel anywhere", async () => {
     for (const name of exampleNames()) {
       document.body.replaceChildren();
-      const node = mount("gufe-view", readExample(name));
+      const node = mount("alchemy-view", readExample(name));
       await flush();
       expect(node.textContent, `${name} fell back to the unsupported panel`).not.toContain(
         "This build can draw",
@@ -2561,7 +2561,7 @@ describe("every header", () => {
     for (const name of exampleNames()) {
       document.body.replaceChildren();
       const payload = readExample(name);
-      const node = mount("gufe-view", payload);
+      const node = mount("alchemy-view", payload);
       await flush();
 
       for (const header of node.querySelectorAll(".gufe-header")) {

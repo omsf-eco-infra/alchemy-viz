@@ -1,8 +1,8 @@
 #!/usr/bin/env python
-"""Build ``examples/notebooks/gufe-viz-gallery.ipynb`` - the views, as pictures.
+"""Build ``examples/notebooks/alchemy-viz-gallery.ipynb`` - the views, as pictures.
 
 **Why this exists.** GitHub's notebook renderer strips ``<iframe>`` and
-``<script>`` from cell outputs, which is everything ``gufe_viz.view()`` emits.
+``<script>`` from cell outputs, which is everything ``alchemy_viz.view()`` emits.
 An executed copy of the demo notebook therefore shows nothing at all on GitHub,
 however well it works in a browser. ``image/png`` is the one output type that
 does survive, so this captures each view as a screenshot and writes a notebook
@@ -35,7 +35,7 @@ REPO = pathlib.Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO / "python"))
 
 EXAMPLES = REPO / "examples"
-OUT = EXAMPLES / "notebooks" / "gufe-viz-gallery.ipynb"
+OUT = EXAMPLES / "notebooks" / "alchemy-viz-gallery.ipynb"
 
 #: Wide enough for the two-pane views, short enough to scroll past on GitHub.
 WINDOW = (1100, 720)
@@ -249,7 +249,7 @@ def code_with_image(source: str, png: bytes, index: int) -> dict:
                 "metadata": {},
                 "data": {
                     "image/png": base64.b64encode(png).decode("ascii"),
-                    "text/plain": "<gufe-view>",
+                    "text/plain": "<alchemy-view>",
                 },
             }
         ],
@@ -257,7 +257,7 @@ def code_with_image(source: str, png: bytes, index: int) -> dict:
 
 
 def main() -> int:
-    import gufe_viz
+    import alchemy_viz
 
     chrome = find_chrome()
     print(f"chrome: {chrome}")
@@ -266,20 +266,20 @@ def main() -> int:
     cells.append(
         markdown(
             """
-# gufe-viz gallery
+# alchemy-viz gallery
 
-Every view gufe-viz draws today, as a picture.
+Every view alchemy-viz draws today, as a picture.
 
 > ### This notebook is for viewing on GitHub. It is not the one you run.
 >
 > **The outputs below are screenshots**, not live views. They exist because
 > GitHub's notebook renderer strips `<iframe>` and `<script>` from cell outputs,
-> which is everything `gufe_viz.view()` emits - so an executed copy of the demo
+> which is everything `alchemy_viz.view()` emits - so an executed copy of the demo
 > notebook shows a blank under every cell there. `image/png` is the one output
 > type that survives.
 >
 > **To run the real thing**, open
-> [`gufe-viz-demo.ipynb`](./gufe-viz-demo.ipynb) - every payload type, every
+> [`alchemy-viz-demo.ipynb`](./alchemy-viz-demo.ipynb) - every payload type, every
 > delivery mode, the live gufe objects and the byte costs:
 >
 > ```
@@ -295,7 +295,7 @@ Every view gufe-viz draws today, as a picture.
 > [`README.md`](./README.md) is the full note.
 
 Every payload type the schema declares is drawn, so what follows is the whole of
-what gufe-viz can show. Where two types share an element - the three PDB kinds,
+what alchemy-viz can show. Where two types share an element - the three PDB kinds,
 the mapping standalone and inside a network - both are here, because sharing a
 drawing path is a claim that has to be checked by looking.
 """,
@@ -304,7 +304,7 @@ drawing path is a claim that has to be checked by looking.
     )
     cells.append(
         code_with_image(
-            'import json\nfrom pathlib import Path\n\nimport gufe_viz\n\nEXAMPLES = Path("../")\npayloads = {p.stem: json.loads(p.read_text()) for p in sorted(EXAMPLES.glob("*.json"))}',
+            'import json\nfrom pathlib import Path\n\nimport alchemy_viz\n\nEXAMPLES = Path("../")\npayloads = {p.stem: json.loads(p.read_text()) for p in sorted(EXAMPLES.glob("*.json"))}',
             b"",
             1,
         )
@@ -325,13 +325,13 @@ drawing path is a claim that has to be checked by looking.
 
             payload = json.loads(source.read_text(encoding="utf-8"))
             page = work / f"{stem}.html"
-            page.write_text(gufe_viz.to_html(payload), encoding="utf-8")
+            page.write_text(alchemy_viz.to_html(payload), encoding="utf-8")
             png = screenshot(chrome, page, work / f"{stem}.png", profile)
             total += len(png)
             print(f"  {stem:24} {payload['type']:<28} {len(png):>8,} bytes")
 
             cells.append(markdown(f"### `{stem}.json` - `{payload['type']}`\n\n{note}", len(cells)))
-            cells.append(code_with_image(f'gufe_viz.view(payloads["{stem}"])', png, len(cells)))
+            cells.append(code_with_image(f'alchemy_viz.view(payloads["{stem}"])', png, len(cells)))
 
     notebook = {
         "cells": cells,
@@ -347,7 +347,7 @@ drawing path is a claim that has to be checked by looking.
     OUT.write_text(json.dumps(notebook, indent=1, ensure_ascii=True) + "\n", encoding="utf-8")
     print(f"\nwrote {OUT.relative_to(REPO)}")
     print(f"  {len(cells)} cells, {total:,} bytes of PNG, {OUT.stat().st_size:,} bytes on disk")
-    print(f"  gufe-viz {gufe_viz.__version__}")
+    print(f"  alchemy-viz {alchemy_viz.__version__}")
     return 0
 
 

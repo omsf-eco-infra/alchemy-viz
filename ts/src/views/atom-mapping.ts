@@ -6,7 +6,7 @@
  *
  *   `<gufe-ligand-network>`   the detail pane, for the selected edge
  *   `<gufe-transformation>`   the mapping the transformation carries
- *   `<gufe-view>`             a mapping payload on its own
+ *   `<alchemy-view>`             a mapping payload on its own
  *
  * All three hand it the same payload shape - `mappingPayloadFor` below is what
  * cuts an edge loose into one - so there is one drawing path and the in-context
@@ -37,7 +37,7 @@
 import { el, errText } from "../shared/dom.js";
 import { switcher } from "../shared/controls.js";
 import { centredMessage, nameWanted } from "../shared/panels.js";
-import { defineElement, generations, GufeElement, type ViewHandle } from "../shared/element.js";
+import { defineElement, generations, AlchemyElement, type ViewHandle } from "../shared/element.js";
 import { choice } from "../shared/settings.js";
 import { load3Dmol } from "../shared/engines.js";
 import { kabsch, applyRT, type Vec3 } from "../shared/kabsch.js";
@@ -405,7 +405,7 @@ export function preparePair(payload: LigandAtomMappingViz, registry: RegistryInd
   };
 }
 
-export class GufeAtomMapping extends GufeElement<LigandAtomMappingViz> {
+export class GufeAtomMapping extends AlchemyElement<LigandAtomMappingViz> {
   protected override placeholder(): string {
     return "Waiting for a LigandAtomMapping payload...";
   }

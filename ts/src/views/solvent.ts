@@ -26,7 +26,7 @@
 
 import { el } from "../shared/dom.js";
 import { card } from "../shared/panels.js";
-import { defineElement, GufeElement, type ViewHandle } from "../shared/element.js";
+import { defineElement, AlchemyElement, type ViewHandle } from "../shared/element.js";
 import { CHIP, FONT, NOTE, SECTION_LABEL, SPACE, WEIGHT } from "../shared/style.js";
 import { V } from "../shared/theme.js";
 import type { SolventComponentViz } from "../schema/types.js";
@@ -81,7 +81,7 @@ function ion(formula: string, role: string): HTMLDivElement {
   return box;
 }
 
-export class GufeSolvent extends GufeElement<SolventComponentViz> {
+export class GufeSolvent extends AlchemyElement<SolventComponentViz> {
   protected override placeholder(): string {
     return "Waiting for a SolventComponent payload...";
   }

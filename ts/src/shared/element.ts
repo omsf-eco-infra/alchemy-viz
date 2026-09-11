@@ -57,7 +57,7 @@ export interface ViewHandle {
  * while the view is building itself, which is before any caller has a handle on
  * anything to set it on. `debug.ts` uses one for the same reason.
  */
-export const VIEW_STATE_GLOBAL = "GUFE_VIZ_VIEW_STATE";
+export const VIEW_STATE_GLOBAL = "ALCHEMY_VIZ_VIEW_STATE";
 
 /**
  * Take the state a host left for `key`, if any. One-shot.
@@ -80,7 +80,7 @@ export function seededViewState(key: string): unknown {
  * A generation counter, for work that finishes after it may have been
  * superseded.
  *
- * The same problem `GufeElement` solves for itself with `#generation`, in the
+ * The same problem `AlchemyElement` solves for itself with `#generation`, in the
  * form a view can use inside one render. Anything a view starts and then waits
  * on - a force layout relaxed off the next turn, an engine behind a CDN fetch -
  * can land after a resize, a mode switch or a teardown has moved on, and then
@@ -119,7 +119,7 @@ const RESIZE_DEBOUNCE_MS = 150;
  */
 const SHELL_ATTRIBUTE = "data-gufe-shell";
 
-export abstract class GufeElement<P> extends HTMLElement {
+export abstract class AlchemyElement<P> extends HTMLElement {
   #payload: P | null = null;
   #handle: ViewHandle | null = null;
   #shell: HTMLDivElement | null = null;
@@ -218,7 +218,7 @@ export abstract class GufeElement<P> extends HTMLElement {
       try {
         this.#handle.cleanup();
       } catch (e) {
-        console.warn("[gufe-viz] cleanup failed:", e);
+        console.warn("[alchemy-viz] cleanup failed:", e);
       }
     }
     this.#handle = null;
@@ -298,7 +298,7 @@ export abstract class GufeElement<P> extends HTMLElement {
       try {
         handle?.cleanup?.();
       } catch (e) {
-        console.warn("[gufe-viz] cleanup of a superseded view failed:", e);
+        console.warn("[alchemy-viz] cleanup of a superseded view failed:", e);
       }
       return;
     }
@@ -307,7 +307,7 @@ export abstract class GufeElement<P> extends HTMLElement {
 
   #renderFailed(host: HTMLDivElement, generation: number, e: unknown): void {
     if (generation !== this.#generation) return;
-    console.warn("[gufe-viz] render failed:", e);
+    console.warn("[alchemy-viz] render failed:", e);
     host.replaceChildren(centredMessage(`Failed to render: ${errText(e)}`, true));
   }
 

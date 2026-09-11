@@ -263,7 +263,7 @@ export function optionalRDKit(): Promise<RDKitModule | null> {
   // `.catch` per call would attach a fresh handler each time and warn once per
   // caller on a page where the fetch failed.
   return (optionalRdkitPromise ??= loadRDKit().catch((e: unknown) => {
-    console.warn("[gufe-viz] RDKit failed to load:", e instanceof Error ? e.message : String(e));
+    console.warn("[alchemy-viz] RDKit failed to load:", e instanceof Error ? e.message : String(e));
     return null;
   }));
 }

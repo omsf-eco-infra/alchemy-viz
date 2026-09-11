@@ -47,7 +47,7 @@
  * Exported because `settingsDump()` hands out prefixed keys, and a caller
  * writing them into some other browser has to be able to recognise its own.
  */
-export const PREFIX = "gufe-viz:";
+export const PREFIX = "alchemy-viz:";
 
 /** Used when `localStorage` cannot be reached, so settings still work per page. */
 const memory = new Map<string, string>();

@@ -19,12 +19,12 @@ import { defineConfig, type Plugin } from "vitest/config";
  * Both go together when that export does.
  */
 function devBundle(): Plugin {
-  const bundle = resolve(import.meta.dirname, "python/gufe_viz/_assets/gufe-viz.js");
+  const bundle = resolve(import.meta.dirname, "python/alchemy_viz/_assets/alchemy-viz.js");
   return {
-    name: "gufe-dev-bundle",
+    name: "alchemy-dev-bundle",
     apply: "serve",
     configureServer(server) {
-      server.middlewares.use("/gufe-dev-bundle.js", (_req, res) => {
+      server.middlewares.use("/alchemy-dev-bundle.js", (_req, res) => {
         if (!existsSync(bundle)) {
           res.statusCode = 404;
           res.end("no bundle built yet - run `pixi run build`");
