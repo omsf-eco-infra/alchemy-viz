@@ -30,7 +30,7 @@
  * anything, the same blocks become a band above the molecules instead.
  */
 
-import { el, onWidth } from "../shared/dom.js";
+import { el, NO_VALUE, onWidth } from "../shared/dom.js";
 import { buttonGroup } from "../shared/controls.js";
 import { centredMessage, statChip, typeBadge } from "../shared/panels.js";
 import { defineElement, GufeElement, type ViewHandle } from "../shared/element.js";
@@ -314,7 +314,7 @@ export class GufeTransformation extends GufeElement<TransformationViz> {
     const header = el("div", `display:flex;flex-direction:column;gap:${SPACE.md};min-width:0;`);
     header.appendChild(transformationTitle(name));
     // A Protocol has no name of its own, so the class name is what identifies it.
-    header.appendChild(metaLine("protocol", protocol?.gufe_type || protocol?.name || "-"));
+    header.appendChild(metaLine("protocol", protocol?.gufe_type || protocol?.name || NO_VALUE));
     header.appendChild(metaLine("mappings", String(mappings.length)));
     diff.appendChild(header);
 

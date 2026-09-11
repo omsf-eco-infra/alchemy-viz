@@ -45,7 +45,16 @@ export function errText(e: unknown): string {
 }
 
 export const fmt = (n: number): string => n.toLocaleString("en-US");
-export const EM_DASH = "-";
+
+/**
+ * What a field shows when it has no value: an unnamed molecule, a mapping with
+ * no score, an atom that maps to nothing.
+ *
+ * Named for the job rather than for the character, so that changing the
+ * character is one edit and reading a call site tells you what it means. A bare
+ * `"-"` in `name || "-"` reads like a separator or a typo.
+ */
+export const NO_VALUE = "-";
 
 /**
  * `text` cut to `max` characters, with the last one spent on an ellipsis.

@@ -25,7 +25,7 @@
  * there; this way the conformer is ready whichever mode the view opens on.
  */
 
-import { el, EM_DASH, errText } from "../shared/dom.js";
+import { el, NO_VALUE, errText } from "../shared/dom.js";
 import { switcher, toggleButton } from "../shared/controls.js";
 import { centredMessage, nameWanted, viewerHost } from "../shared/panels.js";
 import { defineElement, GufeElement, type ViewHandle } from "../shared/element.js";
@@ -100,11 +100,11 @@ export class GufeSmallMolecule extends GufeElement<SmallMoleculeComponentViz> {
 
     const counts = sdf ? parseCounts(sdf) : null;
     const facts: [string, string, boolean][] = [
-      ["Name", name || EM_DASH, false],
-      ["SMILES", smiles || EM_DASH, true],
-      ["Charge", charge == null ? EM_DASH : String(charge), false],
-      ["Atoms", counts ? String(counts.atoms) : EM_DASH, false],
-      ["Bonds", counts ? String(counts.bonds) : EM_DASH, false],
+      ["Name", name || NO_VALUE, false],
+      ["SMILES", smiles || NO_VALUE, true],
+      ["Charge", charge == null ? NO_VALUE : String(charge), false],
+      ["Atoms", counts ? String(counts.atoms) : NO_VALUE, false],
+      ["Bonds", counts ? String(counts.bonds) : NO_VALUE, false],
     ];
     const table = el("div", `display:grid;grid-template-columns:auto minmax(0,1fr);gap:${SPACE.xl} 20px;align-items:baseline;`);
     infoPane.appendChild(table);

@@ -12,14 +12,14 @@ function $e(e) {
   const n = String(e);
   return n === "[object Object]" ? e.name || "unknown error" : n;
 }
-const kt = (e) => e.toLocaleString("en-US"), st = "-", Ln = (e, t) => e.length > t ? `${e.slice(0, t - 1)}...` : e;
+const kt = (e) => e.toLocaleString("en-US"), Je = "-", Ln = (e, t) => e.length > t ? `${e.slice(0, t - 1)}...` : e;
 function Jn(e, t) {
   if (t(e.clientWidth), typeof ResizeObserver > "u") return () => {
   };
   const n = new ResizeObserver(() => t(e.clientWidth));
   return n.observe(e), () => n.disconnect();
 }
-const et = {
+const tt = {
   dark: {
     appBg: "#2b2b40",
     panelBg: "#33334d",
@@ -144,7 +144,7 @@ function qa() {
     return !1;
   }
 }
-const js = qa(), M = js ? et.dark : et.light, ee = {
+const js = qa(), M = js ? tt.dark : tt.light, ee = {
   mono: "ui-monospace,SFMono-Regular,Menlo,monospace",
   /** Label captions and dense readouts. */
   tiny: "10px",
@@ -198,12 +198,12 @@ const js = qa(), M = js ? et.dark : et.light, ee = {
   bg: M.btnBg,
   bgHover: M.btnBgHover,
   bgActive: M.btnBgActive
-}, Ds = `background:${M.selectBg};color:${M.textPrimary};border:1px solid ${M.selectBorder};border-radius:${we.md};padding:${te.sm} ${te.lg};font-size:${ee.body};cursor:pointer;font-family:inherit;`, Ls = `${Ds}width:100%;box-sizing:border-box;cursor:text;`, qs = "24px", Va = `display:flex;align-items:flex-start;gap:12px;padding:9px ${te.xxl};flex-shrink:0;line-height:${qs};background:${M.toolbarBg};border-bottom:1px solid ${M.toolbarBorder};`, Bn = { min: "236px", max: "340px" }, Ye = {
+}, Ds = `background:${M.selectBg};color:${M.textPrimary};border:1px solid ${M.selectBorder};border-radius:${we.md};padding:${te.sm} ${te.lg};font-size:${ee.body};cursor:pointer;font-family:inherit;`, Ls = `${Ds}width:100%;box-sizing:border-box;cursor:text;`, qs = "24px", Va = `display:flex;align-items:flex-start;gap:12px;padding:9px ${te.xxl};flex-shrink:0;line-height:${qs};background:${M.toolbarBg};border-bottom:1px solid ${M.toolbarBorder};`, Bn = { min: "236px", max: "340px" }, Xe = {
   min: "--gufe-menu-min",
   max: "--gufe-menu-max",
   ruleX: "--gufe-menu-rule-x",
   ruleY: "--gufe-menu-rule-y"
-}, Vs = `display:flex;flex-direction:column;gap:${te.lg};flex:1;min-width:var(${Ye.min},${Bn.min});max-width:var(${Ye.max},${Bn.max});box-sizing:border-box;padding:${te.xl};min-height:0;overflow-y:auto;background:${M.panelBg};border:0 solid ${M.splitBorder};border-right-width:var(${Ye.ruleX},1px);border-bottom-width:var(${Ye.ruleY},0);`, Ba = "45%", Ua = "flex:1 1 auto;min-height:84px;overflow:auto;display:flex;flex-direction:column;gap:3px;", Bs = {
+}, Vs = `display:flex;flex-direction:column;gap:${te.lg};flex:1;min-width:var(${Xe.min},${Bn.min});max-width:var(${Xe.max},${Bn.max});box-sizing:border-box;padding:${te.xl};min-height:0;overflow-y:auto;background:${M.panelBg};border:0 solid ${M.splitBorder};border-right-width:var(${Xe.ruleX},1px);border-bottom-width:var(${Xe.ruleY},0);`, Ba = "45%", Ua = "flex:1 1 auto;min-height:84px;overflow:auto;display:flex;flex-direction:column;gap:3px;", Bs = {
   bottom: `display:flex;align-items:center;gap:${te.xl};flex-wrap:wrap;padding:${te.lg} ${te.xxl};flex-shrink:0;background:${M.toolbarBg};border-top:1px solid ${M.toolbarBorder};`
 }, Ha = `flex-shrink:0;padding:${te.sm} ${te.xl};font-size:${ee.heading};font-weight:${he.bold};color:${M.labelFg};background:${M.labelBg};`, zr = `position:absolute;top:${te.md};left:${te.md};z-index:10;pointer-events:none;max-width:calc(100% - ${te.xxl} - ${te.xxl});white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:${te.xs} ${te.lg};border-radius:${we.md};font-size:${ee.heading};font-weight:${he.bold};color:${M.labelFg};background:${M.labelBg};`, Ka = `padding:${te.xs} ${te.lg};border-radius:${we.md};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:${M.labelFg};background:${M.labelBg};`, Ga = `position:absolute;top:${te.lg};left:${te.lg};z-index:15;display:flex;align-items:center;gap:${te.md};min-width:0;max-width:calc(100% - ${te.xxl} - ${te.xxl});`, Wa = "42px", Ja = `display:flex;flex-direction:column;gap:${te.xs};padding:${te.xxl} 18px;border-radius:${we.xl};background:${M.cardBg};border:1px solid ${M.cardBorder};`, Et = {
   base: `display:flex;flex-direction:column;align-items:flex-start;gap:${te.sm};padding:${te.lg} ${te.xl};text-align:left;border-radius:${we.lg};border:1px solid ${M.cardBorder};background:${M.cardBg};cursor:pointer;font-family:inherit;font-size:${ee.body};width:100%;`,
@@ -223,7 +223,7 @@ const js = qa(), M = js ? et.dark : et.light, ee = {
   outline: `background:${M.btnBg};border-color:${M.btnBorder};color:${M.textPrimary};`,
   active: `cursor:pointer;background:${M.cardBgActive};border-color:${M.btnBorder};color:${M.textPrimary};`
 }, jr = `font-size:${ee.small};line-height:1.6;color:${M.textMuted2};`;
-function Ze(e, t, n) {
+function Qe(e, t, n) {
   const r = N("span", "display:inline-flex;align-items:center;gap:5px;white-space:nowrap;");
   n && r.appendChild(
     N("span", `width:8px;height:8px;border-radius:50%;background:${n};display:inline-block;`)
@@ -445,7 +445,7 @@ function Ne(e, t) {
 function cc(e) {
   return e && e.__esModule && Object.prototype.hasOwnProperty.call(e, "default") ? e.default : e;
 }
-var qt = { exports: {} }, pr = {}, qe = {}, rt = {}, hr = {}, mr = {}, gr = {}, So;
+var qt = { exports: {} }, pr = {}, qe = {}, ot = {}, hr = {}, mr = {}, gr = {}, So;
 function Hn() {
   return So || (So = 1, (function(e) {
     Object.defineProperty(e, "__esModule", { value: !0 }), e.regexpCode = e.getEsmExportName = e.getProperty = e.safeStringify = e.stringify = e.strConcat = e.addCodeArg = e.str = e._ = e.nil = e._Code = e.Name = e.IDENTIFIER = e._CodeOrName = void 0;
@@ -1507,8 +1507,8 @@ function Zn() {
 }
 var Ro;
 function lc() {
-  if (Ro) return rt;
-  Ro = 1, Object.defineProperty(rt, "__esModule", { value: !0 }), rt.boolOrEmptySchema = rt.topBoolOrEmptySchema = void 0;
+  if (Ro) return ot;
+  Ro = 1, Object.defineProperty(ot, "__esModule", { value: !0 }), ot.boolOrEmptySchema = ot.topBoolOrEmptySchema = void 0;
   const e = /* @__PURE__ */ Zn(), t = /* @__PURE__ */ se(), n = /* @__PURE__ */ ze(), r = {
     message: "boolean schema is false"
   };
@@ -1516,12 +1516,12 @@ function lc() {
     const { gen: c, schema: d, validateName: u } = a;
     d === !1 ? s(a, !1) : typeof d == "object" && d.$async === !0 ? c.return(n.default.data) : (c.assign((0, t._)`${u}.errors`, null), c.return(!0));
   }
-  rt.topBoolOrEmptySchema = o;
+  ot.topBoolOrEmptySchema = o;
   function i(a, c) {
     const { gen: d, schema: u } = a;
     u === !1 ? (d.var(c, !1), s(a)) : d.var(c, !0);
   }
-  rt.boolOrEmptySchema = i;
+  ot.boolOrEmptySchema = i;
   function s(a, c) {
     const { gen: d, data: u } = a, y = {
       gen: d,
@@ -1535,17 +1535,17 @@ function lc() {
     };
     (0, e.reportError)(y, r, void 0, c);
   }
-  return rt;
+  return ot;
 }
-var be = {}, ot = {}, Mo;
+var be = {}, it = {}, Mo;
 function Gs() {
-  if (Mo) return ot;
-  Mo = 1, Object.defineProperty(ot, "__esModule", { value: !0 }), ot.getRules = ot.isJSONType = void 0;
+  if (Mo) return it;
+  Mo = 1, Object.defineProperty(it, "__esModule", { value: !0 }), it.getRules = it.isJSONType = void 0;
   const e = ["string", "number", "integer", "boolean", "null", "object", "array"], t = new Set(e);
   function n(o) {
     return typeof o == "string" && t.has(o);
   }
-  ot.isJSONType = n;
+  it.isJSONType = n;
   function r() {
     const o = {
       number: { type: "number", rules: [] },
@@ -1561,7 +1561,7 @@ function Gs() {
       keywords: {}
     };
   }
-  return ot.getRules = r, ot;
+  return it.getRules = r, it;
 }
 var Ve = {}, No;
 function Ws() {
@@ -5021,9 +5021,9 @@ function ll() {
   const t = [(/* @__PURE__ */ cl()).default];
   return Tn.default = t, Tn;
 }
-var it = {}, Bi;
+var st = {}, Bi;
 function dl() {
-  return Bi || (Bi = 1, Object.defineProperty(it, "__esModule", { value: !0 }), it.contentVocabulary = it.metadataVocabulary = void 0, it.metadataVocabulary = [
+  return Bi || (Bi = 1, Object.defineProperty(st, "__esModule", { value: !0 }), st.contentVocabulary = st.metadataVocabulary = void 0, st.metadataVocabulary = [
     "title",
     "description",
     "default",
@@ -5031,11 +5031,11 @@ function dl() {
     "readOnly",
     "writeOnly",
     "examples"
-  ], it.contentVocabulary = [
+  ], st.contentVocabulary = [
     "contentMediaType",
     "contentEncoding",
     "contentSchema"
-  ]), it;
+  ]), st;
 }
 var Ui;
 function ul() {
@@ -5495,7 +5495,7 @@ function oa(e, t, n, r = {}) {
     o = !o, s(), r.remember?.set(o), n(o);
   }, s(), i;
 }
-const Pe = "gufe-viz:", tt = /* @__PURE__ */ new Map();
+const Pe = "gufe-viz:", nt = /* @__PURE__ */ new Map();
 let In = null;
 function Wd() {
   const e = globalThis.localStorage;
@@ -5515,7 +5515,7 @@ function Lt() {
 }
 function Jd(e) {
   const t = Lt();
-  if (!t) return tt.get(Pe + e) ?? null;
+  if (!t) return nt.get(Pe + e) ?? null;
   try {
     return t.getItem(Pe + e);
   } catch {
@@ -5525,13 +5525,13 @@ function Jd(e) {
 function Yd(e, t) {
   const n = Lt();
   if (!n) {
-    tt.set(Pe + e, t);
+    nt.set(Pe + e, t);
     return;
   }
   try {
     n.setItem(Pe + e, t);
   } catch {
-    tt.set(Pe + e, t);
+    nt.set(Pe + e, t);
   }
 }
 function or(e, t, n) {
@@ -5574,10 +5574,10 @@ function Gn(e, t = "") {
 function ia() {
   const e = {}, t = Lt(), n = t ? Array.from({ length: t.length }, (r, o) => t.key(o)).filter(
     (r) => typeof r == "string"
-  ) : Array.from(tt.keys());
+  ) : Array.from(nt.keys());
   for (const r of n) {
     if (!r.startsWith(Pe)) continue;
-    const o = t ? t.getItem(r) : tt.get(r) ?? null;
+    const o = t ? t.getItem(r) : nt.get(r) ?? null;
     if (o !== null)
       try {
         e[r.slice(Pe.length)] = JSON.parse(o);
@@ -5590,10 +5590,10 @@ function ia() {
 function Xd() {
   const e = {}, t = Lt(), n = t ? Array.from({ length: t.length }, (r, o) => t.key(o)).filter(
     (r) => typeof r == "string"
-  ) : Array.from(tt.keys());
+  ) : Array.from(nt.keys());
   for (const r of n) {
     if (!r.startsWith(Pe)) continue;
-    const o = t ? t.getItem(r) : tt.get(r) ?? null;
+    const o = t ? t.getItem(r) : nt.get(r) ?? null;
     o !== null && (e[r] = o);
   }
   return e;
@@ -5606,7 +5606,7 @@ function Zd() {
         e.removeItem(Pe + t);
       } catch {
       }
-  tt.clear();
+  nt.clear();
 }
 const Sr = {
   threeDmol: "2.5.5",
@@ -5627,14 +5627,14 @@ function sa(e, t) {
     o.src = e, o.onload = () => n(), o.onerror = () => r(new Error(`Failed to load ${t}`)), document.head.appendChild(o);
   });
 }
-let Qe = null, gt = null;
+let et = null, gt = null;
 function ir() {
   if (gt) return gt;
   const e = so("threeDmol");
-  return e ? (gt = e.then((t) => Qe = t || window.$3Dmol), gt) : (gt = (async () => {
-    if (window.$3Dmol) return Qe = window.$3Dmol;
+  return e ? (gt = e.then((t) => et = t || window.$3Dmol), gt) : (gt = (async () => {
+    if (window.$3Dmol) return et = window.$3Dmol;
     if (await sa(io.threeDmol, "3Dmol.js"), !window.$3Dmol) throw new Error("3Dmol.js loaded but $3Dmol is undefined");
-    return Qe = window.$3Dmol;
+    return et = window.$3Dmol;
   })(), gt);
 }
 let yt = null;
@@ -6166,13 +6166,13 @@ const kr = {
 };
 let ar = js;
 function fa() {
-  return (ar ? et.dark : et.light).canvas2DBg;
+  return (ar ? tt.dark : tt.light).canvas2DBg;
 }
 function Lr() {
-  return (ar ? et.dark : et.light).netDepictBg;
+  return (ar ? tt.dark : tt.light).netDepictBg;
 }
 function hu() {
-  return (ar ? et.dark : et.light).netDepictCaption;
+  return (ar ? tt.dark : tt.light).netDepictCaption;
 }
 function cr(e) {
   return ar ? {
@@ -6614,11 +6614,11 @@ class df extends Me {
     );
     a.appendChild(u);
     const y = r ? uo(r) : null, w = [
-      ["Name", o || st, !1],
-      ["SMILES", i || st, !0],
-      ["Charge", s == null ? st : String(s), !1],
-      ["Atoms", y ? String(y.atoms) : st, !1],
-      ["Bonds", y ? String(y.bonds) : st, !1]
+      ["Name", o || Je, !1],
+      ["SMILES", i || Je, !0],
+      ["Charge", s == null ? Je : String(s), !1],
+      ["Atoms", y ? String(y.atoms) : Je, !1],
+      ["Bonds", y ? String(y.bonds) : Je, !1]
     ], g = N("div", `display:grid;grid-template-columns:auto minmax(0,1fr);gap:${te.xl} 20px;align-items:baseline;`);
     u.appendChild(g);
     for (const [R, V, q] of w) {
@@ -6671,7 +6671,7 @@ class df extends Me {
     }).catch((R) => {
       c.replaceChildren(ge(`RDKit failed to load: ${$e(R)}`, !0));
     }), d.container.appendChild(ge("Loading 3D viewer...")), ir().then(() => {
-      d.container.replaceChildren(), _ = Qe.createViewer(d.container, { backgroundColor: jt.viewer }), _.addModel(ma(r), "sdf"), _.setStyle({}, Ur[vt(h) ? h : "stick"]), _.zoomTo(), _.render(), l = sr(d.container, _), ua(_, l), f();
+      d.container.replaceChildren(), _ = et.createViewer(d.container, { backgroundColor: jt.viewer }), _.addModel(ma(r), "sdf"), _.setStyle({}, Ur[vt(h) ? h : "stick"]), _.zoomTo(), _.render(), l = sr(d.container, _), ua(_, l), f();
     }).catch((R) => {
       d.container.replaceChildren(ge(`3D render failed: ${$e(R)}`, !0));
     }), {
@@ -6785,7 +6785,7 @@ function Hr(e, t, n, r, o) {
     try {
       Promise.resolve(
         e.addSurface(
-          Qe.SurfaceType.VDW,
+          et.SurfaceType.VDW,
           { opacity: De.surfaceOpacity, ...s },
           a(is)
         )
@@ -6841,7 +6841,7 @@ function va(e, t, n, r = {}) {
   return s.addEventListener("pointerup", g), s.addEventListener("pointercancel", g), s;
 }
 function po(e, t) {
-  e.style.setProperty(Ye.min, t ? "0" : Bn.min), e.style.setProperty(Ye.max, t ? "none" : Bn.max), e.style.setProperty(Ye.ruleX, t ? "0" : "1px"), e.style.setProperty(Ye.ruleY, t ? "1px" : "0"), e.style.maxHeight = t ? Ba : "";
+  e.style.setProperty(Xe.min, t ? "0" : Bn.min), e.style.setProperty(Xe.max, t ? "none" : Bn.max), e.style.setProperty(Xe.ruleX, t ? "0" : "1px"), e.style.setProperty(Xe.ruleY, t ? "1px" : "0"), e.style.maxHeight = t ? Ba : "";
 }
 const gf = !1, ho = ".menuOpen";
 function yf() {
@@ -7247,7 +7247,7 @@ class Tf extends Me {
       s.showStatus(`PDB parse error: ${$e(a)}`, "error");
     }
     return s.showStatus("Loading 3D viewer..."), ir().then(() => {
-      const a = Qe.createViewer(s.pane.container, { backgroundColor: jt.viewer });
+      const a = et.createViewer(s.pane.container, { backgroundColor: jt.viewer });
       s.setViewer(a), a.addModel(r, "pdb"), Hr(a, s.opts, o, s.showStatus), s.restoreCamera() || a.zoomTo(), a.spin(s.opts.spin ? "y" : !1), a.render(), s.setInteraction(sr(s.pane.container, a));
     }).catch((a) => {
       s.showStatus(`Failed to render structure: ${$e(a)}`, "error");
@@ -7424,7 +7424,7 @@ function $o(e, t) {
   }
   return n;
 }
-function nt(e) {
+function rt(e) {
   return e.name ? e.name : (e["gufe-key"].split("-").pop() ?? e["gufe-key"]).slice(0, 6);
 }
 function Pa(e) {
@@ -7554,7 +7554,7 @@ function Bf(e) {
 }
 const Ma = "Cmd/Ctrl-click to select several.";
 function Uf(e, t, n, r, o) {
-  const i = (s) => o === "keys" ? s["gufe-key"] : nt(s);
+  const i = (s) => o === "keys" ? s["gufe-key"] : rt(s);
   return r === "nodes" ? e.filter((s) => n.has(s["gufe-key"])).map(i).join(`
 `) : t.filter((s) => n.has(s.from["gufe-key"]) && n.has(s.to["gufe-key"])).map((s) => `${i(s.from)}, ${i(s.to)}`).join(`
 `);
@@ -7665,7 +7665,7 @@ function Ta(e, t) {
 function Jf(e, t) {
   return e[Math.min(e.indexOf(t) + 1, e.length - 1)];
 }
-const Xe = 200, zt = { node: 0.12, edge: 0.06 };
+const Ze = 200, zt = { node: 0.12, edge: 0.06 };
 function at(e) {
   return e > 0 ? `+${e}` : String(e);
 }
@@ -7987,7 +7987,7 @@ function wp(e, t) {
       problem: "This mapping names two molecules, and its registry does not hold them.",
       isError: !1
     };
-  const o = nt(n), i = nt(r), s = mp(e);
+  const o = rt(n), i = rt(r), s = mp(e);
   let a, c;
   try {
     a = Br(n.sdf, o), c = Br(r.sdf, i);
@@ -8075,7 +8075,7 @@ class _p extends Me {
       };
       f = requestAnimationFrame(b);
     }, R = (j, O) => {
-      const b = Qe.createViewer(j.container, { backgroundColor: jt.viewer });
+      const b = et.createViewer(j.container, { backgroundColor: jt.viewer });
       for (const { mol: S } of O) b.addModel(lf(S), "sdf");
       return j.viewer = b, b;
     }, V = (j) => {
@@ -8216,14 +8216,14 @@ class _p extends Me {
       let z = null;
       const L = (ne, de, ue, me) => {
         const ke = N("button", `${Oe.plain}${Oe.button}`);
-        ke.type = "button", ke.appendChild(Ze(ne, String(de), me)), ke.onclick = () => {
+        ke.type = "button", ke.appendChild(Qe(ne, String(de), me)), ke.onclick = () => {
           z = z === ue ? null : ue, re();
         }, I.push({ button: ke, kinds: ue }), S.appendChild(ke);
       }, G = (ne, de) => {
         const ue = N("span", Oe.plain);
-        ue.appendChild(Ze(ne, de)), S.appendChild(ue);
+        ue.appendChild(Qe(ne, de)), S.appendChild(ue);
       };
-      L("mapped atoms", d.size, ["mapped", "element"]), L("element changes", w.elements.length, ["element"], Fe.modifiedColor), L(`unique to ${a}`, w.atoms.length, ["uniqueA"], Fe.destroyedColor), L(`unique to ${c}`, g.atoms.length, ["uniqueB"], Fe.createdColor), G(`atoms in ${a}`, String(u.symbols.length)), G(`atoms in ${c}`, String(y.symbols.length)), G("score", n.score == null ? st : n.score.toFixed(3)), j.appendChild(S), j.appendChild(N("div", Ir, "Correspondence"));
+      L("mapped atoms", d.size, ["mapped", "element"]), L("element changes", w.elements.length, ["element"], Fe.modifiedColor), L(`unique to ${a}`, w.atoms.length, ["uniqueA"], Fe.destroyedColor), L(`unique to ${c}`, g.atoms.length, ["uniqueB"], Fe.createdColor), G(`atoms in ${a}`, String(u.symbols.length)), G(`atoms in ${c}`, String(y.symbols.length)), G("score", n.score == null ? Je : n.score.toFixed(3)), j.appendChild(S), j.appendChild(N("div", Ir, "Correspondence"));
       const W = N("div", jr);
       j.appendChild(W);
       const x = N(
@@ -8231,7 +8231,7 @@ class _p extends Me {
         `display:grid;grid-template-columns:repeat(auto-fill,minmax(${pp}px,1fr));gap:${te.xs} ${te.md};font-family:${ee.mono};font-size:${ee.small};color:${Le.primary};`
       );
       j.appendChild(x);
-      const T = String(Math.max(u.symbols.length, y.symbols.length, 1) - 1).length, B = (ne, de) => `${(ne == null ? st : String(ne)).padStart(T)} ${de.padEnd(2)}`, Y = (ne) => {
+      const T = String(Math.max(u.symbols.length, y.symbols.length, 1) - 1).length, B = (ne, de) => `${(ne == null ? Je : String(ne)).padStart(T)} ${de.padEnd(2)}`, Y = (ne) => {
         if (ne.kind === "uniqueA") return `${a} atom ${ne.a} ${ne.symbolA} maps to nothing`;
         if (ne.kind === "uniqueB") return `${c} atom ${ne.b} ${ne.symbolB} maps to nothing`;
         const de = ne.kind === "element" ? ", an element change" : "";
@@ -8402,9 +8402,9 @@ function Kp(e) {
   const [t, n] = M.netEdgeRamp.map(Hp), r = Math.max(0, Math.min(1, e ?? 0.5));
   return `rgb(${t.map((i, s) => Math.round(i + (n[s] - i) * r)).join(",")})`;
 }
-const Je = nt;
+const Ye = rt;
 function Ia(e, t) {
-  return t ? Je(e).toLowerCase().includes(t) || (e.smiles ?? "").toLowerCase().includes(t) || e["gufe-key"].toLowerCase().includes(t) : !0;
+  return t ? Ye(e).toLowerCase().includes(t) || (e.smiles ?? "").toLowerCase().includes(t) || e["gufe-key"].toLowerCase().includes(t) : !0;
 }
 function Gp(e, t, n, r, o) {
   const i = r.trim().toLowerCase(), s = n.size > 0 || i.length > 0;
@@ -8502,7 +8502,7 @@ function Wp(e) {
     e.nodes.forEach((f, m) => {
       if (t.has(m) || n.has(m)) return;
       const E = f.x * v + p, A = f.y * v + $;
-      E < -Xe || A < -Xe || E > k + Xe || A > _ + Xe || l.push(m);
+      E < -Ze || A < -Ze || E > k + Ze || A > _ + Ze || l.push(m);
     }), l.length && e.rdkit().then((f) => {
       if (!(!f || g !== h))
         for (const m of l)
@@ -8545,8 +8545,8 @@ function Jp(e) {
     },
     shows: (n) => Ia(n, e.query.text.trim().toLowerCase()),
     row: (n) => ({
-      name: Je(n),
-      title: `${Je(n)}
+      name: Ye(n),
+      title: `${Ye(n)}
 ${n.smiles ?? ""}`
     }),
     export: {
@@ -8571,7 +8571,7 @@ class Yp extends Me {
       edges: n.edges ?? [],
       ends: (S) => [S.componentA, S.componentB]
     }), c = Yn(n.name || "Ligand network");
-    c.statsEl.appendChild(Ze("ligands", String(o.length))), c.statsEl.appendChild(Ze("mappings", String(i.length))), t.appendChild(c);
+    c.statsEl.appendChild(Qe("ligands", String(o.length))), c.statsEl.appendChild(Qe("mappings", String(i.length))), t.appendChild(c);
     const d = N("div", "flex:1;display:flex;flex-direction:row;min-height:0;overflow:hidden;");
     t.appendChild(d);
     const u = /* @__PURE__ */ new Set(), y = { minScore: 0 }, w = { text: "" }, g = () => aa(), C = Ra(
@@ -8816,7 +8816,7 @@ class Yp extends Me {
         b.stopPropagation(), s({ kind: "edge", index: H.index });
       }), D.addEventListener("mousemove", (b) => {
         c.show(
-          `<div style="font-weight:700;color:${M.titleColor};">${Ce(Je(H.from))} -&gt; ${Ce(Je(H.to))}</div>` + (H.score == null ? `<div style="color:${M.textMuted2};">no score</div>` : `<div style="margin-top:4px;">score <b>${H.score.toFixed(3)}</b></div>`) + (ie ? `<div style="margin-top:4px;">net charge <b>${Ce(at(ie))}</b> <span style="color:${M.textMuted2};">(${Ce(at(H.from.total_charge ?? 0))} to ${Ce(at(H.to.total_charge ?? 0))})</span></div>` : "") + `<div style="margin-top:4px;font-size:${ee.tiny};color:${M.textMuted2};">Click to see the mapping</div>`,
+          `<div style="font-weight:700;color:${M.titleColor};">${Ce(Ye(H.from))} -&gt; ${Ce(Ye(H.to))}</div>` + (H.score == null ? `<div style="color:${M.textMuted2};">no score</div>` : `<div style="margin-top:4px;">score <b>${H.score.toFixed(3)}</b></div>`) + (ie ? `<div style="margin-top:4px;">net charge <b>${Ce(at(ie))}</b> <span style="color:${M.textMuted2};">(${Ce(at(H.from.total_charge ?? 0))} to ${Ce(at(H.to.total_charge ?? 0))})</span></div>` : "") + `<div style="margin-top:4px;font-size:${ee.tiny};color:${M.textMuted2};">Click to see the mapping</div>`,
           b.offsetX,
           b.offsetY
         );
@@ -8836,7 +8836,7 @@ class Yp extends Me {
       const X = ce("g", { class: "gufe-node", style: "cursor:grab;" });
       X.addEventListener("mousemove", (b) => {
         c.show(
-          `<div style="font-weight:700;color:${M.titleColor};">${Ce(Je(H))}</div>` + (H.smiles ? `<div style="margin-top:3px;font-family:ui-monospace,Menlo,monospace;overflow-wrap:anywhere;">${Ce(H.smiles)}</div>` : "") + (H.total_charge ? `<div style="margin-top:3px;">formal charge <b>${Ce(at(H.total_charge))}</b></div>` : "") + `<div style="margin-top:3px;font-size:${ee.tiny};color:${M.textMuted2};overflow-wrap:anywhere;">${Ce(H["gufe-key"])}</div><div style="margin-top:4px;font-size:${ee.tiny};color:${M.textMuted2};">Click to see the ligand</div>`,
+          `<div style="font-weight:700;color:${M.titleColor};">${Ce(Ye(H))}</div>` + (H.smiles ? `<div style="margin-top:3px;font-family:ui-monospace,Menlo,monospace;overflow-wrap:anywhere;">${Ce(H.smiles)}</div>` : "") + (H.total_charge ? `<div style="margin-top:3px;">formal charge <b>${Ce(at(H.total_charge))}</b></div>` : "") + `<div style="margin-top:3px;font-size:${ee.tiny};color:${M.textMuted2};overflow-wrap:anywhere;">${Ce(H["gufe-key"])}</div><div style="margin-top:4px;font-size:${ee.tiny};color:${M.textMuted2};">Click to see the ligand</div>`,
           b.offsetX,
           b.offsetY
         );
@@ -8881,7 +8881,7 @@ class Yp extends Me {
         fill: M.netInitials,
         "pointer-events": "none"
       });
-      if (D.textContent = Je(H).slice(0, 2).toUpperCase(), X.appendChild(D), m.push(D), H.total_charge) {
+      if (D.textContent = Ye(H).slice(0, 2).toUpperCase(), X.appendChild(D), m.push(D), H.total_charge) {
         const b = ce("text", {
           class: "gufe-node-charge",
           "text-anchor": "middle",
@@ -8901,7 +8901,7 @@ class Yp extends Me {
         fill: M.netNodeCaption,
         "pointer-events": "none"
       });
-      j.textContent = Ln(Je(H), Np), j.setAttribute("display", "none"), E.push(j);
+      j.textContent = Ln(Ye(H), Np), j.setAttribute("display", "none"), E.push(j);
       const O = ce("rect", {
         class: "gufe-node-caption-plate",
         rx: Ft.captionRadius,
@@ -9180,7 +9180,7 @@ class nh extends Me {
       d.showStatus(`PDB parse error: ${$e(g)}`, "error");
     }
     return d.showStatus("Loading 3D viewer..."), ir().then(() => {
-      const g = Qe.createViewer(d.pane.container, { backgroundColor: jt.viewer });
+      const g = et.createViewer(d.pane.container, { backgroundColor: jt.viewer });
       d.setViewer(g);
       for (const C of r.structures) g.addModel(C.pdb, "pdb");
       for (const C of r.ligands) g.addModel(ma(C.sdf), "sdf");
@@ -9399,7 +9399,7 @@ function $h(e, t, n, r) {
 }
 function bh(e, t) {
   const n = Ke(t, e.componentA), r = Ke(t, e.componentB);
-  return `${n ? nt(n) : "A"} to ${r ? nt(r) : "B"}`;
+  return `${n ? rt(n) : "A"} to ${r ? rt(r) : "B"}`;
 }
 function Ps(e) {
   return N(
@@ -9436,7 +9436,7 @@ class vh extends Me {
     const w = N("div", "flex:1;min-width:0;min-height:0;display:flex;flex-direction:column;");
     u.appendChild(w);
     const g = N("div", `display:flex;flex-direction:column;gap:${te.md};min-width:0;`);
-    g.appendChild(Ps(c)), g.appendChild(Rs("protocol", s?.gufe_type || s?.name || "-")), g.appendChild(Rs("mappings", String(a.length))), y.appendChild(g);
+    g.appendChild(Ps(c)), g.appendChild(Rs("protocol", s?.gufe_type || s?.name || Je)), g.appendChild(Rs("mappings", String(a.length))), y.appendChild(g);
     const C = N("div", `display:flex;flex-direction:column;gap:${te.xs};`);
     for (const [l, f] of [
       ["State A", o],
@@ -9468,7 +9468,7 @@ class vh extends Me {
         `display:flex;flex-wrap:wrap;gap:${te.lg} 12px;padding-top:${te.sm};font-size:${ee.small};color:${M.textMuted};`
       );
       for (const f of ["unchanged", "changed", "added", "removed"])
-        v.has(f) && l.appendChild(Ze(f, "", bo[f]));
+        v.has(f) && l.appendChild(Qe(f, "", bo[f]));
       y.appendChild(l);
     }
     const p = N("div", Ha, "Atom mapping");
@@ -9561,7 +9561,7 @@ function Eh(e, t, n, r, o, i, s, a) {
     u.has(w.from["gufe-key"]) && u.has(w.to["gufe-key"]) && y.add(g);
   }), { nodes: u, edges: y };
 }
-const Wn = nt;
+const Wn = rt;
 function Da(e, t) {
   const n = /* @__PURE__ */ new Set();
   for (const r of Object.values(e.components ?? {})) {
@@ -9597,7 +9597,7 @@ function Ph(e, t) {
     n.push(r);
     const i = Ke(t, o);
     if (!i) continue;
-    n.push(nt(i), i["gufe-key"]);
+    n.push(rt(i), i["gufe-key"]);
     const s = i.smiles;
     s && n.push(s);
   }
@@ -9732,7 +9732,7 @@ class Fh extends Me {
       const I = Re(r, S.protocol, "ProtocolViz");
       return I?.gufe_type || I?.name || "";
     }, d = new Set(i.map(c).filter(Boolean)), u = Yn(n.name || "Alchemical network");
-    u.statsEl.appendChild(Ze("systems", String(o.length))), u.statsEl.appendChild(Ze("transformations", String(i.length))), d.size && u.statsEl.appendChild(Ze("protocol", [...d].join(", ")));
+    u.statsEl.appendChild(Qe("systems", String(o.length))), u.statsEl.appendChild(Qe("transformations", String(i.length))), d.size && u.statsEl.appendChild(Qe("protocol", [...d].join(", ")));
     const y = Ah(o, r), w = N("div", "flex:1;display:flex;flex-direction:row;min-height:0;overflow:hidden;");
     t.appendChild(w);
     let g = () => {
@@ -10084,7 +10084,7 @@ class Fh extends Me {
       n.forEach((T, B) => {
         if (!s[B].sdf || X.has(B) || oe.has(B)) return;
         const Y = T.x * z + L, Q = T.y * z + G;
-        Y < -Xe || Q < -Xe || Y > o + Xe || Q > i + Xe || x.push(B);
+        Y < -Ze || Q < -Ze || Y > o + Ze || Q > i + Ze || x.push(B);
       }), x.length && a().then((T) => {
         if (!(!T || D !== W))
           for (const B of x)

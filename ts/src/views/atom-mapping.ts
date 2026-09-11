@@ -78,7 +78,7 @@
  * the transformation view both do.
  */
 
-import { el, EM_DASH, errText } from "../shared/dom.js";
+import { el, NO_VALUE, errText } from "../shared/dom.js";
 import { switcher } from "../shared/controls.js";
 import { centredMessage, nameWanted, statChip } from "../shared/panels.js";
 import { defineElement, GufeElement, type ViewHandle } from "../shared/element.js";
@@ -1058,7 +1058,7 @@ export class GufeAtomMapping extends GufeElement<LigandAtomMappingViz> {
       filterChip(`unique to ${nameB}`, uniquesB.atoms.length, ["uniqueB"], DEPICT_STYLE.createdColor);
       plainChip(`atoms in ${nameA}`, String(molA.symbols.length));
       plainChip(`atoms in ${nameB}`, String(molB.symbols.length));
-      plainChip("score", payload.score == null ? EM_DASH : payload.score.toFixed(3));
+      plainChip("score", payload.score == null ? NO_VALUE : payload.score.toFixed(3));
       body.appendChild(counts);
 
       body.appendChild(el("div", SECTION_LABEL, "Correspondence"));
@@ -1081,7 +1081,7 @@ export class GufeAtomMapping extends GufeElement<LigandAtomMappingViz> {
 
       const digits = String(Math.max(molA.symbols.length, molB.symbols.length, 1) - 1).length;
       const side = (index: number | null, symbol: string): string =>
-        `${(index == null ? EM_DASH : String(index)).padStart(digits)} ${symbol.padEnd(2)}`;
+        `${(index == null ? NO_VALUE : String(index)).padStart(digits)} ${symbol.padEnd(2)}`;
       const describe = (row: Relation): string => {
         if (row.kind === "uniqueA") return `${nameA} atom ${row.a} ${row.symbolA} maps to nothing`;
         if (row.kind === "uniqueB") return `${nameB} atom ${row.b} ${row.symbolB} maps to nothing`;
