@@ -1,1 +1,1 @@
-"""Tests for gufe-viz."""
+"""Tests for alchemy-viz."""

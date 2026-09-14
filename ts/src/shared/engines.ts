@@ -7,42 +7,125 @@
  * small-molecule page never pays for d3.
  *
  * A host may instead **pre-seed** an engine through `globalThis.__gufeEngines`,
- * in which case nothing is fetched at all. That is the hook the zero-network
- * HTML export uses: it inlines the engines into the page and hands
- * them over here. A seeded value may be the module itself or a promise for it.
+ * in which case nothing is fetched at all. A seeded value may be the module
+ * itself or a promise for it.
+ *
+ * That is the hook a zero-network HTML export would use - inline the engines
+ * into the page and hand them over here. `to_html` has no such mode yet; what
+ * drives the hook today is the test suite, which seeds fakes through it so that
+ * no test reaches a CDN.
  */
 
 // --- minimal structural types for the three engines ------------------------
 //
 // None of these ship type declarations we can rely on, and vendoring a full
-// @types package for three call sites would be worse than describing exactly
-// what we use.
+// @types package would be worse than describing exactly what we use: what is
+// here is the surface this project actually touches, which is a fraction of
+// each library and is checked by being the only thing that compiles.
 
 export interface ThreeDmolViewer {
   addModel(data: string, format: string): unknown;
   setStyle(selection: object, style: object): void;
   removeAllSurfaces(): void;
   addSurface(type: unknown, style: object, selection: object): unknown;
-  zoomTo(): void;
+  /**
+   * Frame the scene, or just the part of it `selection` names - which is how a
+   * 30-atom ligand is found inside a 5000-atom protein.
+   */
+  zoomTo(selection?: object): void;
+  /** Multiply the current zoom. `shared/interact.ts` is what bounds it. */
+  zoom(factor: number): void;
+  /**
+   * How near and how far the camera may get, as distances in the units
+   * `CAMERA_Z` is in. 3Dmol applies these to every way it zooms - wheel, drag
+   * and two-finger pinch - which is why `shared/interact.ts` hands them over
+   * rather than only clamping the wheel it sees.
+   *
+   * Optional so that a host pre-seeding an older build degrades to the clamp
+   * `interact.ts` applies itself, instead of throwing.
+   */
+  setZoomLimits?(lower: number, upper: number): void;
+  /**
+   * Where 3Dmol parks the camera. Distances are measured back from here, so the
+   * zoom clamp needs it; optional for the same reason as above, and 150 is the
+   * value every build has defaulted to.
+   */
+  CAMERA_Z?: number;
+  /** A coloured sphere, which is how a mapped pair is marked. */
+  addSphere(spec: object): unknown;
+  /** A cylinder, dashed when asked - the line drawn between a mapped pair. */
+  addCylinder(spec: object): unknown;
+  /** Style a subset on top of what `setStyle` already applied. */
+  addStyle(selection: object, style: object): void;
+  /**
+   * The camera, for keeping two side-by-side viewers pointing the same way.
+   * Index 3 is the camera's z, which is what the zoom clamp reads.
+   */
+  getView(): number[];
+  setView(view: unknown): void;
+  /** Turn the camera, in degrees about an axis. */
+  rotate(angle: number, axis: string): void;
   render(): void;
   resize(): void;
   spin(axis: string | false): void;
   clear(): void;
 }
 
+/**
+ * What a viewer is opened with.
+ *
+ * Spelled out rather than left as `object`, which is what it was: a `config` of
+ * `object` accepts anything at all, so handing 3Dmol a *function* where its
+ * background colour belongs typechecked cleanly and turned every 3D pane's
+ * ground into whatever `String(fn)` renders as.
+ */
+export interface ViewerConfig {
+  /** `0x`-prefixed, which is the one colour form 3Dmol takes. */
+  backgroundColor?: string;
+}
+
 export interface ThreeDmolModule {
-  createViewer(element: HTMLElement, config: object): ThreeDmolViewer;
+  createViewer(element: HTMLElement, config: ViewerConfig): ThreeDmolViewer;
   SurfaceType: { VDW: unknown };
 }
 
 export interface RDKitMol {
   set_new_coords(useCoordGen: boolean): void;
+  /**
+   * Every match of a query molecule, as a JSON string: an array of
+   * `{"atoms": [...], "bonds": [...]}` indexed against *this* molecule, which
+   * is why the caller has to have parsed it the same way as whatever it is
+   * about to draw. Optional like the two below, so a host pre-seeding an older
+   * MinimalLib build loses SMARTS matching instead of throwing.
+   */
+  get_substruct_matches?(query: RDKitMol): string;
+  /**
+   * The molecule back out as a MOL block, which is how a generated 2D layout is
+   * read: MinimalLib will write coordinates into a molecule but never lets a
+   * caller write them back, so the round trip goes through text. Optional for
+   * the same reason as `get_svg_with_highlights`, and a build without it simply
+   * draws whatever coordinates it was handed.
+   */
+  get_molblock?(details?: string): string;
   get_svg(width: number, height: number): string;
+  /**
+   * Optional because it is the newer of the two drawing entry points: an
+   * embedder that pre-seeds an older MinimalLib build has `get_svg` and not
+   * this, so every caller falls back rather than assuming it is there.
+   * `details` is the JSON form of RDKit's drawing options - `atoms`, `bonds`,
+   * `width`, `height`, `legend`.
+   */
+  get_svg_with_highlights?(details: string): string;
   delete(): void;
 }
 
 export interface RDKitModule {
   get_mol(source: string, details?: string): RDKitMol | null;
+  /**
+   * A query molecule from SMARTS. Returns null when the pattern does not parse,
+   * which is the whole of the error handling a typed-in pattern needs.
+   */
+  get_qmol?(smarts: string): RDKitMol | null;
 }
 
 interface SeededEngines {
@@ -63,14 +146,28 @@ declare global {
 
 // --- where the engines come from when they are not pre-seeded --------------
 //
-// Kept as plain string constants rather than literals at the import site so the
-// bundler leaves the URLs alone, so inlining them has one obvious place to look
-// when it vendors these instead.
+// Pinned exactly, never to a range and never to whatever a CDN calls latest. A
+// page built today and opened in a year has to draw the same picture, and an
+// engine that changes under a fixed payload turns a rendering bug into one
+// nobody can reproduce. RDKit is the sharpest case: the pinned `.js` is also
+// what pins the `.wasm`, which Emscripten fetches from the script's own
+// directory, and it is where feature detection like `get_qmol` gets its answer.
+//
+// Moving a pin is a deliberate edit here, with the page re-checked afterwards.
 
-export const ENGINE_URLS = {
-  threeDmol: "https://3dmol.org/build/3Dmol-min.js",
-  rdkit: "https://unpkg.com/@rdkit/rdkit/dist/RDKit_minimal.js",
-  d3: "https://cdn.jsdelivr.net/npm/d3@7/+esm",
+const ENGINE_VERSIONS = {
+  threeDmol: "2.5.5",
+  rdkit: "2025.3.4-1.0.0",
+  d3: "7.9.0",
+} as const;
+
+// Built here rather than at the import site, so the bundler leaves them alone
+// and anything vendoring these instead has one obvious place to look.
+
+const ENGINE_URLS = {
+  threeDmol: `https://unpkg.com/3dmol@${ENGINE_VERSIONS.threeDmol}/build/3Dmol-min.js`,
+  rdkit: `https://unpkg.com/@rdkit/rdkit@${ENGINE_VERSIONS.rdkit}/dist/RDKit_minimal.js`,
+  d3: `https://cdn.jsdelivr.net/npm/d3@${ENGINE_VERSIONS.d3}/+esm`,
 } as const;
 
 function preseeded<T>(name: keyof SeededEngines): Promise<T> | null {
@@ -144,6 +241,33 @@ export function loadRDKit(): Promise<RDKitModule> {
   return rdkitPromise;
 }
 
+/**
+ * RDKit, or null if it could not be had.
+ *
+ * For a view that draws something either way. The two network views fall back to
+ * initials in a node when there is no RDKit, which is a coarser picture rather
+ * than no picture, so a rejected promise is the wrong shape for them.
+ *
+ * A view with nothing to draw without RDKit - `small-molecule`, `atom-mapping` -
+ * deliberately does not use this. It wants the error, because it has a panel to
+ * put the reason in, and "why is this blank" is a question only the message can
+ * answer.
+ *
+ * Warned once, not per caller: the memo above means the fetch is attempted once,
+ * so this says so once.
+ */
+let optionalRdkitPromise: Promise<RDKitModule | null> | null = null;
+
+export function optionalRDKit(): Promise<RDKitModule | null> {
+  // Memoised in its own right, not just relying on `loadRDKit`'s memo: a bare
+  // `.catch` per call would attach a fresh handler each time and warn once per
+  // caller on a page where the fetch failed.
+  return (optionalRdkitPromise ??= loadRDKit().catch((e: unknown) => {
+    console.warn("[alchemy-viz] RDKit failed to load:", e instanceof Error ? e.message : String(e));
+    return null;
+  }));
+}
+
 // --- d3 (graph views) ------------------------------------------------------
 
 let d3Promise: Promise<unknown> | null = null;
@@ -158,10 +282,34 @@ export function loadD3(): Promise<unknown> {
   return d3Promise;
 }
 
+/**
+ * Stop a viewer and let go of its WebGL context.
+ *
+ * Both calls are wrapped because both can throw at teardown and neither failure
+ * is worth propagating: `spin` is missing on 3Dmol v1, and `clear` throws on a
+ * viewer whose context the browser has already taken back. A teardown that
+ * throws is a teardown that stops halfway, which is how a page ends up holding
+ * contexts nothing can release.
+ */
+export function releaseViewer(viewer: ThreeDmolViewer | null): void {
+  if (!viewer) return;
+  try {
+    viewer.spin(false);
+  } catch {
+    /* 3Dmol v1 quirk */
+  }
+  try {
+    viewer.clear();
+  } catch {
+    /* already gone */
+  }
+}
+
 /** Test hook: forget every memoised loader so a fresh mock can be seeded. */
 export function _resetEnginesForTests(): void {
   ThreeDmol = null;
   threeDmolPromise = null;
   rdkitPromise = null;
+  optionalRdkitPromise = null;
   d3Promise = null;
 }

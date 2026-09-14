@@ -2,13 +2,13 @@
 
 Deliberately minimal: :func:`to_html` **returns a string and writes nothing**.
 Where that string goes is a decision for whoever owns the calling code, not for
-this module. :mod:`gufe_viz.cli` is one answer to that question, not the answer.
+this module. :mod:`alchemy_viz.cli` is one answer to that question, not the answer.
 
 The page is four things and no others:
 
 * the compiled bundle, inlined in a ``<script type="module">``;
 * the payload, inlined in a ``<script type="application/json">``;
-* one ``<gufe-view>`` element;
+* one ``<alchemy-view>`` element;
 * three lines of bootstrap that hand the second to the third.
 
 No fetches, no iframe, no server. The one thing it does reach for today is
@@ -18,9 +18,13 @@ network access at all.
 
 The bootstrap uses only the custom-element API (``document.querySelector`` plus
 a ``.payload`` assignment). That is on purpose: it does not depend on any name
-the bundler chose, and it is the same two lines the notebook widget will use.
+the bundler chose, and it is the same two lines the notebook widget uses.
 
-``to_html(obj, debug=True)`` puts a ``debug`` attribute on the ``<gufe-view>``,
+:func:`shell_html` is that same document with the payload block and the
+bootstrap left out, for a host that delivers the payload itself - which is what
+the notebook widget does. One template, two fillings.
+
+``to_html(obj, debug=True)`` puts a ``debug`` attribute on the ``<alchemy-view>``,
 which makes the bundle print the payload it was handed to the browser console.
 It is not the only way in: any page this writes also answers to ``?debug`` in
 its URL, so a file already on disk can be re-opened as
@@ -36,11 +40,11 @@ from pathlib import Path
 from string import Template
 from typing import TYPE_CHECKING, Any
 
-if TYPE_CHECKING:  # importing gufe at runtime would make `import gufe_viz` need it
+if TYPE_CHECKING:  # importing gufe at runtime would make `import alchemy_viz` need it
     from gufe.tokenization import GufeTokenizable
 
 #: Name of the committed Vite build inside the package.
-BUNDLE = "gufe-viz.js"
+BUNDLE = "alchemy-viz.js"
 
 
 class BundleMissing(RuntimeError):
@@ -55,10 +59,10 @@ class BundleMissing(RuntimeError):
 def bundle_source() -> str:
     """Return the compiled TypeScript bundle as text."""
     try:
-        return resources.files("gufe_viz").joinpath("_assets", BUNDLE).read_text(encoding="utf-8")
+        return resources.files("alchemy_viz").joinpath("_assets", BUNDLE).read_text(encoding="utf-8")
     except (FileNotFoundError, ModuleNotFoundError, OSError) as e:
         raise BundleMissing(
-            f"gufe_viz/_assets/{BUNDLE} is missing or unreadable ({e}). In a source checkout, run `pixi run build`."
+            f"alchemy_viz/_assets/{BUNDLE} is missing or unreadable ({e}). In a source checkout, run `pixi run build`."
         ) from e
 
 
@@ -72,34 +76,41 @@ _TEMPLATE = Template("""<!doctype html>
   html, body { height: 100%; margin: 0; }
   body { display: flex; flex-direction: column;
          font: 13px/1.4 ui-sans-serif, system-ui, sans-serif; }
-  gufe-view { flex: 1 1 auto; min-height: 0; }
+  alchemy-view { flex: 1 1 auto; min-height: 0; }
   #gufe-error { display: none; flex: 0 0 auto; padding: 12px 16px; white-space: pre-wrap;
                 font-family: ui-monospace, monospace; color: #991b1b; background: #fee2e2; }
 </style>
 </head>
 <body>
 <div id="gufe-error"></div>
-<gufe-view$view_attributes></gufe-view>
-<script id="gufe-payload" type="application/json">$payload</script>
+<alchemy-view$view_attributes></alchemy-view>
+$payload
 $engines
 <script type="module">
 $code
+$bootstrap
+</script>
+</body>
+</html>
+""")
 
+#: The payload, baked into the page. Absent from the shell, which is handed its
+#: payload at runtime instead.
+_PAYLOAD_BLOCK = Template('<script id="gufe-payload" type="application/json">$payload</script>')
+
+_BOOTSTRAP = """
 // ---- bootstrap: hand the element the payload baked into this file ----
 // Only the custom-element API is used here, so nothing depends on a name the
 // bundler happened to choose.
 try {
-  document.querySelector("gufe-view").payload =
+  document.querySelector("alchemy-view").payload =
     JSON.parse(document.getElementById("gufe-payload").textContent);
 } catch (e) {
   const err = document.getElementById("gufe-error");
   err.textContent = String((e && e.stack) || e);
   err.style.display = "block";
 }
-</script>
-</body>
-</html>
-""")
+"""
 
 _CDN_ENGINES_NOTE = (
     "<!-- RDKit / 3Dmol / d3 are fetched from their CDNs on demand, and only by a\n"
@@ -161,20 +172,47 @@ def to_html(obj: GufeTokenizable | dict[str, Any], *, title: str | None = None, 
         If the compiled bundle is not present in the installed package.
     """
     payload = _as_payload_dict(obj)
-    code = bundle_source()
 
     # `Template.substitute` scans the template once, so a placeholder appearing
     # inside a substituted value (e.g. the payload or bundle) is left alone.
     return _TEMPLATE.substitute(
-        title=_escape_html(title or payload.get("name") or payload.get("type") or "gufe-viz"),
-        # `</` cannot appear inside a <script> block, whatever the payload holds;
-        # `\/` is a legal JSON escape, so this survives JSON.parse unchanged.
-        payload=json.dumps(payload).replace("</", "<\\/"),
+        title=_escape_html(title or payload.get("name") or payload.get("type") or "alchemy-viz"),
+        payload=_PAYLOAD_BLOCK.substitute(
+            # `</` cannot appear inside a <script> block, whatever the payload
+            # holds; `\/` is a legal JSON escape, so this survives JSON.parse
+            # unchanged.
+            payload=json.dumps(payload).replace("</", "<\\/")
+        ),
         engines=_CDN_ENGINES_NOTE,
-        code=_script_safe(code),
+        code=_script_safe(bundle_source()),
+        bootstrap=_BOOTSTRAP,
         # A bare boolean attribute, because that is what the element tests for -
         # no value to keep in step between the two languages.
         view_attributes=" debug" if debug else "",
+    )
+
+
+def shell_html(*, title: str = "alchemy-viz") -> str:
+    """Return the same page as :func:`to_html`, minus the payload.
+
+    The notebook widget writes this into an iframe and then sets ``.payload`` on
+    the ``<alchemy-view>`` inside it, so the payload arrives over the widget comm
+    rather than baked into the document. Everything else - the bundle, the
+    element, the stylesheet - is the page ``to_html`` produces, from the same
+    template, which is the point: there is one document to get right.
+
+    The elements are defined by the time the iframe's ``load`` event fires,
+    because a module script delays it. That is the whole handshake; a host that
+    sets ``.payload`` before then would be assigning to an element that has not
+    been upgraded yet, where the assignment would shadow the class's accessor.
+    """
+    return _TEMPLATE.substitute(
+        title=_escape_html(title),
+        payload="",
+        engines=_CDN_ENGINES_NOTE,
+        code=_script_safe(bundle_source()),
+        bootstrap="",
+        view_attributes="",
     )
 
 

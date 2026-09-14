@@ -7,7 +7,7 @@ dist/
 .pytest_cache/
 .ruff_cache/
 .ipynb_checkpoints
-python/gufe_viz/_version.py
+python/alchemy_viz/_version.py
 
 # Node
 node_modules/
@@ -17,7 +17,13 @@ ts/dist/
 # pixi
 .pixi/
 
+# notebooks
+.ipynb_checkpoints/
+# `pixi run marimo` converts the demo notebook into here; the .ipynb is the source
+examples/notebooks/.marimo/
+
 # editors / OS
 .DS_Store
 .idea/
 .vscode/
+

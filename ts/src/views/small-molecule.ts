@@ -1,32 +1,70 @@
 /**
- * `<gufe-small-molecule>` - 2D depiction | 3D conformer, with an info bar.
+ * `<gufe-small-molecule>` - one ligand, drawn one way at a time.
  *
  * RDKit draws the 2D depiction and 3Dmol the 3D conformer; both are loaded
  * lazily, so a page with no small molecule on it never pays for RDKit's wasm.
+ *
+ * One picture at a time rather than two side by side. A split pane gave each
+ * half of the width to a drawing that wanted all of it, and neither half was
+ * ever the one being looked at. The switcher is therefore what the mapping view
+ * has - a mode per way of looking, over the picture rather than beside it, with
+ * the molecule's name overlaid in the corner in place of a header strip:
+ *
+ *   2D                     the depiction
+ *   Stick, Ball+Stick,     the conformer, in that style
+ *   Sphere
+ *   Info                   name, SMILES, charge and the counts
+ *
+ * Spin sits with them because it is a control of the 3D picture rather than a
+ * fourth way to look at the molecule; it is dead outside those three modes and
+ * says so by being disabled.
+ *
+ * The panes are all built and all laid out, and the ones not in force are only
+ * made invisible. 3Dmol sizes its canvas from the element it renders into, so a
+ * viewer built inside a `display:none` pane would be built at nothing and stay
+ * there; this way the conformer is ready whichever mode the view opens on.
  */
 
-import { BTN_CSS, buttonGroup, centredMessage, EM_DASH, el, errText, headerStrip, viewerHost } from "../shared/dom.js";
-import { defineElement, GufeElement, type ViewHandle } from "../shared/element.js";
-import { load3Dmol, loadRDKit, ThreeDmol, type ThreeDmolViewer } from "../shared/engines.js";
+import { el, NO_VALUE, errText } from "../shared/dom.js";
+import { switcher, toggleButton } from "../shared/controls.js";
+import { centredMessage, nameWanted, viewerHost } from "../shared/panels.js";
+import { defineElement, AlchemyElement, type ViewHandle } from "../shared/element.js";
+import { choice, flag } from "../shared/settings.js";
+import { load3Dmol, loadRDKit, releaseViewer, ThreeDmol, type ThreeDmolViewer } from "../shared/engines.js";
+import { viewerInteraction, type BoundedZoom, type Interaction } from "../shared/interact.js";
+import { rememberLigandPose, restoreLigandPose } from "../shared/ligand-camera.js";
+import { DEPICT_STYLE } from "../shared/depict-style.js";
 import { depictSVG, ensureSDFTerminator, parseCounts, placeDepiction } from "../shared/sdf.js";
-import { T } from "../shared/theme.js";
+import { depictGround, depictThemeOptions } from "../shared/depict-theme.js";
+import { FONT, OVERLAY_CONTROLS, PANE_LABEL_OVERLAY, SPACE, SURFACE } from "../shared/style.js";
+import { V } from "../shared/theme.js";
 import type { SmallMoleculeComponentViz } from "../schema/types.js";
 
-const SMALL_MOL_STYLES = [
+const MODES = [
+  { id: "2d", label: "2D", title: "The 2D depiction" },
   { id: "stick", label: "Stick", title: "Sticks only" },
   { id: "ball", label: "Ball+Stick", title: "Ball and stick" },
   { id: "sphere", label: "Sphere", title: "Space-filling spheres" },
+  { id: "info", label: "Info", title: "Name, SMILES, charge and the counts" },
 ] as const;
 
+type Mode = (typeof MODES)[number]["id"];
+
+/** The three modes that are the conformer, and what each asks 3Dmol for. */
 const SMALL_MOL_SPECS: Record<string, object> = {
   stick: { stick: { radius: 0.15, colorscheme: "Jmol" } },
   ball: { stick: { radius: 0.12, colorscheme: "Jmol" }, sphere: { scale: 0.28, colorscheme: "Jmol" } },
   sphere: { sphere: { scale: 1.0, colorscheme: "Jmol" } },
 };
 
+const is3D = (mode: Mode): boolean => mode in SMALL_MOL_SPECS;
+
 const DEPICT_SIZE = 400;
 
-export class GufeSmallMolecule extends GufeElement<SmallMoleculeComponentViz> {
+/** A pane of the stage: the whole of it, and invisible until it is the one in force. */
+const PANE = "position:absolute;inset:0;min-width:0;min-height:0;";
+
+export class GufeSmallMolecule extends AlchemyElement<SmallMoleculeComponentViz> {
   protected override placeholder(): string {
     return "Waiting for a SmallMoleculeComponent payload...";
   }
@@ -37,83 +75,158 @@ export class GufeSmallMolecule extends GufeElement<SmallMoleculeComponentViz> {
     const smiles = payload.smiles;
     const charge = payload.total_charge;
 
-    host.appendChild(headerStrip(name || "Unnamed molecule", "SmallMoleculeComponent"));
+    const stage = el("div", "flex:1;position:relative;min-height:0;overflow:hidden;");
+    host.appendChild(stage);
 
-    const split = el("div", "flex:1;display:flex;flex-direction:row;overflow:hidden;min-height:0;");
-    host.appendChild(split);
+    // --- the panes ---
 
-    const left = el("div", "flex:1 1 50%;min-width:0;display:flex;flex-direction:column;");
-    const right = el("div", "flex:1 1 50%;min-width:0;display:flex;flex-direction:column;position:relative;");
-    split.appendChild(left);
-    split.appendChild(el("div", `width:1px;flex-shrink:0;background:${T.splitBorder};`));
-    split.appendChild(right);
-
-    const paneLabel = (text: string) =>
-      el("div", `flex-shrink:0;padding:4px 10px;font-size:12px;font-weight:bold;color:${T.labelFg};` +
-        `background:${T.labelBg};`, text);
-
-    left.appendChild(paneLabel("2D"));
     const depictBox = el(
       "div",
-      "flex:1;min-height:0;display:flex;align-items:center;justify-content:center;overflow:hidden;padding:8px;" +
-        `background:${T.canvas2DBg};`,
+      `${PANE}display:flex;align-items:center;justify-content:center;overflow:hidden;padding:8px;` +
+        `background:${depictGround()};`,
     );
-    left.appendChild(depictBox);
+    stage.appendChild(depictBox);
 
-    right.appendChild(paneLabel("3D"));
     const host3D = viewerHost();
-    right.appendChild(host3D.wrap);
+    host3D.wrap.style.cssText = PANE;
+    stage.appendChild(host3D.wrap);
 
-    // --- info bar ---
-    const infoBar = el(
+    const infoPane = el(
       "div",
-      "flex-shrink:0;display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 20px;padding:8px 16px;font-size:12px;" +
-        `background:${T.toolbarBg};border-top:1px solid ${T.toolbarBorder};color:${T.textPrimary};`,
+      `${PANE}overflow:auto;padding:16px 20px;background:${V.panelBg};color:${V.textPrimary};` +
+        `font-size:${FONT.body};`,
     );
-    host.appendChild(infoBar);
+    stage.appendChild(infoPane);
 
     const counts = sdf ? parseCounts(sdf) : null;
-    const cells: [string, string, boolean][] = [
-      ["Name", name || EM_DASH, false],
-      ["SMILES", smiles || EM_DASH, true],
-      ["Charge", charge == null ? EM_DASH : String(charge), false],
-      ["Atoms", counts ? String(counts.atoms) : EM_DASH, false],
-      ["Bonds", counts ? String(counts.bonds) : EM_DASH, false],
+    const facts: [string, string, boolean][] = [
+      ["Name", name || NO_VALUE, false],
+      ["SMILES", smiles || NO_VALUE, true],
+      ["Charge", charge == null ? NO_VALUE : String(charge), false],
+      ["Atoms", counts ? String(counts.atoms) : NO_VALUE, false],
+      ["Bonds", counts ? String(counts.bonds) : NO_VALUE, false],
     ];
-    for (const [label, value, mono] of cells) {
-      const cell = el("div", "display:flex;align-items:baseline;gap:6px;min-width:0;");
-      cell.appendChild(
+    const table = el("div", `display:grid;grid-template-columns:auto minmax(0,1fr);gap:${SPACE.xl} 20px;align-items:baseline;`);
+    infoPane.appendChild(table);
+    for (const [label, value, mono] of facts) {
+      table.appendChild(
         el(
-          "span",
-          "font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;flex-shrink:0;" +
-            `color:${T.textMuted2};`,
+          "div",
+          `font-size:${FONT.tiny};font-weight:700;letter-spacing:.08em;text-transform:uppercase;white-space:nowrap;` +
+            `color:${V.textMuted2};`,
           label,
         ),
       );
-      const v = el(
-        "span",
-        `user-select:text;cursor:text;color:${T.textPrimary}` +
-          (mono ? ";font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;overflow-wrap:anywhere;" : ""),
+      const cell = el(
+        "div",
+        `user-select:text;cursor:text;overflow-wrap:anywhere;color:${V.textPrimary}` +
+          (mono ? `;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:${FONT.small};` : ""),
         value,
       );
-      v.title = value;
-      cell.appendChild(v);
-      infoBar.appendChild(cell);
+      cell.title = value;
+      table.appendChild(cell);
     }
 
+    // The molecule's name, over the picture rather than in a strip above it: a
+    // bar spent a row of height on one short line, and which mode is in force is
+    // already said by the switcher below. Hidden behind Info, which names the
+    // molecule in its own first row, and left off entirely where something above
+    // has already named it - see `HIDE_NAME_ATTRIBUTE`.
+    const named = nameWanted(host);
+    const paneLabel = el("div", PANE_LABEL_OVERLAY, name || "Unnamed molecule");
+    if (named) stage.appendChild(paneLabel);
+
+    // --- the switcher ---
+
+    const modeSetting = choice<Mode>(
+      "small-molecule.mode",
+      "2d",
+      MODES.map((m) => m.id),
+    );
+    const spinSetting = flag("small-molecule.spin", false);
+    let mode: Mode = modeSetting.get();
+    let spinning = spinSetting.get();
+    let viewer: ThreeDmolViewer | null = null;
+    let interaction: (BoundedZoom & Interaction) | null = null;
+
+    /** Spin only what is being looked at: a hidden canvas turning is a frame a second wasted. */
+    const applySpin = () => {
+      try {
+        viewer?.spin(spinning && is3D(mode) ? "y" : false);
+      } catch {
+        /* 3Dmol v1 quirk */
+      }
+    };
+
+    const show = (next: Mode): void => {
+      mode = next;
+      depictBox.style.visibility = mode === "2d" ? "visible" : "hidden";
+      host3D.wrap.style.visibility = is3D(mode) ? "visible" : "hidden";
+      infoPane.style.visibility = mode === "info" ? "visible" : "hidden";
+      paneLabel.style.display = mode === "info" || !named ? "none" : "block";
+      spinBtn.disabled = !is3D(mode);
+      spinBtn.style.opacity = is3D(mode) ? "1" : "0.5";
+      if (is3D(mode) && viewer) {
+        viewer.setStyle({}, SMALL_MOL_SPECS[mode]);
+        // The pane was laid out all along, but the window may have changed size
+        // behind it.
+        viewer.resize();
+        viewer.render();
+      }
+      applySpin();
+    };
+
+    // The bar floats over the picture, so nothing in the layout stops it running
+    // off a narrow pane: below the width its buttons need, the modes become a
+    // dropdown instead. See `switcher`.
+    const controls = el("div", OVERLAY_CONTROLS);
+    const spinBtn = toggleButton(
+      "Spin",
+      spinning,
+      (on) => {
+        spinning = on;
+        applySpin();
+      },
+      { title: "Toggle continuous rotation", remember: spinSetting },
+    );
+    /**
+     * Spin rides between the styles it turns and Info, which is where the reader
+     * asked for it, and the group tracks its own buttons so a guest among them
+     * is harmless. Collapsed there is no row to ride in, so it stands beside the
+     * dropdown: it is a control of the picture rather than a way of looking at
+     * the molecule, and it belongs on the bar in either form.
+     */
+    const placeSpin = (compact: boolean): void => {
+      if (compact) controls.insertBefore(spinBtn, controls.firstChild);
+      else modes.buttons.insertBefore(spinBtn, modes.buttons.lastElementChild);
+    };
+    const modes = switcher(MODES, mode, (id) => show(id as Mode), {
+      remember: modeSetting,
+      onLayout: placeSpin,
+      fit: { pane: stage, bar: controls },
+    });
+    controls.appendChild(modes);
+    placeSpin(false);
+    stage.appendChild(controls);
+
+    show(mode);
+
     // A schema-valid payload can still carry an empty or unusable SDF; that is a
-    // render-degraded state, not an error.
+    // render-degraded state, not an error. Info still has everything it had.
     if (!sdf || !sdf.trim()) {
       depictBox.appendChild(centredMessage("No molecule provided"));
       host3D.container.appendChild(centredMessage("No molecule provided"));
-      return {};
+      return { cleanup: () => modes.cleanup() };
     }
 
     // --- 2D ---
     depictBox.appendChild(centredMessage("Loading 2D depiction..."));
     loadRDKit()
       .then((RDKit) => {
-        const svg = depictSVG(RDKit, sdf, DEPICT_SIZE);
+        // `cpk`: a single molecule is drawn in RDKit's element colours. `mono` is
+        // gufe's mapping palette and belongs to the mapping view, not here.
+        const options = depictThemeOptions("cpk");
+        const svg = depictSVG(RDKit, sdf, DEPICT_SIZE, DEPICT_STYLE.layout, undefined, options);
         if (svg) {
           placeDepiction(depictBox, svg, DEPICT_SIZE);
         } else {
@@ -125,47 +238,24 @@ export class GufeSmallMolecule extends GufeElement<SmallMoleculeComponentViz> {
       });
 
     // --- 3D ---
-    let viewer: ThreeDmolViewer | null = null;
-    let style: string = "stick";
-    let spinning = false;
-
-    const switcher = el(
-      "div",
-      "position:absolute;bottom:10px;right:10px;display:flex;gap:4px;padding:4px;border-radius:6px;z-index:10;" +
-        `background:${T.switcherBg};box-shadow:0 2px 8px rgba(0,0,0,0.25);`,
-    );
-    switcher.appendChild(
-      buttonGroup(SMALL_MOL_STYLES, style, (id) => {
-        style = id;
-        if (viewer) {
-          viewer.setStyle({}, SMALL_MOL_SPECS[id]);
-          viewer.render();
-        }
-      }),
-    );
-    const spinBtn = el("button", `${BTN_CSS}margin-left:4px;`, "Spin");
-    spinBtn.title = "Toggle continuous rotation";
-    spinBtn.onclick = () => {
-      spinning = !spinning;
-      spinBtn.style.background = spinning ? T.btnBgActive : T.btnBg;
-      try {
-        viewer?.spin(spinning ? "y" : false);
-      } catch {
-        /* 3Dmol v1 quirk */
-      }
-    };
-    switcher.appendChild(spinBtn);
-    right.appendChild(switcher);
-
     host3D.container.appendChild(centredMessage("Loading 3D viewer..."));
     load3Dmol()
       .then(() => {
         host3D.container.replaceChildren();
-        viewer = ThreeDmol!.createViewer(host3D.container, { backgroundColor: T.viewerBg });
+        viewer = ThreeDmol!.createViewer(host3D.container, { backgroundColor: SURFACE.viewer() });
         viewer.addModel(ensureSDFTerminator(sdf), "sdf");
-        viewer.setStyle({}, SMALL_MOL_SPECS[style]);
+        viewer.setStyle({}, SMALL_MOL_SPECS[is3D(mode) ? mode : "stick"]);
         viewer.zoomTo();
         viewer.render();
+        // After zoomTo, so the bound is measured from the opening framing.
+        interaction = viewerInteraction(host3D.container, viewer);
+        // ... and after that, so the pose is applied through the same bounds a
+        // wheel goes through. Clicking along a network is a different ligand
+        // every time, and this is what makes the run of them comparable: the
+        // molecule is framed fresh and then turned to where the reader had the
+        // last one.
+        restoreLigandPose(viewer, interaction);
+        applySpin();
       })
       .catch((e: unknown) => {
         host3D.container.replaceChildren(centredMessage(`3D render failed: ${errText(e)}`, true));
@@ -179,17 +269,12 @@ export class GufeSmallMolecule extends GufeElement<SmallMoleculeComponentViz> {
         }
       },
       cleanup() {
-        if (!viewer) return;
-        try {
-          viewer.spin(false);
-        } catch {
-          /* 3Dmol v1 quirk */
-        }
-        try {
-          viewer.clear();
-        } catch {
-          /* already gone */
-        }
+        modes.cleanup();
+        // Before anything is torn down: a cleared viewer has no camera to read.
+        rememberLigandPose(viewer, interaction);
+        interaction?.cleanup();
+        interaction = null;
+        releaseViewer(viewer);
         viewer = null;
       },
     };

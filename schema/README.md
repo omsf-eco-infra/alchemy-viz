@@ -1,6 +1,16 @@
 # The contract
 
-`gufe-viz.schema.json` **is the gate between Python and TypeScript.** Nothing
+Two schemas live here, and they answer different questions.
+
+| file | says | written by |
+|---|---|---|
+| `alchemy-viz.schema.json` | what a gufe object **is** | a Python payload builder |
+| `depict-style.schema.json` | how a ligand pair is **drawn** in 2D | a person, in the editor linked below |
+
+Everything below is about the first one. The second is described in
+[Depiction style](#depiction-style) at the end.
+
+`alchemy-viz.schema.json` **is the gate between Python and TypeScript.** Nothing
 reaches the browser except data that validates against it.
 
 Python builds a payload and validates it here; TypeScript validates
@@ -10,7 +20,7 @@ gets to assume the other's shape.
 ## Hand-written - edit this file directly
 
 ```
-schema/gufe-viz.schema.json   <- this file. The source of truth.
+schema/alchemy-viz.schema.json   <- this file. The source of truth.
         |                     Nothing generates it.
         |  pixi run types
         v
@@ -145,8 +155,10 @@ is no case where the two can be at different versions.
 Adding an optional `schema_version` later is additive and non-breaking, so this
 is a decision that can be revisited without a migration.
 
-All twelve types are declared even though only three are drawn so far. That
-costs nothing and means adding a view is an additive change, not a breaking one.
+All twelve declared types have a view. Declaring a type before drawing it costs
+nothing and keeps adding a view an additive change rather than a breaking one,
+which is why the schema is allowed to run ahead of the browser; `VIEW_TAGS` and
+`ts/tests/dispatch.test.ts` are what say where the two stand today.
 
 ## Types
 
@@ -195,12 +207,14 @@ Three things, all tested elsewhere because JSON Schema cannot express them:
   validation time both are just non-empty strings: "this string is the
   `gufe-key` of an entry in that array, and that entry has this type" is a join
   across two parts of the document, and JSON Schema has no such construct. This
-  is the other side of referential integrity, and it is what the inlined
-  `molA_sdf` used to guarantee structurally. The named key types put the
-  referent in the contract's vocabulary and in the generated TypeScript; the
-  check itself is a Python test (`test_mapping_carries_both_endpoints_by_key`)
-  and, in the browser, `lookupOfType`, which returns undefined and lets the view
-  degrade rather than drawing the wrong thing.
+  is the other side of referential integrity: inlining a molecule into the
+  mapping that names it would guarantee the join structurally, at the cost of
+  carrying every ligand of a network once per edge. The named key types buy the
+  vocabulary back - the referent is in the contract and in the generated
+  TypeScript - and the check itself is a Python test
+  (`test_mapping_carries_both_endpoints_by_key_and_the_index_map`) and, in the
+  browser, `lookupOfType`, which returns undefined and lets the view degrade
+  rather than drawing the wrong thing.
 
   A pattern on the key's class-name prefix looks like it would close this, and
   does not: dispatch is `isinstance`-based, so a `SmallMoleculeComponent`
@@ -220,3 +234,63 @@ states whether the result must be rejected or accepted.
 
 If you change this file, add the row that proves the change does what you meant.
 
+## Depiction style
+
+`depict-style.schema.json` is the contract for one small, separate document:
+how `<gufe-atom-mapping>` draws a ligand pair in 2D. Marking style, ring shape,
+hydrogen treatment, letter and bond sizes, every colour.
+
+It is deliberately **not** part of `alchemy-viz.schema.json`. That schema describes
+what a gufe object is, and every field in it is written by a payload builder
+from a real object. Nothing in this one is: it is entirely taste, it describes no
+gufe object, and a transformation drawn twice with two different styles is the
+same transformation. Putting it in the payload would make every Python builder
+carry a preference it has no opinion about, and Python never sees this file.
+
+### It is authored in a live editor
+
+<https://framejs.app/j/5df86d91e8824b20a02908b52a6f07c3>
+
+That page draws real transformation pairs with these exact values, documents
+every key beside the control that sets it, and exports this document. The loop:
+
+```
+open the editor  ->  move the controls  ->  Copy or Download
+                 ->  drop the file over ts/src/shared/depict-style.json
+                 ->  pixi run build
+```
+
+It goes the other way too: paste the committed document into the editor and
+press Apply to see exactly what a given build draws.
+
+### How it reaches the browser
+
+```
+schema/depict-style.schema.json   <- the contract. Hand-written, like the other one.
+        |                            Checked against the committed document by
+        |                            ts/tests/depict-style.test.ts.
+        v
+ts/src/shared/depict-style.json   <- ONE exported document. This is the file you replace.
+        |  import ... with { type: "json" }
+        v
+ts/src/shared/depict-style.ts     <- the types, the defaults, and the whole pipeline
+```
+
+The JSON is imported by the TypeScript, so it is compiled into the bundle. There
+is nothing to fetch, no runtime setter, and no way for two pictures in one page
+to disagree about the style.
+
+### The defaults draw what this project has always drawn
+
+Every key is optional except `version`, and what a document leaves out takes the
+built-in default. Those defaults are either a value gufe sets or a value RDKit
+already uses, so passing them explicitly changes nothing: with the document
+untouched, the picture is byte-identical to what one plain
+`get_svg_with_highlights` call draws. The editor starts on the same values,
+which is what makes an edited style a readable diff rather than a jump to
+something new.
+
+Three tests hold that together: the committed document validates against the
+schema, the schema and the TypeScript defaults agree key by key and range by
+range, and the options handed to RDKit still match `MAPPING_DRAW_OPTIONS`, which
+is generated from gufe itself.

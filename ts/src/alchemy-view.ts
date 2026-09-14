@@ -1,35 +1,37 @@
 /**
- * `<gufe-view>`: the dispatcher, and the browser end of the contract.
+ * `<alchemy-view>`: the dispatcher, and the browser end of the contract.
  *
  * Set `.payload` and it does two things in order: validate against
- * `schema/gufe-viz.schema.json`, then mount the `<gufe-*>` element that claims
+ * `schema/alchemy-viz.schema.json`, then mount the `<gufe-*>` element that claims
  * the payload's `type`.
  *
- * There is no version check, because a payload carries no version. Every
- * consumer ships the reader and the writer in one artifact, so the two cannot be at different
- * versions. The version would normally lives in the schema's `$id`, however,
- * that might not be checked as there are currently no plans for external
- * consumers of the schmea.
+ * There is no version check, because a payload carries no version field. Every
+ * consumer ships the reader and the writer in one artifact - a generated page
+ * inlines the exact bundle that reads it - so the two cannot be at different
+ * versions. The schema's `$id` carries one for anything that ever does need to
+ * ask, and nothing here reads it: there are no external consumers of the schema
+ * to ask on behalf of.
  *
  * Nothing here throws at the caller, because the caller is often a notebook
- * widget with no way to surface an exception. Every failure, e.g. a payload that is
- * not an object, a type with no view, a missing required field, they all become a panel
+ * widget with no way to surface an exception. Every failure - a payload that is
+ * not an object, a type with no view, a missing required field - becomes a panel
  * that names what happened and where.
  *
  * When the debug switch is on (`?debug` in the URL, a `debug` attribute on the
- * element, or `window.GUFE_VIZ_DEBUG`) the payload is also printed to the
+ * element, or `window.ALCHEMY_VIZ_DEBUG`) the payload is also printed to the
  * console verbatim, before it is validated. That is the answer to "what JSON did
  * the browser actually get?", which is otherwise unreadable inside the page.
  */
 
-import { centredMessage, el, esc } from "./shared/dom.js";
+import { el } from "./shared/dom.js";
+import { centredMessage } from "./shared/panels.js";
 import { logPayload } from "./shared/debug.js";
 import {
   defineElement,
-  GufeElement,
+  AlchemyElement,
   type ViewHandle,
 } from "./shared/element.js";
-import { T } from "./shared/theme.js";
+import { V } from "./shared/theme.js";
 import { formatIssues, validatePayload } from "./schema/validate.js";
 import type { PayloadType } from "./schema/types.js";
 
@@ -41,9 +43,18 @@ import type { PayloadType } from "./schema/types.js";
  * visualization for X yet" panel.
  */
 export const VIEW_TAGS: Partial<Record<PayloadType, string>> = {
+  AlchemicalNetworkViz: "gufe-alchemical-network",
   SmallMoleculeComponentViz: "gufe-small-molecule",
   ProteinComponentViz: "gufe-protein",
+  ProteinMembraneComponentViz: "gufe-protein",
+  ProtocolViz: "gufe-protocol",
+  SolvatedPDBComponentViz: "gufe-protein",
   LigandNetworkViz: "gufe-ligand-network",
+  ChemicalSystemViz: "gufe-chemical-system",
+  LigandAtomMappingViz: "gufe-atom-mapping",
+  TransformationViz: "gufe-transformation",
+  SolventComponentViz: "gufe-solvent",
+  UnknownComponentViz: "gufe-unknown-component",
 };
 
 interface UnknownPayload {
@@ -58,6 +69,11 @@ export interface DispatchProblem {
   detail?: string;
 }
 
+/**
+ * Why `payload` cannot be drawn, or null when it can.
+ *
+ * Exported for the dispatch test, which is the only caller outside this file.
+ */
 export function describeProblem(payload: unknown): DispatchProblem | null {
   if (
     payload == null ||
@@ -66,7 +82,7 @@ export function describeProblem(payload: unknown): DispatchProblem | null {
   ) {
     return {
       message:
-        "This does not look like a gufe-viz payload (expected a JSON object).",
+        "This does not look like a alchemy-viz payload (expected a JSON object).",
     };
   }
 
@@ -87,7 +103,7 @@ export function describeProblem(payload: unknown): DispatchProblem | null {
   const { valid, issues } = validatePayload(payload);
   if (!valid) {
     return {
-      message: `This payload says it is a ${type}, but it does not match the gufe-viz schema.`,
+      message: `This payload says it is a ${type}, but it does not match the alchemy-viz schema.`,
       detail: formatIssues(issues),
     };
   }
@@ -101,12 +117,7 @@ function noVisualization(type: string): DispatchProblem {
   };
 }
 
-/** Back-compat shim for callers that only want the sentence. */
-export function dispatchProblem(payload: unknown): string | null {
-  return describeProblem(payload)?.message ?? null;
-}
-
-export class GufeView extends GufeElement<unknown> {
+export class AlchemyView extends AlchemyElement<unknown> {
   protected override placeholder(): string {
     return "Waiting for data...";
   }
@@ -166,8 +177,8 @@ function unsupportedPanel(
       "max-width:640px;padding:8px 12px;border-radius:6px;font-size:11px;white-space:pre-wrap;" +
         "font-family:ui-monospace,SFMono-Regular,Menlo,monospace;overflow-wrap:anywhere;" +
         (isError
-          ? `background:${T.warnBg};color:${T.warnFg};border:1px solid ${T.warnBorder};`
-          : `background:${T.panelBg};color:${T.textMuted2};border:1px solid ${T.cardBorder};`),
+          ? `background:${V.warnBg};color:${V.warnFg};border:1px solid ${V.warnBorder};`
+          : `background:${V.panelBg};color:${V.textMuted2};border:1px solid ${V.cardBorder};`),
       text,
     );
 
@@ -179,12 +190,20 @@ function unsupportedPanel(
   return wrap;
 }
 
+/**
+ * The payload's own shape, as plain text.
+ *
+ * Deliberately not escaped: what this returns goes to `mono`, which puts it in
+ * an element's `textContent`. Escaping it there is one escape too many - a
+ * molecule called `2'-deoxy` comes out as `2&#39;-deoxy`, and the panel that
+ * exists to say what arrived says something that did not.
+ */
 function describePayload(payload: unknown): string | null {
   if (payload == null || typeof payload !== "object") return null;
   const p = payload as UnknownPayload;
   const bits: string[] = [];
-  if (typeof p.type === "string") bits.push(`type: ${esc(p.type)}`);
-  if (typeof p.name === "string" && p.name) bits.push(`name: ${esc(p.name)}`);
+  if (typeof p.type === "string") bits.push(`type: ${p.type}`);
+  if (typeof p.name === "string" && p.name) bits.push(`name: ${p.name}`);
   const keys = Object.keys(payload);
   if (keys.length)
     bits.push(
@@ -193,4 +212,4 @@ function describePayload(payload: unknown): string | null {
   return bits.length ? bits.join("\n") : null;
 }
 
-defineElement("gufe-view", GufeView);
+defineElement("alchemy-view", AlchemyView);

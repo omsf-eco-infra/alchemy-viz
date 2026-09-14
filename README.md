@@ -1,10 +1,8 @@
-# gufe-viz
+# alchemy-viz
 
 Visualization tools for [gufe](https://github.com/OpenFreeEnergy/gufe).
 
-Turns a gufe object into an interactive browser visualization - a single HTML
-file you open locally. No server, no account, no network round-trip for your
-data.
+Turns a gufe object into an interactive browser visualization you open locally
 
 > **Under construction.** The pipeline runs end to end, and three of the twelve
 > payload types have a view. The rest are declared in the schema, built by
@@ -13,14 +11,13 @@ data.
 
 ---
 
-## Quick start - from nothing to a picture
+## Quick start
 
 ### 1. Install pixi
 
 **[pixi](https://pixi.sh) and git. That is the whole list.** pixi provides
 everything else - Python 3.12+, Node 20+, gufe, RDKit, pytest, jsonschema and
-ruff all come from `pixi.toml`, pinned in `pixi.lock`. You do not need a system
-Python, a system Node, or a conda install of your own.
+ruff all come from `pixi.toml`, pinned in `pixi.lock`.
 
 ```bash
 curl -fsSL https://pixi.sh/install.sh | bash    # macOS / Linux
@@ -34,35 +31,45 @@ below needs the full `~/.pixi/bin/pixi` in place of `pixi`.
 ### 2. Get the environment
 
 ```bash
-git clone https://github.com/omsf-eco-infra/gufe-viz.git
-cd gufe-viz
+git clone https://github.com/omsf-eco-infra/alchemy-viz.git
+cd alchemy-viz
 pixi install
 ```
 
-That solves and downloads a conda environment containing RDKit and gufe - a few
-hundred megabytes, and a couple of minutes the first time, cached afterwards.
-You do **not** need to run `npm install`: every task that needs Node depends on
-an `npm-install` task that runs it for you and is skipped on a cache hit.
-
-git matters for more than cloning - the version comes from `setuptools-scm`, so
-a tarball with no `.git` in it builds as `0.0.0`.
+That solves and downloads a conda environment containing RDKit and gufe.
 
 ### 3. Look at the visualizations
 
-Three ways, in increasing order of "this is what a user will actually do".
+The fastest loop is the dev server. It rebuilds on save, so a change to a view
+is visible without running anything else:
 
-**The gallery** - every example payload on one scrolling page. Start here.
+```bash
+pixi run dev
+# http://localhost:5173/gallery.html   every example, every view
+# http://localhost:5173/parity.html    our atom mapping beside gufe's own
+# http://localhost:5173/               drop any payload JSON on the page
+```
+
+The gallery finds `examples/*.json` by itself, so a new fixture appears without
+touching it. Cards draw as you scroll to them and are released again when you
+scroll well past: several of them hold a WebGL context, and a browser only
+allows so many at once.
+
+
+Three ways:
+
+**The gallery:**  every example payload on one page, for quick debugging and checks
 
 ```bash
 pixi run dev
 # http://localhost:5173/gallery.html
 ```
 
-The gallery deliberately shows "sorry, there is no visualization for X yet" for
-the types that have no view. That panel is the intended behaviour, not a broken
-card. (Vite picks the next free port if 5173 is taken - watch the output.)
+Every declared type has a view, so the gallery draws all of them. The "sorry,
+there is no visualization for X yet" panel is still what a payload naming an
+undeclared type gets, which is what `ts/tests/dispatch.test.ts` exercises.
 
-**Drag and drop** - the same dev server, one payload at a time. Drop any file
+**Drag and drop:** the same dev server, one payload at a time. Drop any file
 from `examples/` anywhere on the page:
 
 ```bash
@@ -70,14 +77,14 @@ pixi run dev
 # http://localhost:5173/
 ```
 
-**A standalone HTML file** - what ships. One file, opened from disk, no server:
+**A standalone HTML file:** what is actually used by this library. One file, opened from disk, no server:
 
 ```bash
-pixi run gufe-viz examples/ligand_network_named.json -o /tmp/network.html
+pixi run alchemy-viz examples/ligand_network_named.json -o /tmp/network.html
 open /tmp/network.html          # macOS;  xdg-open on Linux
 ```
 
-With no `-o`, the page lands beside the input as `<input>.html` - so
+With no `-o`, the page lands beside the input as `<input>.html`, so
 `ligand.json` becomes `ligand.json.html`, keeping the original suffix so two
 inputs that differ only by extension cannot collide. `-o -` writes to stdout.
 
@@ -89,32 +96,81 @@ To see the payload the page was built from, render it with the debug switch
 baked in:
 
 ```bash
-pixi run gufe-viz-debug examples/ligand_network_named.json -o /tmp/network.html
+pixi run alchemy-viz-debug examples/ligand_network_named.json -o /tmp/network.html
 ```
 
-Both tasks take the same flags as the bare command - `pixi task list` shows them
-with the rest. `gufe-viz` is a console script from `pyproject.toml`, so
-`pixi run gufe-viz ...` would work with no task declared at all; the tasks exist
-so that the command is findable if you (like me) just use `pixi run`
+### 4. Future CLI integration
 
-### 4. Do it with your own object
+Eventually `openfe` integration, but for now it's manual:
 
 ```python
-import gufe_viz
+import alchemy_viz
 
-html = gufe_viz.to_html(small_molecule_component)   # returns a string
+html = alchemy_viz.to_html(small_molecule_component)   # returns a string
 open("mol.html", "w").write(html)                   # writing it is your call
 ```
 
 `to_html` accepts a gufe object or a plain payload dict. It returns a string and
-writes nothing, anywhere - where the page goes is the caller's decision.
+writes nothing.
+
+### 5. Notebook rendering of visualizations
+
+```python
+alchemy_viz.view(small_molecule_component)   # the same page, in a cell
+```
+
+**NB:** When this is published, we can update the gufe repo with this as an optional dependency, and if installed, will render the object without the need for specific `.view(..)` calls.
+
+
+There are [two notebooks](examples/notebooks/), one is for running locally and the other is so you can see the visualization in e.g. github (which restricts javascript and iframes).
+
+```bash
+pixi run notebook    # JupyterLab on examples/notebooks/alchemy-viz-demo.ipynb
+pixi run marimo      # the same notebook, converted, in marimo
+```
+
+`alchemy-viz-demo.ipynb` is the local **development** version, with every payload type. Make a change and refresh to iterate.
+
+[`alchemy-viz-gallery.ipynb`](examples/notebooks/alchemy-viz-gallery.ipynb) is the
+**GitHub** version, since GitHub's
+notebook renderer strips the `<iframe>` and `<script>` that `view()` emits,
+so you would see just blank cells instead of rendered visualizations.
+`pixi run gallery` rebuilds the gallery images.
+
+You can run the gallery: its cells hold the real `view()` call, and running
+it replaces each screenshot with the live view. Just do not commit that: it
+strips out the pictures GitHub needs. `pixi run gallery` puts them back.
+[`examples/notebooks/README.md`](examples/notebooks/README.md) is the full note
+for developers, including when to regenerate.
+
+`view()` returns two layers from one call, and your frontend picks:
+
+| layer | mimetype | needs | gives |
+| --- | --- | --- | --- |
+| static | `text/html` - the page in an `<iframe srcdoc>` | nothing | a saved notebook that still draws with no kernel |
+| live | a widget view - shell page plus the payload as widget state | `anywidget` | `w.payload = other` redraws in place |
+
+```python
+w = alchemy_viz.view(ligand_A)     # display it
+w.payload = ligand_B            # the cell above redraws, in place
+
+alchemy_viz.view(obj, live=False)     # static only - what a kernel-less reader sees
+alchemy_viz.view(obj, static=False)   # live only - half the bytes, blank on export
+```
+
+The live layer is optional: `pip install alchemy-viz[notebook]`. Without it `view()`
+returns the static layer alone and everything still draws, minus the updating.
+
+**Both layers put the view in an iframe**. We don't want any notebook css
+interference, and the visualization must be a standalone page for the CLI
+use case, so it's an iframe/page everywhere.
 
 ### What a *user* of the library needs
 
 None of the above. Installing the package is plain pip, with no Node anywhere:
 
 ```bash
-pip install .          # not on PyPI yet - see Status
+pip install .          # not on PyPI yet, see Status
 ```
 
 The compiled JavaScript bundle is committed to this repository and ships inside
@@ -132,11 +188,11 @@ the wheel, which is what makes that true.
 > entry in `pixi.toml` is what redirects it to conda-forge. Remove either one
 > and something breaks.
 >
-> The `>=1.12` floor is what protects you: `pip install gufe-viz` fails with
+> The `>=1.12` floor is what protects you: `pip install alchemy-viz` fails with
 > *"Could not find a version that satisfies the requirement gufe>=1.12 (from
 > versions: 0.4)"* rather than quietly installing a gufe whose API is gone.
 >
-> `import gufe_viz` and `to_html(payload_dict)` need no gufe at all - the import
+> `import alchemy_viz` and `to_html(payload_dict)` need no gufe at all - the import
 > is lazy - so `pip install --no-deps` is a valid way to get just the renderer.
 
 ---
@@ -149,7 +205,7 @@ Schema is the contract between the two, and it lives here, not in gufe.
 
 ```mermaid
 flowchart LR
-  subgraph PY["Python · python/gufe_viz"]
+  subgraph PY["Python · python/alchemy_viz"]
     direction TB
     obj["<b>gufe object</b><br/>SmallMoleculeComponent<br/>ProteinComponent<br/>LigandNetwork ..."]
     build["<b>payload_for()</b><br/>asks the object to serialize<br/><i>itself</i>: to_sdf(), to_pdb_file()"]
@@ -158,12 +214,12 @@ flowchart LR
   end
 
   plain --> payload[["<b>payload JSON</b><br/>flat, tagged with <code>type</code>"]]
-  payload --> tohtml["<b>to_html()</b><br/>one self-contained page:<br/>bundle + payload + &lt;gufe-view&gt;"]
+  payload --> tohtml["<b>to_html()</b><br/>one self-contained page:<br/>bundle + payload + &lt;alchemy-view&gt;"]
 
   subgraph BR["Browser · ts/src"]
     direction TB
-    gview["<b>&lt;gufe-view&gt;</b><br/>validate, then dispatch on <code>type</code>"]
-    view["<b>&lt;gufe-small-molecule&gt;</b><br/><b>&lt;gufe-protein&gt;</b><br/><b>&lt;gufe-ligand-network&gt;</b>"]
+    gview["<b>&lt;alchemy-view&gt;</b><br/>validate, then dispatch on <code>type</code>"]
+    view["<b>&lt;gufe-small-molecule&gt;</b><br/><b>&lt;gufe-protein&gt;</b><br/><b>&lt;gufe-ligand-network&gt;</b><br/>... one per declared type"]
     gview --> view
   end
 
@@ -174,7 +230,7 @@ flowchart LR
 Two rules hold that picture together.
 
 **gufe's own `to_json` never crosses into TypeScript.** TypeScript only ever
-sees SDF, PDB and flat, schema-valid JSON - not even GraphML, whose nodes *are*
+sees SDF, PDB and flat, schema-valid JSON, not even GraphML, whose nodes *are*
 gufe JSON. Deduplicated key-chains, `:custom:` codecs and the `to_dict`/`to_json`
 divergence all stay Python problems, because the alternative is a large amount
 of TypeScript that has to track gufe's serialization forever.
@@ -184,11 +240,11 @@ of TypeScript that has to track gufe's serialization forever.
 ### The generated HTML file: what is in it, and how it loads
 
 `to_html(obj)` returns a complete page as a **string** and writes nothing
-anywhere - the CLI is one caller that chooses to write it, not the only possible
-one. The page has four parts and no others:
+anywhere. The CLI is what chooses where to put it.
+The page has four parts and no others:
 
 ```html
-<gufe-view></gufe-view>                                <!-- 1. where it draws -->
+<alchemy-view></alchemy-view>                                <!-- 1. where it draws -->
 
 <script id="gufe-payload" type="application/json">     <!-- 2. the data -->
 {"type":"SmallMoleculeComponentViz","name":"benzene","sdf":"...", ... }
@@ -197,20 +253,20 @@ one. The page has four parts and no others:
 <script type="module">
   ... 239 kB of compiled bundle ...                        <!-- 3. the code -->
 
-  document.querySelector("gufe-view").payload =        <!-- 4. the bootstrap -->
+  document.querySelector("alchemy-view").payload =        <!-- 4. the bootstrap -->
     JSON.parse(document.getElementById("gufe-payload").textContent);
 </script>
 ```
 
 **Where the input data lives:** inside the file, in `#gufe-payload`, as *inert
-text*. `type="application/json"` is not a script type the browser executes - the
+text*. `type="application/json"` is not a script type the browser executes, the
 element is a container the DOM hands back as a string. Nothing fetches it,
 nothing sits beside it on disk, and moving or emailing the `.html` moves the
 data with it.
 
 **How it is loaded:** by that last statement, run once at parse time.
 `textContent` gets the raw JSON, `JSON.parse` turns it into an object, and
-assigning it to `.payload` starts the render. That is the entire handshake - the
+assigning it to `.payload` starts the render. That is the entire handshake: the
 same custom-element API an external page or a notebook widget would use, and it
 depends on no name the bundler chose. If anything throws, the message lands in a
 visible `#gufe-error` strip at the top of the page rather than in a console
@@ -230,8 +286,8 @@ where `<\/script` means the same thing. A molecule named
 console instead, indented. See [Debugging: seeing the
 payload](#debugging-seeing-the-payload).
 
-**Where the code comes from:** `python/gufe_viz/_assets/gufe-viz.js`, the
-committed Vite build, read by `gufe_viz.bundle_source()` and inlined verbatim.
+**Where the code comes from:** `python/alchemy_viz/_assets/alchemy-viz.js`, the
+committed Vite build, read by `alchemy_viz.bundle_source()` and inlined verbatim.
 That file being in the repository and in the wheel is what lets `pip install`
 work with no Node toolchain.
 
@@ -252,7 +308,7 @@ use, for environments with no network access at all.
 
 ### What the browser does when a payload arrives
 
-Setting `.payload` on a `<gufe-view>` is the whole API. Every failure below is a
+Setting `.payload` on a `<alchemy-view>` is the whole API. Every failure below is a
 panel that names the problem - never a thrown exception, and never a blank box.
 
 ```mermaid
@@ -261,7 +317,7 @@ flowchart TD
   dbg -->|yes| console["console: the payload,<br/>as JSON and as an object"]
   dbg -->|no| isobj{"a JSON object?"}
   console --> isobj
-  isobj -->|no| p1["panel: this does not look<br/>like a gufe-viz payload"]
+  isobj -->|no| p1["panel: this does not look<br/>like a alchemy-viz payload"]
   isobj -->|yes| hastype{"has a <code>type</code>?"}
   hastype -->|no| p3["panel: nothing says<br/>what this is"]
   hastype -->|yes| hasview{"a view claims<br/>that type?"}
@@ -302,8 +358,8 @@ enough:
 | Switch | How | The case it exists for |
 |---|---|---|
 | URL | open the page as `<url>?debug` | a page **already written** - nothing is rebuilt, and `file:///tmp/network.html?debug` works |
-| attribute | `to_html(obj, debug=True)`, `pixi run gufe-viz-debug <input>` | handing someone a file that does it on its own |
-| global | `window.GUFE_VIZ_DEBUG = true`, set before `.payload` | a host that mounts the element itself: a notebook widget, or a console session |
+| attribute | `to_html(obj, debug=True)`, `pixi run alchemy-viz-debug <input>` | handing someone a file that does it on its own |
+| global | `window.ALCHEMY_VIZ_DEBUG = true`, set before `.payload` | a host that mounts the element itself: a notebook widget, or a console session |
 
 `?gufe-debug` is accepted as well as `?debug`, for a host page that already uses
 `?debug` for something of its own.
@@ -311,7 +367,7 @@ enough:
 What lands in the console is one collapsed group per render:
 
 ```
-> [gufe-viz] payload LigandNetworkViz (3542 chars)
+> [alchemy-viz] payload LigandNetworkViz (3542 chars)
     {
       "type": "LigandNetworkViz",
       "gufe-key": "LigandNetwork-fd4275a34f7e2c5b5021b5d9eb51d62d",
@@ -333,7 +389,7 @@ Two properties are worth relying on:
   schema, or names a type this build cannot draw, is still printed in full -
   which is the case the switch is for. The panel on the page tells you *which
   field*; the console tells you *what was actually there*.
-* **It logs from `<gufe-view>`**, which every host goes through - the generated
+* **It logs from `<alchemy-view>`**, which every host goes through - the generated
   page, the dropzone, the gallery, and any embedding of the bundle. There is
   nothing to wire up per view.
 
@@ -346,7 +402,7 @@ The pieces are exported from the bundle for a host that wants to do its own
 reporting, or to decide whether to:
 
 ```js
-import { debugEnabled, logPayload, payloadJson } from "./gufe-viz.js";
+import { debugEnabled, logPayload, payloadJson } from "./alchemy-viz.js";
 ```
 
 ---
@@ -355,13 +411,13 @@ import { debugEnabled, logPayload, payloadJson } from "./gufe-viz.js";
 
 ### One file, two languages downstream
 
-`schema/gufe-viz.schema.json` is **the source of truth.**
+`schema/alchemy-viz.schema.json` is **the source of truth.**
 Both languages are downstream: TypeScript types are
 generated from it, and Python validates against it in the test suite.
 
 ```mermaid
 flowchart TD
-  src["<b>schema/gufe-viz.schema.json</b>"]
+  src["<b>schema/alchemy-viz.schema.json</b>"]
 
   src -->|"pixi run types"| types["<b>ts/src/schema/types.ts</b><br/><i>generated · committed</i>"]
   src -.->|"loaded at runtime"| ajv["Ajv, in the browser"]
@@ -369,7 +425,7 @@ flowchart TD
 
   types --> views["ts/src/** - the views"]
   ajv --> views
-  views -->|"pixi run build"| bundle["<b>python/gufe_viz/_assets/gufe-viz.js</b><br/><i>generated · committed</i>"]
+  views -->|"pixi run build"| bundle["<b>python/alchemy_viz/_assets/alchemy-viz.js</b><br/><i>generated · committed</i>"]
   bundle --> wheel(["the wheel: <code>pip install</code><br/>needs no Node toolchain"])
 
   src --> fixtures["examples/*.json + python/tests/mutations.json<br/>checked by <i>both</i> test suites"]
@@ -463,7 +519,7 @@ instead.
 
 ### How the two sides are kept honest
 
-`examples/*.json` is the hinge. The same eleven golden payloads - built from real
+`examples/*.json` is the hinge. The same golden payloads - built from real
 gufe objects by `scripts/make_examples.py` - feed pytest, vitest, the
 drag-and-drop page and the gallery. `python/tests/mutations.json` declares a mutation
 matrix **once, as data**, and both suites apply it against the same schema file:
@@ -487,17 +543,17 @@ two suites goes red.
 
 The loop is short, and every step has a task:
 
-1. **Model the data** in `schema/gufe-viz.schema.json`. Add a `$def`
+1. **Model the data** in `schema/alchemy-viz.schema.json`. Add a `$def`
    named exactly for the `type` const it declares - both validators find a
    payload's branch by that name.
-2. **Build the payload** in `python/gufe_viz/components.py`, `networks.py` or
+2. **Build the payload** in `python/alchemy_viz/components.py`, `networks.py` or
    `alchemical.py`, returning a plain dict, and add it to the `isinstance`
    dispatch. Ask the gufe object to serialize itself; never reach into its JSON.
 3. `pixi run types` - the TypeScript types follow from the schema.
 4. **Write the view**: `ts/src/views/<type>.ts`, a class extending
-   `GufeElement<YourPayload>` with one `renderView(host, payload)` method.
+   `AlchemyElement<YourPayload>` with one `renderView(host, payload)` method.
    Return `{ onResize, cleanup }` if it owns anything that must be released.
-5. **Register it**: add the tag to `VIEW_TAGS` in `ts/src/gufe-view.ts` and an
+5. **Register it**: add the tag to `VIEW_TAGS` in `ts/src/alchemy-view.ts` and an
    `import` in `ts/src/index.ts`.
 6. `pixi run examples` for a fixture, add the mutation rows that prove your new
    constraints hold, then `pixi run build` and `pixi run test`.
@@ -520,7 +576,7 @@ widget straightforward:
 
 Embedding one view inside another is therefore
 `host.appendChild(document.createElement("gufe-..."))`, and the embedded element
-cleans itself up when its parent removes it. `<gufe-view>` itself is just a
+cleans itself up when its parent removes it. `<alchemy-view>` itself is just a
 dispatcher that does exactly this.
 
 ### Embedding the bundle in your own page
@@ -529,8 +585,8 @@ The bundle is one ES module. Importing it registers every element as a side
 effect; there is no init call:
 
 ```html
-<script type="module" src="gufe-viz.js"></script>
-<gufe-view id="v" style="width:100%;height:600px"></gufe-view>
+<script type="module" src="alchemy-viz.js"></script>
+<alchemy-view id="v" style="width:100%;height:600px"></alchemy-view>
 <script type="module">
   document.getElementById("v").payload = await (await fetch("payload.json")).json();
 </script>
@@ -542,17 +598,17 @@ API. It is the same one
 uses, and the same one a notebook widget will use; only where the payload comes
 from differs.
 
-From Python, `gufe_viz.bundle_source()` returns the bundle as a string if you
+From Python, `alchemy_viz.bundle_source()` returns the bundle as a string if you
 want to inline it yourself rather than use `to_html`.
 
-A host that mounts the element itself is the case `window.GUFE_VIZ_DEBUG = true`
+A host that mounts the element itself is the case `window.ALCHEMY_VIZ_DEBUG = true`
 exists for: set it before assigning `.payload` and the element prints what it was
 handed. See [Debugging: seeing the
 payload](#debugging-seeing-the-payload).
 
 ### Integrating with OpenFE
 
-`gufe-viz <input>` exists as a working reference implementation, **not** as the
+`alchemy-viz <input>` exists as a working reference implementation, **not** as the
 CLI integration - that is `openfe view`'s job when someone wires it up. The
 library writes nothing to disk on its own; `to_html` returns a string and the
 caller decides where it goes.
@@ -577,7 +633,7 @@ That is `test-py` and `test-ts` together. Run them separately when iterating:
 | Command | Suite | Covers |
 |---|---|---|
 | `pixi run test-py` | pytest | Payload builders per type; every fixture against the schema; the `isinstance` dispatch order against gufe's real class hierarchy; schema and TypeScript dispatch parity; the mutation matrix; `to_html` and the CLI. |
-| `pixi run test-ts` | vitest | The same fixtures and the same mutation matrix through Ajv; `<gufe-view>` dispatch and graceful degradation; the create/update/destroy lifecycle; what each view puts on the page; the three debug switches and what they print; a smoke test that loads the **built bundle** and drives it through the generated page's bootstrap. |
+| `pixi run test-ts` | vitest | The same fixtures and the same mutation matrix through Ajv; `<alchemy-view>` dispatch and graceful degradation; the create/update/destroy lifecycle; what each view puts on the page; the three debug switches and what they print; a smoke test that loads the **built bundle** and drives it through the generated page's bootstrap. |
 
 Two more checks, both of which CI runs and both of which are easy to forget
 locally:
@@ -624,12 +680,19 @@ somewhere sensible - for that, see
 
 | Task | What it does |
 |---|---|
-| `pixi run dev` | Vite dev server - dropzone and gallery |
-| `pixi run gufe-viz <input> [-o out.html]` | Render one payload or gufe object as a standalone page |
-| `pixi run gufe-viz-debug <input> [-o out.html]` | The same, with the payload printed to the browser console |
-| `pixi run build` | Bundle TypeScript into `python/gufe_viz/_assets/gufe-viz.js` |
+| `pixi run dev` | Vite dev server - dropzone, gallery and the parity page |
+| `pixi run parity-reference` | Render gufe's own mapping drawings, to compare ours against |
+| `pixi run big-network` | Generate a large synthetic ligand network, to measure against |
+| `pixi run atom-colors` | Regenerate the mirrored atom colours from gufe and matplotlib |
+| `pixi run alchemy-viz <input> [-o out.html]` | Render one payload or gufe object as a standalone page |
+| `pixi run alchemy-viz-debug <input> [-o out.html]` | The same, with the payload printed to the browser console |
+| `pixi run build` | Bundle TypeScript into `python/alchemy_viz/_assets/alchemy-viz.js` |
 | `pixi run types` | Regenerate `ts/src/schema/types.ts` from the JSON Schema |
 | `pixi run examples` | Rebuild `examples/*.json` from real gufe objects |
+| `pixi run gallery` | Rebuild the gallery notebook - every view, screenshotted |
+| `pixi run notebook` | JupyterLab on the demo notebook (its own environment) |
+| `pixi run marimo` | The same notebook, converted, in marimo |
+| `pixi run test-notebook` | The notebook layer's tests, with anywidget installed |
 | `pixi run test` | Both test suites |
 | `pixi run test-py` / `test-ts` | One suite each |
 | `pixi run lint` | ruff, and `tsc --noEmit` |
@@ -641,33 +704,40 @@ somewhere sensible - for that, see
 
 ```
 schema/     the Python<->TypeScript contract, and the mutation matrix
-python/     gufe_viz - payload builders, HTML writer, CLI
-ts/         the custom elements, one file per view
+python/     alchemy_viz - payload builders, HTML writer, notebook view, CLI
+ts/         the custom elements; src/views one per payload type, src/shared
+            the machinery they are built from
 examples/   golden payloads, shared by pytest, vitest, the dropzone and the gallery
+            notebooks/ - one demo covering every type and every delivery mode
 scripts/    the generators, and CI runs
+            data/ - the fixture inputs gufe does not ship, read never rebuilt
 ```
 
 ## Status
 
 The pipeline works end to end. Nothing is published yet.
 
-**Has a view:**
+Every type the schema declares has a view. `ts/tests/dispatch.test.ts` asserts
+that, so this table cannot go stale without the suite saying so:
 
 | Type | View |
 |---|---|
-| `SmallMoleculeComponentViz` | 2D depiction + 3D conformer |
-| `ProteinComponentViz` | 3Dmol with representation and colour-scheme switchers |
-| `LigandNetworkViz` | force / circular / radial graph, ligand depictions in the nodes, a detail pane per mapping |
+| `SmallMoleculeComponentViz` | 2D depiction, 3D conformer in three styles, and an info pane |
+| `ProteinComponentViz` | 3Dmol with representation, colour scheme, waters and hetero atoms |
+| `SolvatedPDBComponentViz`, `ProteinMembraneComponentViz` | the same view, opened showing what surrounds the protein |
+| `SolventComponentViz` | the conditions card - what the solvent is, and how it is ionized |
+| `LigandAtomMappingViz` | six ways to read one mapping, including gufe's own `view_3d` |
+| `LigandNetworkViz` | force / circular / radial graph, ligand depictions in the nodes, a detail pane per mapping or ligand |
+| `ChemicalSystemViz` | the labelled components, the selected one drawn beside them, and the whole complex in one scene where there is one |
+| `TransformationViz` | the state diff beside the atom mapping it carries |
+| `AlchemicalNetworkViz` | systems joined by transformations, coloured by composition, with a detail pane per system or transformation |
+| `ProtocolViz`, `UnknownComponentViz` | a card naming what the payload says, for the things there is nothing to draw |
 
-**Declared, built by Python, no view yet:** `SolvatedPDBComponentViz`,
-`ProteinMembraneComponentViz`, `SolventComponentViz`, `UnknownComponentViz`,
-`LigandAtomMappingViz`, `ChemicalSystemViz`, `TransformationViz`,
-`AlchemicalNetworkViz`.
-
-**Not there yet:** the remaining views; zero-network pages with RDKit, 3Dmol and
-d3 inlined (today's pages still fetch those three from their CDNs on demand);
-the notebook widget; an optional localhost server; PyPI/conda-forge and the
-transfer to the OpenFE org.
+**Not there yet:** zero-network pages with RDKit, 3Dmol and d3 inlined - the
+`__gufeEngines` hook they would use is in place and the tests drive it, but
+`to_html` has no `engines="bundled"` mode, so today's pages still fetch those
+three from their CDNs on demand. Also an optional localhost server;
+PyPI/conda-forge and the transfer to the OpenFE org.
 
 ## Licence
 

@@ -1,5 +1,5 @@
 /**
- * `<gufe-view>` dispatch, and degrading gracefully when it cannot draw.
+ * `<alchemy-view>` dispatch, and degrading gracefully when it cannot draw.
  *
  * The whole point of the explicit `type` discriminator is that a payload is
  * drawn by the view that claims that type, or by nothing at all and that
@@ -9,11 +9,12 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import "../src/index.js";
-import { dispatchProblem, VIEW_TAGS } from "../src/gufe-view.js";
+import { describeProblem, VIEW_TAGS } from "../src/alchemy-view.js";
+import { PAYLOAD_TYPES } from "../src/schema/types.js";
 import { clearFakeEngines, exampleNames, flush, readExample, seedFakeEngines } from "./helpers.js";
 
 function mountView(payload: unknown): HTMLElement & { payload: unknown } {
-  const view = document.createElement("gufe-view") as HTMLElement & { payload: unknown };
+  const view = document.createElement("alchemy-view") as HTMLElement & { payload: unknown };
   document.body.appendChild(view);
   view.payload = payload;
   return view;
@@ -23,24 +24,34 @@ function mountView(payload: unknown): HTMLElement & { payload: unknown } {
 const DRAWABLE = exampleNames().filter((n) => (VIEW_TAGS as Record<string, string>)[readExample(n).type as string]);
 const NOT_YET = exampleNames().filter((n) => !(VIEW_TAGS as Record<string, string>)[readExample(n).type as string]);
 
-describe("dispatchProblem", () => {
+/** The sentence alone, which is what every assertion here is about. */
+const problemWith = (payload: unknown): string | null => describeProblem(payload)?.message ?? null;
+
+describe("describeProblem", () => {
   it("accepts a payload whose type has a view", () => {
-    expect(dispatchProblem(readExample("small_molecule.json"))).toBeNull();
-    expect(dispatchProblem(readExample("protein.json"))).toBeNull();
+    expect(problemWith(readExample("small_molecule.json"))).toBeNull();
+    expect(problemWith(readExample("protein.json"))).toBeNull();
   });
 
   it("refuses a type it does not draw, by name", () => {
-    const problem = dispatchProblem({ type: "AlchemicalNetworkViz", name: "", nodes: [], edges: [] });
-    expect(problem).toContain("AlchemicalNetworkViz");
+    // Chosen from the dispatch table rather than named here. A declared type
+    // with no view is legal by design, but which types those are shrinks as
+    // views land, and an earlier version of this test hard-coded one and
+    // started failing the day it got drawn.
+    const undrawn = PAYLOAD_TYPES.find((type) => !VIEW_TAGS[type]);
+    if (!undrawn) return; // every declared type draws, which is the goal
+
+    const problem = problemWith({ type: undrawn, name: "" });
+    expect(problem).toContain(undrawn);
     expect(problem).toContain("no visualization");
   });
 
   it("refuses a payload with no type", () => {
-    expect(dispatchProblem({ name: "nameless" })).toContain("no `type`");
+    expect(problemWith({ name: "nameless" })).toContain("no `type`");
   });
 
   it.each([null, undefined, 42, "a string", ["an", "array"]])("refuses a non-object payload: %s", (bad) => {
-    expect(dispatchProblem(bad)).toContain("does not look like a gufe-viz payload");
+    expect(problemWith(bad)).toContain("does not look like a alchemy-viz payload");
   });
 
   // There is no version check to test: a payload carries no version, because
@@ -49,11 +60,11 @@ describe("dispatchProblem", () => {
   // key, and is refused as one rather than silently tolerated.
   it("treats a leftover schema_version as the unknown key it now is", () => {
     const payload = { ...readExample("protein.json"), schema_version: "1.0" };
-    expect(dispatchProblem(payload)).toContain("does not match the gufe-viz schema");
+    expect(problemWith(payload)).toContain("does not match the alchemy-viz schema");
   });
 });
 
-describe("<gufe-view>", () => {
+describe("<alchemy-view>", () => {
   beforeEach(() => seedFakeEngines());
   afterEach(() => {
     clearFakeEngines();
@@ -61,7 +72,7 @@ describe("<gufe-view>", () => {
   });
 
   it("shows a placeholder before any payload arrives", () => {
-    const view = document.createElement("gufe-view");
+    const view = document.createElement("alchemy-view");
     document.body.appendChild(view);
     expect(view.textContent).toContain("Waiting for data");
   });
