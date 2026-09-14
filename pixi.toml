@@ -20,6 +20,8 @@ pytest = "*"
 jsonschema = "*"
 ruff = "*"
 pip = "*"
+python-build = ">=1.6.0,<2"
+twine = ">=7.0.0,<8"
 
 [pypi-dependencies]
 alchemy-viz = { path = ".", editable = true }
@@ -161,3 +163,24 @@ depends-on = ["npm-install"]
 [tasks.ci]
 description = "Everything CI runs: lint, both suites, generated-artifact freshness."
 depends-on = ["lint", "test-py", "test-ts", "check-generated"]
+
+[tasks.dist]
+description = "Build the sdist and wheel into dist/, and check them the way PyPI will."
+# `build` first: the wheel carries the compiled bundle, so a stale bundle would
+# ship. `--strict` makes twine fail on a long-description warning rather than
+# letting a README that renders badly reach PyPI, where the upload cannot be
+# taken back.
+cmd = """
+rm -rf dist &&
+python -m build &&
+twine check --strict dist/*
+"""
+depends-on = ["build"]
+
+[tasks.dist-check]
+description = "Install the built wheel into a throwaway venv with no gufe, and use it."
+# What `pip install alchemy-viz` actually lands in. gufe is not on PyPI at a
+# usable version, so a gufe-less environment is the ordinary case and the
+# package has to import and render payloads there.
+cmd = "bash scripts/check_wheel.sh"
+depends-on = ["dist"]

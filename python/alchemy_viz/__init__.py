@@ -4,11 +4,22 @@
     >>> html = alchemy_viz.to_html(small_molecule_component)  # returns a string
     >>> alchemy_viz.view(small_molecule_component)  # the same page, in a notebook
 
-:func:`to_html` returns the page and writes nothing; where it goes is the
-caller's decision. ``alchemy-viz <input> -o out.html`` is one answer to that, and
-a development convenience rather than the OpenFE CLI integration.
-:func:`view` is the notebook's answer to the same question - see
-:mod:`alchemy_viz.notebook` for what a cell gets and why it is in an iframe.
+A standalone, optional companion to an openfe installation. It is not part of
+gufe and not part of openfe; it patches nothing, registers nothing, and
+overrides no method on any gufe class. The arrow points one way: alchemy-viz
+imports gufe to read objects, and neither gufe nor openfe ever calls back into
+alchemy-viz. Installing it changes the behaviour of nothing already installed,
+and uninstalling it breaks nothing. Visualizing something is always an explicit
+call to one of the three entry points below.
+
+There are three, one per context:
+
+* :func:`to_html` returns the page as a string and writes nothing - where it
+  goes is the caller's decision;
+* :func:`view` is the notebook's answer to the same question, see
+  :mod:`alchemy_viz.notebook` for what a cell gets and why it is in an iframe;
+* ``alchemy-viz <input> -o out.html`` renders an object already on disk, see
+  :mod:`alchemy_viz.cli`.
 
 The intermediate value is a plain, schema-valid dict:
 
@@ -17,10 +28,12 @@ The intermediate value is a plain, schema-valid dict:
 ``schema/alchemy-viz.schema.json`` in this repository is the contract it satisfies,
 and the compiled TypeScript in ``alchemy_viz/_assets/`` is what draws it.
 
-This package depends on gufe and gufe never depends on this package. The
-dependency is imported lazily inside :func:`payload_for` rather than at module
-scope, which is what lets ``import alchemy_viz`` and :func:`to_html` on an existing
-payload dict work in an environment that has the wheel but not gufe.
+gufe is imported lazily, inside :func:`payload_for`, rather than at module
+scope. That is what lets ``import alchemy_viz`` and :func:`to_html` on an
+existing payload dict work in an environment that has the wheel but not gufe -
+which is the normal state after ``pip install alchemy-viz``, since gufe is not
+installable from PyPI. :mod:`alchemy_viz._gufe` explains that, and is what turns
+the missing import into an instruction rather than a ``ModuleNotFoundError``.
 """
 
 from __future__ import annotations
@@ -58,7 +71,10 @@ def payload_for(obj: GufeTokenizable) -> dict[str, Any]:
     call on an unsupported type is a mistake at the call site, and saying so
     immediately is more useful than a panel.
     """
-    import gufe
+    from ._gufe import require_gufe
+
+    gufe = require_gufe()
+
     from gufe.transformations.transformation import TransformationBase
 
     from .alchemical import alchemical_network_payload, transformation_payload

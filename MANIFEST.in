@@ -1,0 +1,45 @@
+# What goes into the sdist.
+#
+# setuptools-scm's file finder defaults the sdist to "every file git tracks",
+# which here is 27 MB of development material: the example payloads, the
+# structure fixtures under scripts/data, the TypeScript sources, the notebooks.
+# None of it is needed to build the wheel, so all of it is pruned below.
+#
+# The wheel itself is unaffected - it is defined by `package-data` in
+# pyproject.toml, and the one artifact that matters, the compiled bundle in
+# alchemy_viz/_assets/, is declared there.
+
+# The hand-written contract. Not needed to build, kept because an sdist that
+# contains the payload format it implements can be read on its own.
+include schema/alchemy-viz.schema.json
+include schema/README.md
+
+# Development material. The git repository is where this lives.
+prune do-not-commit
+prune examples
+prune scripts
+prune ts
+prune node_modules
+prune build
+prune .github
+prune .pixi
+
+# The test suite reads examples/ and schema/ from a repository checkout, so it
+# cannot run from an unpacked sdist. Shipping it would ship a suite that only
+# errors. `git clone` then `pixi run test` is the supported way to run it.
+prune python/tests
+
+exclude .gitattributes
+exclude .pre-commit-config.yaml
+exclude package.json
+exclude package-lock.json
+exclude pixi.lock
+exclude pixi.toml
+exclude rever.xsh
+exclude tsconfig.json
+exclude vite.config.ts
+exclude vite.lib.config.ts
+exclude CLAUDE.md
+exclude .DS_Store
+global-exclude *.py[cod]
+global-exclude .DS_Store

@@ -82,7 +82,7 @@ export function describeProblem(payload: unknown): DispatchProblem | null {
   ) {
     return {
       message:
-        "This does not look like a alchemy-viz payload (expected a JSON object).",
+        "This does not look like an alchemy-viz payload (expected a JSON object).",
     };
   }
 
