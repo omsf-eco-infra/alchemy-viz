@@ -51,7 +51,7 @@ describe("describeProblem", () => {
   });
 
   it.each([null, undefined, 42, "a string", ["an", "array"]])("refuses a non-object payload: %s", (bad) => {
-    expect(problemWith(bad)).toContain("does not look like a alchemy-viz payload");
+    expect(problemWith(bad)).toContain("does not look like an alchemy-viz payload");
   });
 
   // There is no version check to test: a payload carries no version, because

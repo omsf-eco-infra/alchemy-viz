@@ -5431,7 +5431,7 @@ const so = {
 function cu(e) {
   if (e == null || typeof e != "object" || Array.isArray(e))
     return {
-      message: "This does not look like a alchemy-viz payload (expected a JSON object)."
+      message: "This does not look like an alchemy-viz payload (expected a JSON object)."
     };
   const { type: t } = e;
   if (typeof t != "string" || !t)

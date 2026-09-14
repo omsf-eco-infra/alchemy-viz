@@ -1,4 +1,4 @@
-"""``to_html`` and the dev CLI.
+"""``to_html`` and the command line interface.
 
 The page is one file, it loads nothing at parse time, and ``to_html`` returns a
 string rather than writing one anywhere.

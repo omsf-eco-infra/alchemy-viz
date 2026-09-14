@@ -50,16 +50,14 @@ jobs:
 
       - run: pixi run check-generated
 
-  # alchemy-viz must build and install without a Node toolchain anywhere in sight,
-  # and the compiled bundle must be inside the wheel rather than beside it.
-  #
-  # `--no-deps` because gufe comes from conda-forge: the declared `gufe>=1.12`
-  # is deliberately unsatisfiable on PyPI, whose newest release is 0.4, so
-  # resolving dependencies here would fail by design. That failure is tested
-  # separately below. What this job is actually for is the Node question, and
-  # `--no-deps` is what isolates it.
+  # The state a `pip install alchemy-viz` actually lands in: no Node toolchain,
+  # and no gufe. gufe is not installable from PyPI at a usable version, so it is
+  # declared as an extra rather than a hard dependency, which makes "installed,
+  # importable, and rendering payloads, with no gufe present" the ordinary case
+  # this job has to hold. The plain `pip install .` here - no `--no-deps` - is
+  # the assertion that resolution succeeds on PyPI alone.
   pip-install:
-    name: pip install (no node)
+    name: pip install (no node, no gufe)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -70,18 +68,51 @@ jobs:
         with:
           python-version: "3.12"
 
-      - run: pip install --no-deps .
+      - run: pip install .
+
+      - name: gufe really is absent
+        run: |
+          python - <<'PY'
+          import importlib.util
+          import sys
+
+          if importlib.util.find_spec("gufe") is not None:
+              sys.exit("gufe got installed; the extra is leaking into the hard dependencies")
+          print("no gufe, as expected")
+          PY
+
+      # The bundle is committed and ships inside the wheel rather than beside
+      # it, which is what makes the no-Node install above possible. Run from a
+      # temp directory so this reads the installed package, not the checkout.
       - name: the bundle shipped with the wheel
         run: python -c "import alchemy_viz; print(alchemy_viz.bundle_source()[:80])"
         working-directory: ${{ runner.temp }}
 
-      # The other half of the same decision: a plain `pip install` must refuse
-      # rather than hand someone the pre-1.0 gufe from PyPI.
-      - name: pip refuses to install the wrong gufe
+      - name: rendering a payload needs no gufe
         run: |
-          if pip install --dry-run . 2>err.log; then
-            echo "expected the gufe>=1.12 requirement to be unsatisfiable on PyPI"
-            exit 1
-          fi
-          grep -q "gufe>=1.12" err.log || { echo "failed, but not on gufe:"; cat err.log; exit 1; }
-          echo "refused as intended:"; grep "gufe" err.log
+          python - <<'PY'
+          import alchemy_viz
+
+          html = alchemy_viz.to_html({"type": "SmallMoleculeComponentViz", "name": "x"})
+          assert "<alchemy-view" in html, html[:200]
+          print(f"rendered {len(html):,} bytes")
+          PY
+        working-directory: ${{ runner.temp }}
+
+      # The other half of the same decision. Dropping the hard requirement must
+      # not turn "gufe is missing" into a bare ModuleNotFoundError naming a
+      # package the reader cannot pip-install; it has to name conda-forge.
+      - name: a missing gufe is reported in words
+        run: |
+          python - <<'PY'
+          import alchemy_viz
+
+          try:
+              alchemy_viz.payload_for(object())
+          except ImportError as e:
+              assert "conda-forge" in str(e), f"no install instruction in: {e}"
+              print("reported as:", str(e).splitlines()[0])
+          else:
+              raise SystemExit("expected ImportError when gufe is not installed")
+          PY
+        working-directory: ${{ runner.temp }}

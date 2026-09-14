@@ -8,18 +8,21 @@ platforms = ["osx-arm64", "osx-64", "linux-64", "linux-aarch64", "win-64"]
 [dependencies]
 python = ">=3.12,<3.14"
 nodejs = ">=20"
-# gufe is declared here *and* in pyproject.toml, deliberately. pyproject is the
-# only file pip can see, so the requirement has to live there; but a PyPI
-# requirement is satisfied by a conda package only when that package is also in
-# this table, so this line is what makes pixi resolve gufe from conda-forge
-# rather than from PyPI - where the newest release is 0.4 and the 1.0 API does
-# not exist yet. The two entries must agree on the floor.
+# This is where the real gufe comes from. It is a conda-forge package: PyPI's
+# newest release is 0.4 and the 1.0 API does not exist there, which is why
+# pyproject.toml declares gufe as an extra rather than a hard dependency and
+# pushes the failure to import time. Development does not want that failure, so
+# this table supplies the genuine article and `pixi run test` exercises the
+# gufe-backed paths. The floor here and the floor in the `gufe` extra should
+# agree.
 gufe = ">=1.12"
 rdkit = "*"
 pytest = "*"
 jsonschema = "*"
 ruff = "*"
 pip = "*"
+python-build = ">=1.6.0,<2"
+twine = ">=7.0.0,<8"
 
 [pypi-dependencies]
 alchemy-viz = { path = ".", editable = true }
@@ -161,3 +164,24 @@ depends-on = ["npm-install"]
 [tasks.ci]
 description = "Everything CI runs: lint, both suites, generated-artifact freshness."
 depends-on = ["lint", "test-py", "test-ts", "check-generated"]
+
+[tasks.dist]
+description = "Build the sdist and wheel into dist/, and check them the way PyPI will."
+# `build` first: the wheel carries the compiled bundle, so a stale bundle would
+# ship. `--strict` makes twine fail on a long-description warning rather than
+# letting a README that renders badly reach PyPI, where the upload cannot be
+# taken back.
+cmd = """
+rm -rf dist &&
+python -m build &&
+twine check --strict dist/*
+"""
+depends-on = ["build"]
+
+[tasks.dist-check]
+description = "Install the built wheel into a throwaway venv with no gufe, and use it."
+# What `pip install alchemy-viz` actually lands in. gufe is not on PyPI at a
+# usable version, so a gufe-less environment is the ordinary case and the
+# package has to import and render payloads there.
+cmd = "bash scripts/check_wheel.sh"
+depends-on = ["dist"]

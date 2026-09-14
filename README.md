@@ -99,19 +99,33 @@ baked in:
 pixi run alchemy-viz-debug examples/ligand_network_named.json -o /tmp/network.html
 ```
 
-### 4. Future CLI integration
+### 4. From Python, or from the command line
 
-Eventually `openfe` integration, but for now it's manual:
+Two ways in, one renderer behind both.
+
+From Python, on a live object:
 
 ```python
 import alchemy_viz
 
 html = alchemy_viz.to_html(small_molecule_component)   # returns a string
-open("mol.html", "w").write(html)                   # writing it is your call
+open("mol.html", "w").write(html)                      # writing it is your call
 ```
 
 `to_html` accepts a gufe object or a plain payload dict. It returns a string and
 writes nothing.
+
+From the shell, on an object already saved to disk:
+
+```bash
+alchemy-viz ligand.json                 # writes ligand.json.html beside it
+alchemy-viz network.json -o out.html    # or wherever you say
+alchemy-viz ligand.json -o - > out.html # or stdout
+```
+
+The input may be a serialized gufe object or an alchemy-viz payload JSON. Both
+produce the same single self-contained HTML file. `alchemy-viz --help` lists the
+rest.
 
 ### 5. Notebook rendering of visualizations
 
@@ -119,7 +133,10 @@ writes nothing.
 alchemy_viz.view(small_molecule_component)   # the same page, in a cell
 ```
 
-**NB:** When this is published, we can update the gufe repo with this as an optional dependency, and if installed, will render the object without the need for specific `.view(..)` calls.
+**NB:** `view()` is always an explicit call. alchemy-viz does not patch gufe,
+does not register renderers on gufe classes, and does not override
+`_repr_html_` or any other method. Installing it changes the behaviour of
+nothing already in the environment, and uninstalling it breaks nothing.
 
 
 There are [two notebooks](examples/notebooks/), one is for running locally and the other is so you can see the visualization in e.g. github (which restricts javascript and iframes).
@@ -170,30 +187,55 @@ use case, so it's an iframe/page everywhere.
 None of the above. Installing the package is plain pip, with no Node anywhere:
 
 ```bash
-pip install .          # not on PyPI yet, see Status
+pip install alchemy-viz
+```
+
+Install it **into the environment that already has openfe or gufe**, not beside
+it. alchemy-viz is an optional companion to that environment: it reads gufe
+objects, and the gufe it reads is the one already installed there.
+
+```bash
+conda activate my-openfe-env
+pip install alchemy-viz
 ```
 
 The compiled JavaScript bundle is committed to this repository and ships inside
-the wheel, which is what makes that true.
+the wheel, so none of this needs a Node toolchain.
 
-> **Get gufe from conda-forge, not PyPI.** The `gufe` on PyPI is stuck at 0.4, a
-> single release predating the 1.0 API; conda-forge has 1.12.0, which is what
-> this package is developed and tested against and what `pixi install` gives
-> you. `conda install -c conda-forge gufe` is the other route.
+Optional extras:
+
+```bash
+pip install "alchemy-viz[notebook]"   # anywidget, for update-in-place in a cell
+```
+
+> **gufe is not a dependency of the wheel, and that is deliberate.** The `gufe`
+> on PyPI is stuck at 0.4, a single release predating the 1.0 API. conda-forge
+> has 1.12, which is what this package is written against and what `pixi
+> install` gives you.
 >
-> gufe is declared in **both** `pyproject.toml` and `pixi.toml`, which is not a
-> duplication to tidy up. `pyproject.toml` is the only file pip can see, so the
-> requirement has to live there; a PyPI requirement is satisfied by a conda
-> package only when that package is also in pixi's own dependency table, so the
-> entry in `pixi.toml` is what redirects it to conda-forge. Remove either one
-> and something breaks.
+> A hard `gufe>=1.12` in `pyproject.toml` would therefore be unsatisfiable from
+> PyPI, and `pip install alchemy-viz` would fail its resolution step for
+> *everyone* - including the people who already have a perfectly good conda gufe
+> sitting in the environment they are installing into. So the requirement is not
+> declared as a hard dependency. It moved to import time instead:
 >
-> The `>=1.12` floor is what protects you: `pip install alchemy-viz` fails with
-> *"Could not find a version that satisfies the requirement gufe>=1.12 (from
-> versions: 0.4)"* rather than quietly installing a gufe whose API is gone.
+> ```
+> >>> alchemy_viz.payload_for(ligand)
+> ImportError: alchemy-viz needs gufe >= 1.12, and it is not installed.
+> gufe is not installable from PyPI - the only release there is 0.4, which
+> predates the 1.0 API. Get it from conda-forge:
+>     conda install -c conda-forge gufe
+> ```
 >
-> `import alchemy_viz` and `to_html(payload_dict)` need no gufe at all - the import
-> is lazy - so `pip install --no-deps` is a valid way to get just the renderer.
+> `python/alchemy_viz/_gufe.py` is the whole of that mechanism.
+>
+> `import alchemy_viz` and `to_html(payload_dict)` need no gufe at all - the
+> import is lazy - so a gufe-less install is a valid way to get just the
+> renderer, and `alchemy-viz some_payload.json` works there too.
+>
+> `pixi.toml` is what pulls the real gufe in for development, from conda-forge.
+> `pip install "alchemy-viz[gufe]"` declares the requirement for any resolver
+> that can actually reach a gufe >= 1.12.
 
 ---
 
@@ -317,7 +359,7 @@ flowchart TD
   dbg -->|yes| console["console: the payload,<br/>as JSON and as an object"]
   dbg -->|no| isobj{"a JSON object?"}
   console --> isobj
-  isobj -->|no| p1["panel: this does not look<br/>like a alchemy-viz payload"]
+  isobj -->|no| p1["panel: this does not look<br/>like an alchemy-viz payload"]
   isobj -->|yes| hastype{"has a <code>type</code>?"}
   hastype -->|no| p3["panel: nothing says<br/>what this is"]
   hastype -->|yes| hasview{"a view claims<br/>that type?"}
@@ -606,12 +648,28 @@ exists for: set it before assigning `.payload` and the element prints what it wa
 handed. See [Debugging: seeing the
 payload](#debugging-seeing-the-payload).
 
-### Integrating with OpenFE
+### Relationship to OpenFE and gufe
 
-`alchemy-viz <input>` exists as a working reference implementation, **not** as the
-CLI integration - that is `openfe view`'s job when someone wires it up. The
-library writes nothing to disk on its own; `to_html` returns a string and the
-caller decides where it goes.
+alchemy-viz is a **standalone, optional** package. It is not part of gufe and
+not part of openfe, and the dependency arrow points one way only: alchemy-viz
+imports the gufe library to read objects, and nothing in gufe or openfe imports
+or calls alchemy-viz.
+
+Concretely, installing it:
+
+- patches nothing and monkeypatches nothing;
+- registers no renderer and overrides no method on any gufe class, including
+  `_repr_html_`;
+- adds no import hook and no entry point that gufe or openfe reads.
+
+Every visualization is an explicit call to one of the three entry points -
+`to_html`, `view`, or the `alchemy-viz` command. Uninstalling the package
+returns the environment to exactly what it was.
+
+That is also why it installs *into* an openfe environment rather than bringing
+its own gufe: the objects you want to draw are the ones already in that
+environment. The library writes nothing to disk on its own; `to_html` returns a
+string and the caller decides where it goes.
 
 Which of gufe's serialization forms round-trips reliably is still an open
 question: `QuickRun` writes `to_dict` while other paths write `to_json`, and the
@@ -699,6 +757,8 @@ somewhere sensible - for that, see
 | `pixi run format` | Apply ruff's fixes and formatting |
 | `pixi run check-generated` | Fail if any committed generated artifact is stale |
 | `pixi run ci` | Lint, both suites and `check-generated`, as CI runs them |
+| `pixi run dist` | Build `dist/*.whl` and `dist/*.tar.gz`, and `twine check` them |
+| `pixi run dist-check` | Install that wheel into a clean venv with no gufe, and use it |
 
 ## Layout
 
@@ -713,9 +773,56 @@ scripts/    the generators, and CI runs
             data/ - the fixture inputs gufe does not ship, read never rebuilt
 ```
 
+## Releasing
+
+The version is not a string anyone edits. setuptools-scm derives it from the
+git tag, so tagging *is* the release:
+
+```bash
+git tag -a v0.1.0 -m "v0.1.0"
+git push origin v0.1.0
+```
+
+That fires `.github/workflows/release.yml`, which builds the sdist and wheel,
+checks that the compiled bundle is inside the wheel, installs that wheel into a
+clean environment with no Node and no gufe and renders a payload with it, and
+only then uploads to PyPI.
+
+Upload is [PyPI Trusted
+Publishing](https://docs.pypi.org/trusted-publishers/): no API token is stored
+in the repository. PyPI has to be configured once, on the project's *Publishing*
+page, to trust this repository with workflow `release.yml` and environment
+`pypi`. Renaming the workflow file breaks that trust until the publisher is
+re-pointed.
+
+Rehearse first. PyPI refuses to re-upload a filename it already has, so a real
+release is one-shot. Running the workflow manually
+(*Actions -> Release -> Run workflow*) builds and verifies exactly the same way
+but uploads to TestPyPI instead, which costs nothing but a dev version number.
+
+To build locally without publishing:
+
+```bash
+pixi run dist         # rebuilds the bundle, then sdist + wheel, then twine check
+pixi run dist-check   # installs that wheel into a clean venv with no gufe, and uses it
+```
+
+`dist-check` is the same three assertions the release workflow makes before it
+uploads: the bundle is inside the wheel, a payload renders with no gufe present,
+and asking for something that does need gufe names conda-forge.
+
+The sdist is deliberately small (~180 KB). `MANIFEST.in` prunes the 27 MB of
+development material the repository tracks - the example payloads, the
+structure fixtures, the TypeScript sources - none of which the wheel is built
+from. The test suite reads `examples/` and `schema/` from a checkout, so it is
+pruned too and is not runnable from an unpacked sdist; `git clone` then `pixi
+run test` is how it runs.
+
 ## Status
 
-The pipeline works end to end. Nothing is published yet.
+The pipeline works end to end. Not published to PyPI yet - the machinery above
+is in place and rehearsable against TestPyPI, and the name `alchemy-viz` is
+unclaimed.
 
 Every type the schema declares has a view. `ts/tests/dispatch.test.ts` asserts
 that, so this table cannot go stale without the suite saying so:
@@ -736,8 +843,8 @@ that, so this table cannot go stale without the suite saying so:
 **Not there yet:** zero-network pages with RDKit, 3Dmol and d3 inlined - the
 `__gufeEngines` hook they would use is in place and the tests drive it, but
 `to_html` has no `engines="bundled"` mode, so today's pages still fetch those
-three from their CDNs on demand. Also an optional localhost server;
-PyPI/conda-forge and the transfer to the OpenFE org.
+three from their CDNs on demand. Also an optional localhost server; the first
+PyPI upload, a conda-forge feedstock, and the transfer to the OpenFE org.
 
 ## Licence
 
