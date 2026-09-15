@@ -3,6 +3,11 @@
 
 `alchemy-viz` is set of browser-based visualization tools for [OpenFE](https://docs.openfree.energy/en/latest/index.html). It is supported by the [NSF](#support) via the [Open Molecular Science Foundation](https://omsf.io/)
 
+[![Curated gallery](./examples/media/screenshot-01.png)](https://framejs.app/j/e59fd6f18b2248adbd7e1fcb59aaeec2)
+
+
+
+
 With a single command you can view OpenFE objects in notebooks and the CLI:
 
 
