@@ -1,5 +1,5 @@
 /**
- * The gallery: every component, every example payload, one scrolling page.
+ * The gallery: every component, one scrolling page, in two sizes.
  *
  * The point is that a change in one place can be checked everywhere it shows up,
  * in one reload. Each example renders through `<alchemy-view>` the real dispatch
@@ -8,11 +8,18 @@
  * standalone, inside the ligand network and inside the transformation view at
  * the same time.
  *
+ * `/gallery.html` draws the curated list in `curated.ts` - one example per view,
+ * the biggest one that says something its smaller siblings do not.
+ * `/gallery-all.html` draws the whole of `examples/`, sizes and duplicates
+ * included, which is what you want when a payload shape rather than a drawing is
+ * in question.
+ *
  * Dev-only: nothing here is part of the shipped bundle.
  */
 
 // For its side effects: this is what registers every `<gufe-*>` element.
 import "../index.js";
+import { CURATED, CURATED_FILES } from "./curated.js";
 import { mount } from "./mount.js";
 import { withDebugFlag } from "../shared/debug.js";
 import { errText } from "../shared/dom.js";
@@ -54,20 +61,29 @@ const CARD_HEIGHT = "520px";
 const MOUNT_MARGIN = "600px";
 const RELEASE_MARGIN = "1400px";
 
-export async function buildGallery(host: HTMLElement): Promise<void> {
-  const paths = Object.keys(EXAMPLES).sort();
+/** Which set of examples a page draws. */
+export type GalleryMode = "curated" | "all";
 
-  const header = document.createElement("header");
-  header.style.cssText =
-    "padding:16px 20px 4px;font:13px/1.5 ui-sans-serif,system-ui,sans-serif;" + `color:${V.textMuted};`;
-  header.innerHTML =
-    `<h1 style="margin:0 0 4px;font-size:18px;color:${V.titleColor};">alchemy-viz gallery</h1>` +
-    `<div>${paths.length} example payload${paths.length === 1 ? "" : "s"} from <code>examples/</code>, ` +
-    "each rendered through <code>&lt;alchemy-view&gt;</code>. " +
-    `<a href="${withDebugFlag("./parity.html")}" style="color:${V.titleColor};">mapping parity -&gt;</a></div>`;
-  host.appendChild(header);
+/** The glob's paths keyed by file name, which is what the curated list holds. */
+function byName(): Map<string, string> {
+  const map = new Map<string, string>();
+  for (const path of Object.keys(EXAMPLES)) map.set(path.split("/").pop()!, path);
+  return map;
+}
 
-  if (!paths.length) {
+export async function buildGallery(host: HTMLElement, mode: GalleryMode = "curated"): Promise<void> {
+  const all = byName();
+  const names = mode === "all" ? [...all.keys()].sort() : CURATED_FILES.filter((f) => all.has(f));
+  // A curated name with no file means an example was renamed or dropped. The
+  // header says so rather than the page quietly drawing one card fewer;
+  // `ts/tests/gallery.test.ts` fails on the same thing, but the page is what
+  // gets looked at every day.
+  const missing = mode === "all" ? [] : CURATED_FILES.filter((f) => !all.has(f));
+  const notes = new Map(CURATED.map((c) => [c.file, c.note]));
+
+  host.appendChild(header(mode, names.length, all.size, missing));
+
+  if (!all.size) {
     const empty = document.createElement("div");
     empty.style.cssText = `padding:20px;color:${V.textMuted2};font:13px ui-sans-serif,system-ui,sans-serif;`;
     empty.textContent = "No example payloads yet - run `pixi run examples`.";
@@ -75,8 +91,8 @@ export async function buildGallery(host: HTMLElement): Promise<void> {
     return;
   }
 
-  for (const path of paths) {
-    const name = path.split("/").pop()!;
+  for (const name of names) {
+    const path = all.get(name)!;
     const card = document.createElement("section");
     card.style.cssText =
       `margin:16px 20px;border:1px solid ${V.cardBorder};border-radius:10px;overflow:hidden;` +
@@ -90,8 +106,10 @@ export async function buildGallery(host: HTMLElement): Promise<void> {
     // the page being opened reads its own URL, and an example worth opening
     // alone is usually one being debugged.
     const href = withDebugFlag(`./index.html?file=${encodeURIComponent(EXAMPLE_URLS[path] ?? "")}`);
+    const note = notes.get(name);
     bar.innerHTML =
       `<b style="color:${V.textPrimary};font-family:ui-monospace,Menlo,monospace;">${name}</b>` +
+      (note && mode === "curated" ? `<span>${note}</span>` : "") +
       `<a href="${href}" style="margin-left:auto;color:${V.titleColor};">open alone -></a>`;
     card.appendChild(bar);
 
@@ -103,6 +121,35 @@ export async function buildGallery(host: HTMLElement): Promise<void> {
     placeholder(stage, name);
     observe(stage, path, name);
   }
+}
+
+/** The title, what is on the page, and the way to the other two pages. */
+function header(mode: GalleryMode, shown: number, total: number, missing: string[]): HTMLElement {
+  const el = document.createElement("header");
+  el.style.cssText =
+    "padding:16px 20px 4px;font:13px/1.5 ui-sans-serif,system-ui,sans-serif;" + `color:${V.textMuted};`;
+
+  const link = (href: string, text: string) =>
+    `<a href="${withDebugFlag(href)}" style="color:${V.titleColor};">${text} -&gt;</a>`;
+
+  const title = mode === "all" ? "alchemy-viz gallery - everything" : "alchemy-viz gallery";
+  const blurb =
+    mode === "all"
+      ? `all ${total} example payload${total === 1 ? "" : "s"} in <code>examples/</code>, every size and duplicate`
+      : `${shown} of ${total} example payloads: one per view, the one worth looking at`;
+  const other =
+    mode === "all" ? link("./gallery.html", "curated gallery") : link("./gallery-all.html", "every example");
+
+  el.innerHTML =
+    `<h1 style="margin:0 0 4px;font-size:18px;color:${V.titleColor};">${title}</h1>` +
+    `<div>${blurb}, each rendered through <code>&lt;alchemy-view&gt;</code>. ` +
+    `${other} &middot; ${link("./parity.html", "mapping parity")}</div>` +
+    (missing.length
+      ? `<div style="color:${V.errorFg};">curated but missing from <code>examples/</code>: ` +
+        `<code>${missing.join(", ")}</code> - run <code>pixi run examples</code>, ` +
+        "or fix <code>ts/src/dev/curated.ts</code>.</div>"
+      : "");
+  return el;
 }
 
 /** What a card shows before it is scrolled to. */

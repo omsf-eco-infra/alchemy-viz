@@ -1,5 +1,20 @@
 # alchemy-viz
 
+
+`alchemy-viz` is set of browser-based visualization tools for [OpenFE](https://docs.openfree.energy/en/latest/index.html). It is supported by the [NSF](#support) via the [Open Molecular Science Foundation](https://omsf.io/)
+
+With a single command you can view OpenFE objects in notebooks and the CLI:
+
+
+
+## Quickstart
+
+
+
+
+It has been supported by the Open Molecular Science Foundation ...TODO
+
+
 Visualization tools for [gufe](https://github.com/OpenFreeEnergy/gufe).
 
 Turns a gufe object into an interactive browser visualization you open locally
@@ -11,7 +26,7 @@ Turns a gufe object into an interactive browser visualization you open locally
 
 ---
 
-## Quick start
+## Development  
 
 ### 1. Install pixi
 
@@ -45,29 +60,37 @@ is visible without running anything else:
 
 ```bash
 pixi run dev
-# http://localhost:5173/gallery.html   every example, every view
-# http://localhost:5173/parity.html    our atom mapping beside gufe's own
-# http://localhost:5173/               drop any payload JSON on the page
+# http://localhost:5173/gallery.html       one example per view, the one worth looking at
+# http://localhost:5173/gallery-all.html   every payload in examples/, sizes and duplicates
+# http://localhost:5173/parity.html        our atom mapping beside gufe's own
+# http://localhost:5173/                   drop any payload JSON on the page
 ```
 
-The gallery finds `examples/*.json` by itself, so a new fixture appears without
-touching it. Cards draw as you scroll to them and are released again when you
-scroll well past: several of them hold a WebGL context, and a browser only
-allows so many at once.
+The server prints those four URLs when it starts.
+
+`examples/` holds several sizes of the same thing, because pytest and vitest want
+a two-atom payload as much as they want a real network. `/gallery.html` shows the
+curated list in `ts/src/dev/curated.ts` - one example per view, the biggest one
+that says something its smaller siblings do not - and `/gallery-all.html` shows
+the directory, so a new fixture appears there without touching anything. Cards
+draw as you scroll to them and are released again when you scroll well past:
+several of them hold a WebGL context, and a browser only allows so many at once.
 
 
 Three ways:
 
-**The gallery:**  every example payload on one page, for quick debugging and checks
+**The gallery:** example payloads on one page, for quick debugging and checks
 
 ```bash
 pixi run dev
-# http://localhost:5173/gallery.html
+# http://localhost:5173/gallery.html       the curated set, one example per view
+# http://localhost:5173/gallery-all.html   every payload in examples/
 ```
 
-Every declared type has a view, so the gallery draws all of them. The "sorry,
-there is no visualization for X yet" panel is still what a payload naming an
-undeclared type gets, which is what `ts/tests/dispatch.test.ts` exercises.
+Every declared type has a view, so between them the two pages draw all of them -
+`ts/tests/gallery.test.ts` fails if a view lands with no curated card. The
+"sorry, there is no visualization for X yet" panel is still what a payload naming
+an undeclared type gets, which is what `ts/tests/dispatch.test.ts` exercises.
 
 **Drag and drop:** the same dev server, one payload at a time. Drop any file
 from `examples/` anywhere on the page:
@@ -757,7 +780,7 @@ somewhere sensible - for that, see
 
 | Task | What it does |
 |---|---|
-| `pixi run dev` | Vite dev server - dropzone, gallery and the parity page |
+| `pixi run dev` | Vite dev server - both galleries, the dropzone and the parity page |
 | `pixi run parity-reference` | Render gufe's own mapping drawings, to compare ours against |
 | `pixi run big-network` | Generate a large synthetic ligand network, to measure against |
 | `pixi run atom-colors` | Regenerate the mirrored atom colours from gufe and matplotlib |
@@ -864,6 +887,14 @@ that, so this table cannot go stale without the suite saying so:
 `to_html` has no `engines="bundled"` mode, so today's pages still fetch those
 three from their CDNs on demand. Also an optional localhost server; the first
 PyPI upload, a conda-forge feedstock, and the transfer to the OpenFE org.
+
+## Support
+
+This work was supported by the [National Science Foundation under Grant No. 2303740](https://nsf.elsevierpure.com/en/projects/pose-phase-ii-building-open-source-ecosystems-in-molecular-scienc-2/).
+
+![NSF funding header]([image-url](https://nsf.elsevierpure.com/skin/headerImage/))
+
+
 
 ## Licence
 

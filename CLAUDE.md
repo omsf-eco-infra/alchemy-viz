@@ -15,7 +15,7 @@ of them with descriptions.
 | `pixi run lint` | ruff check + format check + `tsc --noEmit` |
 | `pixi run ci` | what CI runs, including generated-artifact freshness |
 | `pixi run build` | bundle `ts/src/**` into `python/alchemy_viz/_assets/alchemy-viz.js` |
-| `pixi run dev` | vite server; `/gallery.html` renders every example |
+| `pixi run dev` | vite server; `/gallery.html` is the curated set, `/gallery-all.html` every example |
 
 Run one vitest file with `npx vitest run ts/tests/<name>.test.ts`.
 
@@ -62,6 +62,8 @@ Edit the source, then run the command.
   the facts `preparePair` works out, `mapping-modes.ts` the six ways of drawing
   them, `mapping-stage.ts` the boxes and the viewer lifecycle
 - Python page/notebook plumbing: `html.py`, `notebook.py`, `cli.py`
+- a framejs frame: `.claude/skills/framejs-alchemy-viz/` - by default a frame
+  loads the built bundle from jsDelivr and mounts `<alchemy-view>`
 
 The two network views and `ts/tests/views.test.ts` run to a few thousand lines
 each. Read the region you need rather than the file - `grep -n` for the symbol,
