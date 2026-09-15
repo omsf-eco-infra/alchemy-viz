@@ -488,6 +488,38 @@ def _jak2_network() -> gufe.LigandNetwork:
     return network_from(DATA / "jak2_docked_poses.sdf", DATA / "jak2_network_edges.json")
 
 
+def _jak2_hub(network: gufe.LigandNetwork) -> str:
+    """The name of the network's busiest node, ties broken by the name itself.
+
+    Two fixtures are built around this ligand, so which one it is has to be
+    decided the same way in both, and it has to be decided rather than chosen: a
+    tie broken by set iteration order would move between runs, and these files
+    are committed.
+    """
+    degree: dict[str, int] = {node.name: 0 for node in network.nodes}
+    for edge in network.edges:
+        degree[edge.componentA.name] += 1
+        degree[edge.componentB.name] += 1
+    return min(degree, key=lambda name: (-degree[name], name))
+
+
+def _jak2_ligand() -> gufe.SmallMoleculeComponent:
+    """One docked JAK2 inhibitor, standing alone.
+
+    The small molecule view's other two fixtures are benzene and a four-atom
+    anion. Both are read in a glance, and neither asks much of the drawing: no
+    fused rings to lay out, no conformer worth turning, barely any elements to
+    colour. This is a real inhibitor in the pose a docking run put it in, which
+    is the molecule that view is for.
+
+    The busiest node of :func:`_jak2_network`, which is also what
+    :func:`_jak2_ensemble` builds its ensemble around - so the two fixtures are
+    the same molecule alone and in company.
+    """
+    network = _jak2_network()
+    return {node.name: node for node in network.nodes}[_jak2_hub(network)]
+
+
 #: Ligands in the docked ensemble: the busiest node of the JAK2 network and the
 #: five partners it overlaps best. Enough to read as an ensemble rather than as
 #: a pose, and few enough that 3Dmol's element colouring still separates them -
@@ -514,12 +546,7 @@ def _jak2_ensemble() -> gufe.ChemicalSystem:
 
     network = _jak2_network()
     by_name = {node.name: node for node in network.nodes}
-
-    degree: dict[str, int] = {name: 0 for name in by_name}
-    for edge in network.edges:
-        degree[edge.componentA.name] += 1
-        degree[edge.componentB.name] += 1
-    hub = min(degree, key=lambda name: (-degree[name], name))
+    hub = _jak2_hub(network)
 
     partners = sorted(
         (
@@ -594,9 +621,12 @@ def build() -> dict[str, GufeTokenizable]:
 
     return {
         # Two variants per kind: with and without a formal charge, and
-        # a whole protein against a single-chain fragment of it.
+        # a whole protein against a single-chain fragment of it. The third small
+        # molecule is neither variant but the realistic case: a docked inhibitor,
+        # which is what the depiction and the 3D styles are actually for.
         "small_molecule.json": benzene,
         "small_molecule_charged.json": _acetate(),
+        "small_molecule_ligand.json": _jak2_ligand(),
         "protein.json": ProteinComponent.from_pdb_file(str(data / "181l.pdb"), name="181l"),
         "protein_fragment.json": _protein_fragment(data / "181l.pdb"),
         # The two PDB-carrying subclasses. They exist so the schema's three

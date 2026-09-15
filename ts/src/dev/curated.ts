@@ -48,8 +48,8 @@ export const CURATED: CuratedExample[] = [
     note: "181l, the whole structure",
   },
   {
-    file: "small_molecule_charged.json",
-    note: "acetate - formal charges drawn",
+    file: "small_molecule_ligand.json",
+    note: "a docked jak2 inhibitor, not a benzene",
   },
   {
     file: "solvent.json",
