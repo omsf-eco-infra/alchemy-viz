@@ -89,10 +89,24 @@ ipywidgets = ">=8"
 jupyterlab = ">=4"
 marimo = "*"
 
+# Node picks CommonJS or ESM by walking up from the file it is loading until it
+# finds a package.json. `.pixi/` sits inside the repository and carries none of
+# its own, so the first one found for anything under it is ours at the root, and
+# our `"type": "module"` gets applied to third-party JavaScript that was never
+# part of this package. JupyterLab ships `node-version-check.js` and
+# jupyter_builder ships `yarn.js`, both CommonJS, and both then fail to load;
+# JupyterLab reports the failure as "Please install nodejs", which is misleading
+# because pixi has already installed one. Writing a package.json here ends our
+# package at `.pixi/` and hands that subtree back to Node's default, which for a
+# `.js` file with no `type` field is CommonJS.
+[feature.notebook.tasks.env-module-boundary]
+description = "Stop the root package.json from forcing ESM on the JavaScript vendored inside .pixi."
+cmd = "echo '{ \"type\": \"commonjs\" }' > .pixi/package.json"
+
 [feature.notebook.tasks.notebook]
 description = "JupyterLab on the demo notebook: every visualization type, every delivery mode."
 cmd = "jupyter lab examples/notebooks/alchemy-viz-demo.ipynb"
-depends-on = ["build"]
+depends-on = ["build", "env-module-boundary"]
 
 [feature.notebook.tasks.marimo]
 # One notebook, two frontends: marimo reads the same .ipynb, converted. The
