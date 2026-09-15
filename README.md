@@ -106,10 +106,10 @@ Two ways in, one renderer behind both.
 From Python, on a live object:
 
 ```python
-import alchemy_viz
+from alchemy_viz import to_html
 
-html = alchemy_viz.to_html(small_molecule_component)   # returns a string
-open("mol.html", "w").write(html)                      # writing it is your call
+html = to_html(small_molecule_component)   # returns a string
+open("mol.html", "w").write(html)          # writing it is your call
 ```
 
 `to_html` accepts a gufe object or a plain payload dict. It returns a string and
@@ -130,8 +130,13 @@ rest.
 ### 5. Notebook rendering of visualizations
 
 ```python
-alchemy_viz.view(small_molecule_component)   # the same page, in a cell
+from alchemy_viz import view
+
+view(small_molecule_component)   # the same page, in a cell
 ```
+
+You import `view` from alchemy-viz and call it on a gufe object. gufe is not
+involved in the call: it never learns this package exists.
 
 **NB:** `view()` is always an explicit call. alchemy-viz does not patch gufe,
 does not register renderers on gufe classes, and does not override
@@ -168,11 +173,11 @@ for developers, including when to regenerate.
 | live | a widget view - shell page plus the payload as widget state | `anywidget` | `w.payload = other` redraws in place |
 
 ```python
-w = alchemy_viz.view(ligand_A)     # display it
-w.payload = ligand_B            # the cell above redraws, in place
+w = view(ligand_A)       # display it
+w.payload = ligand_B     # the cell above redraws, in place
 
-alchemy_viz.view(obj, live=False)     # static only - what a kernel-less reader sees
-alchemy_viz.view(obj, static=False)   # live only - half the bytes, blank on export
+view(obj, live=False)     # static only - what a kernel-less reader sees
+view(obj, static=False)   # live only - half the bytes, blank on export
 ```
 
 The live layer is optional: `pip install alchemy-viz[notebook]`. Without it `view()`
@@ -650,10 +655,24 @@ payload](#debugging-seeing-the-payload).
 
 ### Relationship to OpenFE and gufe
 
-alchemy-viz is a **standalone, optional** package. It is not part of gufe and
-not part of openfe, and the dependency arrow points one way only: alchemy-viz
-imports the gufe library to read objects, and nothing in gufe or openfe imports
-or calls alchemy-viz.
+alchemy-viz belongs to the gufe/OpenFE family, and is a **separate library**
+from gufe rather than a piece of it. Those are two different statements and both
+matter:
+
+- **It depends on gufe.** alchemy-viz imports the gufe library itself, to read
+  the objects it draws. It pulls gufe in; nobody hands it one.
+- **It is not integrated into gufe's code.** Nothing in gufe or openfe imports
+  alchemy-viz, calls it, or knows it exists. The dependency arrow points one way
+  and never back.
+
+So it is called independently: you import a function from alchemy-viz and call
+it yourself.
+
+```python
+from alchemy_viz import view
+
+view(ligand)
+```
 
 Concretely, installing it:
 

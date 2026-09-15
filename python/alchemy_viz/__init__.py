@@ -1,16 +1,19 @@
 """alchemy-viz - interactive browser visualizations for gufe objects.
 
-    >>> import alchemy_viz
-    >>> html = alchemy_viz.to_html(small_molecule_component)  # returns a string
-    >>> alchemy_viz.view(small_molecule_component)  # the same page, in a notebook
+    >>> from alchemy_viz import to_html, view
+    >>> html = to_html(small_molecule_component)  # returns a string
+    >>> view(small_molecule_component)  # the same page, in a notebook
 
-A standalone, optional companion to an openfe installation. It is not part of
-gufe and not part of openfe; it patches nothing, registers nothing, and
-overrides no method on any gufe class. The arrow points one way: alchemy-viz
-imports gufe to read objects, and neither gufe nor openfe ever calls back into
-alchemy-viz. Installing it changes the behaviour of nothing already installed,
-and uninstalling it breaks nothing. Visualizing something is always an explicit
-call to one of the three entry points below.
+A separate library from gufe, and one that depends on gufe. Both halves of that
+are load-bearing. alchemy-viz imports gufe itself, to read the objects it draws;
+it is never handed one by gufe. And it is not integrated into gufe's code -
+nothing in gufe or openfe imports this package, calls it, or knows it exists. It
+patches nothing, registers nothing, and overrides no method on any gufe class,
+so installing it changes the behaviour of nothing already installed and
+uninstalling it breaks nothing.
+
+That makes it a library you call independently: you import one of the entry
+points below and call it yourself, on an object you already have.
 
 There are three, one per context:
 
@@ -23,7 +26,8 @@ There are three, one per context:
 
 The intermediate value is a plain, schema-valid dict:
 
-    >>> payload = alchemy_viz.payload_for(small_molecule_component)
+    >>> from alchemy_viz import payload_for
+    >>> payload = payload_for(small_molecule_component)
 
 ``schema/alchemy-viz.schema.json`` in this repository is the contract it satisfies,
 and the compiled TypeScript in ``alchemy_viz/_assets/`` is what draws it.

@@ -2,7 +2,7 @@
 """Build ``examples/notebooks/alchemy-viz-gallery.ipynb`` - the views, as pictures.
 
 **Why this exists.** GitHub's notebook renderer strips ``<iframe>`` and
-``<script>`` from cell outputs, which is everything ``alchemy_viz.view()`` emits.
+``<script>`` from cell outputs, which is everything ``view()`` emits.
 An executed copy of the demo notebook therefore shows nothing at all on GitHub,
 however well it works in a browser. ``image/png`` is the one output type that
 does survive, so this captures each view as a screenshot and writes a notebook
@@ -274,7 +274,7 @@ Every view alchemy-viz draws today, as a picture.
 >
 > **The outputs below are screenshots**, not live views. They exist because
 > GitHub's notebook renderer strips `<iframe>` and `<script>` from cell outputs,
-> which is everything `alchemy_viz.view()` emits - so an executed copy of the demo
+> which is everything `view()` emits - so an executed copy of the demo
 > notebook shows a blank under every cell there. `image/png` is the one output
 > type that survives.
 >
@@ -304,7 +304,12 @@ drawing path is a claim that has to be checked by looking.
     )
     cells.append(
         code_with_image(
-            'import json\nfrom pathlib import Path\n\nimport alchemy_viz\n\nEXAMPLES = Path("../")\npayloads = {p.stem: json.loads(p.read_text()) for p in sorted(EXAMPLES.glob("*.json"))}',
+            # `from alchemy_viz import view` on purpose: alchemy-viz is a separate
+            # library that is called directly, so the cells below read as a
+            # function someone imported rather than as something gufe provides.
+            "import json\nfrom pathlib import Path\n\nfrom alchemy_viz import view\n\n"
+            'EXAMPLES = Path("../")\n'
+            'payloads = {p.stem: json.loads(p.read_text()) for p in sorted(EXAMPLES.glob("*.json"))}',
             b"",
             1,
         )
@@ -331,7 +336,7 @@ drawing path is a claim that has to be checked by looking.
             print(f"  {stem:24} {payload['type']:<28} {len(png):>8,} bytes")
 
             cells.append(markdown(f"### `{stem}.json` - `{payload['type']}`\n\n{note}", len(cells)))
-            cells.append(code_with_image(f'alchemy_viz.view(payloads["{stem}"])', png, len(cells)))
+            cells.append(code_with_image(f'view(payloads["{stem}"])', png, len(cells)))
 
     notebook = {
         "cells": cells,

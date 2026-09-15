@@ -39,7 +39,7 @@ request, mostly.
 ### Why it has to exist
 
 GitHub's notebook renderer strips `<iframe>` and `<script>` from cell outputs.
-That is everything `alchemy_viz.view()` emits: the static layer is an
+That is everything `view()` emits: the static layer is an
 `<iframe srcdoc>` holding the page, and the live layer is a widget that needs a
 kernel and a widget manager, neither of which GitHub has. So an executed copy of
 the demo notebook shows a blank under every single cell there, however well it
