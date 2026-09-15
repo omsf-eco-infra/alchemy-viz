@@ -129,6 +129,11 @@ export class GufeComplex extends AlchemyElement<ChemicalSystemViz> {
       // makes for another: in a complex the waters sit between the eye and the
       // site.
       waters: false,
+      // The complex opens on the surface: what a reader wants from this pane is
+      // the shape of the pocket the ligand sits in, which a backbone ribbon does
+      // not show. The protein view, where the structure is the subject, still
+      // opens on the cartoon.
+      rep: "surface",
       heteroTitle: "Show hetero atoms / ions / lipids in the structure",
       menuLabel: "Representation, colouring, framing and display options",
       // The structure's key, not this system's: every leg of a campaign is a

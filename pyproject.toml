@@ -9,6 +9,14 @@ requires = [
 name = "alchemy-viz"
 description = "Visualization tools for gufe"
 readme = "README.md"
+keywords = [
+  "alchemical-free-energy",
+  "cheminformatics",
+  "computational-chemistry",
+  "gufe",
+  "openfe",
+  "visualization",
+]
 license = "MIT"
 license-files = [ "LICENSE" ]
 authors = [ { name = "The OpenFE developers", email = "openfe@omsf.io" } ]
@@ -25,14 +33,6 @@ classifiers = [
   "Topic :: Scientific/Engineering :: Chemistry",
   "Topic :: Scientific/Engineering :: Visualization",
 ]
-keywords = [
-  "alchemical-free-energy",
-  "cheminformatics",
-  "computational-chemistry",
-  "gufe",
-  "openfe",
-  "visualization",
-]
 dynamic = [ "version" ]
 # Deliberately empty, and gufe is deliberately not here.
 #
@@ -48,7 +48,7 @@ dynamic = [ "version" ]
 # `alchemy_viz._gufe.require_gufe` raises with the conda-forge instruction. See
 # the `gufe` extra below, and `pixi.toml`, which is what pulls the real one in
 # for development.
-dependencies = [ ]
+dependencies = []
 # Declarative form of the same requirement, for anyone whose resolver can
 # actually reach a gufe >=1.12 - a conda-forge-backed pip, or a future PyPI
 # release. `pip install alchemy-viz[gufe]` is the assertion "I expect this to be
@@ -70,18 +70,18 @@ urls.Issues = "https://github.com/omsf-eco-infra/alchemy-viz/issues"
 scripts.alchemy-viz = "alchemy_viz.cli:main"
 
 [tool.setuptools]
-package-dir = { "" = "python" }
 packages.find.where = [ "python" ]
-packages.find.namespaces = false
 # `python/tests/` has an `__init__.py`, so an unfiltered find() discovers it as a
 # top-level package named `tests` and installs it into site-packages, where it
 # collides with every other project that ships one. Only alchemy_viz ships.
 packages.find.include = [ "alchemy_viz*" ]
+packages.find.namespaces = false
+package-dir = { "" = "python" }
 include-package-data = true
-zip-safe = false
 # The Vite bundle and the HTML template are build artifacts, committed to the
 # repo so `pip install .` needs no Node toolchain.
 package-data.alchemy_viz = [ "_assets/*" ]
+zip-safe = false
 
 [tool.setuptools_scm]
 fallback_version = "0.0.0"
@@ -96,5 +96,5 @@ lint.select = [
   "UP", # pyupgrade
 ]
 
-[tool.pytest.ini_options]
-testpaths = [ "python/tests" ]
+[tool.pytest]
+ini_options.testpaths = [ "python/tests" ]

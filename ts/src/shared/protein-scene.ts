@@ -19,7 +19,7 @@ import { buttonGroup, dropdown, toggleButton } from "./controls.js";
 import { nameWanted, viewerHost } from "./panels.js";
 import { chromeMenu, type ChromeMenu, MENU_OPEN_SUFFIX, orientMenuPanel } from "./chrome.js";
 import { framejsMenuItem } from "./framejs.js";
-import type { ViewHandle } from "./element.js";
+import { seededViewState, type ViewHandle } from "./element.js";
 import { choice, flag, type Setting } from "./settings.js";
 import { releaseViewer, type ThreeDmolViewer } from "./engines.js";
 import { resetControl, type BoundedZoom, type Interaction } from "./interact.js";
@@ -73,6 +73,47 @@ export function forgetCameras(): void {
   cameras.clear();
 }
 
+/**
+ * What a shared snapshot of a structure carries: where it was being looked at.
+ *
+ * Everything else about the picture is a `Setting` - the representation, the
+ * colouring, the waters, the complex's framing mode - and settings travel with a
+ * frame already. The camera does not, because it is where a reader got to rather
+ * than how they like to read, which is exactly why `cameras` above keeps it for
+ * a sitting and no longer. Sharing is the one case where that has to cross a
+ * page: a link to "the pocket, from here" is worth nothing if it opens on the
+ * default framing of the whole protein.
+ *
+ * `camera` is 3Dmol's own `getView` vector - the pan, the distance and the
+ * orientation quaternion - passed back to `setView` unread. Its length has
+ * varied between 3Dmol versions, so nothing here assumes more than that it is
+ * finite numbers.
+ */
+export interface ProteinViewState {
+  camera: number[];
+}
+
+/** A camera as 3Dmol reports it, or null. Shared by what is read and what is restored. */
+function asCamera(value: unknown): number[] | null {
+  if (!Array.isArray(value) || value.length < 4) return null;
+  return value.every((n) => typeof n === "number" && Number.isFinite(n)) ? (value.slice() as number[]) : null;
+}
+
+/**
+ * The camera a host left for this view, if any.
+ *
+ * Keyed by the element's own tag the way `framejs.ts` writes it, so the two
+ * agree without a third place naming the string. One-shot, by `seededViewState`:
+ * a re-render after a resize must not keep hauling the reader back to the
+ * camera the frame opened on.
+ */
+function asSeededState(element: Element): number[] | null {
+  const key = element.tagName.toLowerCase().replace(/^gufe-/, "");
+  const state = seededViewState(key);
+  if (!state || typeof state !== "object") return null;
+  return asCamera((state as Partial<ProteinViewState>).camera);
+}
+
 /** One labelled block of the menu: a caption over what it controls. */
 export interface MenuSection {
   label: string;
@@ -97,6 +138,14 @@ export interface ProteinSceneSpec {
    * sit between the eye and the site. A stored choice still wins over all three.
    */
   waters: boolean;
+  /**
+   * Which representation the scene opens on, when nothing is stored.
+   *
+   * Like `waters`, a property of the payload rather than of the reader: a bare
+   * protein is read as a backbone, while a complex is read as the shape of the
+   * site the ligand sits in, which is a surface. A stored choice wins over both.
+   */
+  rep?: ProteinRepresentation;
   /** The hetero toggle's tooltip, which the two views word differently. */
   heteroTitle: string;
   /** Accessible name for the menu button. */
@@ -180,7 +229,7 @@ export function proteinScene(spec: ProteinSceneSpec): ProteinScene {
   // mean setting it twice.
   const repSetting = choice(
     "protein.representation",
-    "cartoon",
+    spec.rep ?? "cartoon",
     PROTEIN_REPS.map((r) => r.id),
   );
   const colorSetting = choice(
@@ -199,6 +248,11 @@ export function proteinScene(spec: ProteinSceneSpec): ProteinScene {
     hetero: heteroSetting.get(),
     spin: spinSetting.get(),
   };
+
+  // Read here rather than where it is used, because `seededViewState` is
+  // one-shot: taking it at scene build is what makes a second scene of the same
+  // kind on the page open on its own framing rather than on this one's.
+  let seededCamera = asSeededState(spec.element);
 
   let viewer: ThreeDmolViewer | null = null;
   let interaction: (BoundedZoom & Interaction) | null = null;
@@ -379,10 +433,8 @@ export function proteinScene(spec: ProteinSceneSpec): ProteinScene {
    */
   const rememberCamera = (): void => {
     if (!spec.cameraKey || !viewer) return;
-    const view = viewer.getView?.();
-    if (Array.isArray(view) && view.length >= 4 && view.every((n) => Number.isFinite(n))) {
-      cameras.set(spec.cameraKey, view.slice());
-    }
+    const view = asCamera(viewer.getView?.());
+    if (view) cameras.set(spec.cameraKey, view);
   };
 
   return {
@@ -395,7 +447,13 @@ export function proteinScene(spec: ProteinSceneSpec): ProteinScene {
       statsSection.style.display = parts.length ? "" : "none";
     },
     restoreCamera: () => {
-      const view = spec.cameraKey ? cameras.get(spec.cameraKey) : undefined;
+      // The shared snapshot first, then the sitting's own memory. A frame is
+      // someone saying "look at this, from here", and it is only ever there on
+      // the first scene of a page - so on every later one this is the memory
+      // again. Taken rather than read, for the same reason it was read once.
+      const seeded = seededCamera;
+      seededCamera = null;
+      const view = seeded ?? (spec.cameraKey ? cameras.get(spec.cameraKey) : undefined);
       if (!view || !viewer) return false;
       viewer.setView(view.slice());
       viewer.render();
@@ -415,6 +473,14 @@ export function proteinScene(spec: ProteinSceneSpec): ProteinScene {
         if (!viewer) return;
         viewer.resize();
         viewer.render();
+      },
+      // What the share button sends, so a link opens on the structure as it is
+      // on screen: the same angle, the same distance, the same thing centred.
+      // Null while the viewer is still loading, which a frame reads as "frame it
+      // yourself" rather than as an error.
+      viewState(): ProteinViewState | null {
+        const camera = asCamera(viewer?.getView?.());
+        return camera ? { camera } : null;
       },
       cleanup() {
         live = false;

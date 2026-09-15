@@ -18,10 +18,39 @@ This work was supported by the [Open Molecular Science Foundation vis the NSF](#
 
 With a single command you can view OpenFE objects in notebooks and the CLI:
 
+```bash
+conda activate my-openfe-env          # the environment that already has openfe
+pip install "alchemy-viz[notebook]"
+```
 
+**There is no conversion step and no alchemy-viz object model.** OpenFE does not
+define its own classes for components, networks or campaigns - `openfe/__init__.py`
+re-exports gufe's - so `openfe.SmallMoleculeComponent` *is*
+`gufe.SmallMoleculeComponent`, and `view()` takes whatever openfe handed you:
 
+```python
+from alchemy_viz import view
 
+view(network)        # a LigandNetwork, straight out of a planner
+view(campaign)       # an AlchemicalNetwork
+view(ligand)         # a SmallMoleculeComponent, a ProteinComponent, a ChemicalSystem...
+```
 
+Already planned a campaign on the command line? `alchemy-viz` reads the files
+`openfe plan-rbfe-network` wrote, and turns each into one self-contained HTML page:
+
+```bash
+openfe plan-rbfe-network -M ligands.sdf -p protein.pdb -o network_setup
+
+alchemy-viz network_setup/network_setup.json -o campaign.html      # the whole campaign
+alchemy-viz network_setup/ligand_network.graphml -o network.html   # the ligands and mappings
+alchemy-viz "network_setup/transformations/<edge>.json"            # one edge
+```
+
+[**Start here: your own OpenFE objects**](./examples/notebooks/alchemy-viz-demo.ipynb)
+is the notebook section that runs all of the above, and
+[the gallery](./examples/notebooks/alchemy-viz-gallery.ipynb) is what the views
+look like without installing anything.
 
 
 Visualization tools for [gufe](https://github.com/OpenFreeEnergy/gufe).
@@ -35,7 +64,7 @@ Turns a gufe object into an interactive browser visualization you open locally
 
 ---
 
-## Development  
+## Development
 
 ### 1. Install pixi
 

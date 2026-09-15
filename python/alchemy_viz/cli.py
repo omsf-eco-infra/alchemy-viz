@@ -5,9 +5,13 @@ Python session. The other is :func:`alchemy_viz.view` in a notebook. Neither is
 invoked by gufe or by openfe: alchemy-viz is a standalone package that uses the
 gufe library to read objects, and nothing in gufe or openfe calls back into it.
 
-Input may be either an alchemy-viz payload JSON - the files in ``examples/`` - or
-a serialized gufe object, which is deserialized into live gufe objects first and
+Input may be an alchemy-viz payload JSON - the files in ``examples/`` - or a
+serialized gufe object, which is deserialized into live gufe objects first and
 only then turned into a payload. TypeScript never sees gufe's JSON.
+
+That second form covers everything ``openfe plan-rbfe-network`` writes: the
+campaign at ``<output_dir>/<output_dir>.json``, each edge under
+``transformations/``, and ``ligand_network.graphml``.
 
 The payload path needs no gufe installed at all. Reading a serialized gufe
 object does, and gufe has to come from conda-forge; see :mod:`alchemy_viz._gufe`.
@@ -19,6 +23,7 @@ import argparse
 import json
 import os
 import sys
+import warnings
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -43,9 +48,19 @@ def _looks_like_payload(value: object) -> bool:
 def load(path: Path) -> GufeTokenizable | dict[str, Any]:
     """Return something :func:`alchemy_viz.to_html` can render.
 
-    Tries, in order: an alchemy-viz payload, then a serialized gufe object.
+    Three input formats, told apart by suffix and then by shape: a GraphML
+    ligand network, an alchemy-viz payload, and a serialized gufe object.
+
+    GraphML is here because it is one of the three things
+    ``openfe plan-rbfe-network`` leaves in an output directory, and the only one
+    of them that is not JSON. Pointing this command at
+    ``network_setup/ligand_network.graphml`` is an obvious thing to try, and
+    "not valid JSON" would be a poor answer to it.
     """
     text = path.read_text(encoding="utf-8")
+
+    if path.suffix.lower() == ".graphml":
+        return _load_ligand_network(text, path)
 
     try:
         parsed = json.loads(text)
@@ -58,18 +73,40 @@ def load(path: Path) -> GufeTokenizable | dict[str, Any]:
     return _load_gufe_object(text, path)
 
 
+def _load_ligand_network(text: str, path: Path) -> GufeTokenizable:
+    """Read a ``LigandNetwork`` out of the GraphML that gufe writes."""
+    try:
+        from gufe import LigandNetwork
+    except ImportError as e:
+        from ._gufe import INSTALL_HINT
+
+        raise SystemExit(f"{path} is a GraphML ligand network, and reading one needs gufe.\n\n{INSTALL_HINT}") from e
+
+    try:
+        return LigandNetwork.from_graphml(text)
+    except Exception as e:  # noqa: BLE001 - the file is named .graphml; there is no second guess to make
+        raise SystemExit(f"{path}: could not read this as a gufe LigandNetwork ({type(e).__name__}: {e}).") from e
+
+
 def _load_gufe_object(text: str, path: Path) -> GufeTokenizable:
     """Deserialize a saved gufe object, or explain why we could not.
 
-    Which of gufe's serialization forms round-trips reliably today is still an
-    open question - ``QuickRun`` writes ``to_dict`` while
-    other paths write ``to_json``, and the keyed-chain form is different again.
-    Rather than guess, this tries the documented entry point and, on failure,
-    says exactly that: the payload path above always works, and building the
-    object in Python and calling ``alchemy_viz.to_html`` directly always works.
+    ``GufeTokenizable.from_json`` is the entry point that reads every form gufe
+    writes: it tries the keyed chain first and falls back to the dict
+    representation. Both shapes reach this function in practice - ``to_json``
+    writes a keyed chain, which is a JSON list, and ``to_dict`` writes a
+    mapping - and going through ``from_json`` means this module does not have to
+    tell them apart.
+
+    That matters most for the files ``openfe plan-rbfe-network`` leaves in its
+    output directory. Every one of them - the campaign at
+    ``<output_dir>/<output_dir>.json`` and each edge under
+    ``transformations/`` - is written by ``to_json``, so they are keyed chains,
+    and reading one as a dict fails with a ``TypeError`` about a string not
+    being an integer that says nothing about what went wrong.
     """
     try:
-        from gufe.tokenization import JSON_HANDLER, GufeTokenizable
+        from gufe.tokenization import GufeTokenizable
     except ImportError as e:
         from ._gufe import INSTALL_HINT
 
@@ -78,16 +115,21 @@ def _load_gufe_object(text: str, path: Path) -> GufeTokenizable:
         ) from e
 
     try:
-        return GufeTokenizable.from_dict(json.loads(text, cls=JSON_HANDLER.decoder))
+        with warnings.catch_warnings():
+            # from_json warns when it falls back from the keyed chain to the
+            # dict form. That fallback is a success, not something to report.
+            warnings.simplefilter("ignore")
+            return GufeTokenizable.from_json(content=text)
     except Exception as e:  # noqa: BLE001 - every failure mode gets the same advice
         raise SystemExit(
             f"{path}: could not read this as an alchemy-viz payload or as a serialized gufe object "
             f"({type(e).__name__}: {e}).\n"
             f"\n"
-            f"gufe has more than one serialization form and which of them round-trips is still an "
-            f"open question. Two things that always work:\n"
-            f"  - point this at an alchemy-viz payload, such as the files in examples/;\n"
-            f"  - build the object in Python and call alchemy_viz.to_html(obj) yourself."
+            f"Three things that do work:\n"
+            f"  - a file written by openfe, such as network_setup/network_setup.json or any edge "
+            f"under network_setup/transformations/;\n"
+            f"  - an alchemy-viz payload, such as the files in examples/;\n"
+            f"  - building the object in Python and calling alchemy_viz.to_html(obj) yourself."
         ) from e
 
 
@@ -97,7 +139,12 @@ def main(argv: list[str] | None = None) -> int:
         description="Render a gufe object or an alchemy-viz payload as one self-contained HTML file.",
         epilog="Reading a serialized gufe object needs gufe from conda-forge; payload JSON does not.",
     )
-    parser.add_argument("input", type=Path, help="an alchemy-viz payload JSON, or a serialized gufe object")
+    parser.add_argument(
+        "input",
+        type=Path,
+        help="a serialized gufe object (including anything openfe plan-rbfe-network wrote), "
+        "a .graphml ligand network, or an alchemy-viz payload JSON",
+    )
     parser.add_argument(
         "-o",
         "--output",

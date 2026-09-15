@@ -19,13 +19,30 @@ import "../src/index.js";
 import { framejsModule, type UiState } from "../src/shared/framejs.js";
 import { settings } from "../src/shared/settings.js";
 import type { NetworkViewState } from "../src/views/ligand-network.js";
-import { clearFakeEngines, flush, readExample, seedFakeEngines } from "./helpers.js";
+import {
+  clearFakeEngines,
+  flush,
+  readExample,
+  seedFakeEngines,
+  type SeededEnginesResult,
+} from "./helpers.js";
 
 /** A frame carrying no state: the view opens as a new reader would find it. */
 const EMPTY_STATE: UiState = { settings: {}, views: {} };
 
 /** Long enough to pass for a bundle, and recognizable in what is uploaded. */
 const FAKE_BUNDLE = `// pretend bundle\nconst marker = "gufe";\n${"// filler\n".repeat(1200)}`;
+
+function mount(tag: string, payload: unknown): HTMLElement {
+  const node = document.createElement(tag) as HTMLElement & { payload: unknown };
+  document.body.appendChild(node);
+  node.payload = payload;
+  return node;
+}
+
+/** A menu button, whichever view's it is: it is the one control that says it opens. */
+const menuButton = (node: HTMLElement): HTMLButtonElement =>
+  Array.from(node.querySelectorAll("button")).find((b) => b.getAttribute("aria-expanded") === "false")!;
 
 function mountNetwork(): HTMLElement {
   const node = document.createElement("gufe-ligand-network") as HTMLElement & { payload: unknown };
@@ -72,8 +89,9 @@ function inlineBundle(): HTMLScriptElement {
 }
 
 describe("the framejs share button", () => {
+  let engines: SeededEnginesResult;
   beforeEach(() => {
-    seedFakeEngines();
+    engines = seedFakeEngines();
   });
   afterEach(() => {
     clearFakeEngines();
@@ -224,6 +242,37 @@ describe("the framejs share button", () => {
     expect(state.nodes).toHaveLength(before.nodes.length);
     expect(state.scale).toBe(before.scale);
     expect(state.selected).toBe(1);
+  });
+
+  it("carries the structure's camera, so a shared scene opens where it was left", async () => {
+    // The point of sharing a protein or a complex: the reader on the other end
+    // of the link should be looking at the pocket this one was looking at. The
+    // payload carries the structure and the settings carry how it is drawn;
+    // where the camera is has nowhere else to travel.
+    inlineBundle();
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(null));
+    vi.spyOn(window, "open").mockReturnValue(null);
+
+    const node = mount("gufe-complex", readExample("chemical_system_complex.json"));
+    await flush();
+    // Turn the scene by hand first, the way a drag does, so what is asserted is
+    // this reader's angle rather than the one every complex opens on.
+    const viewer = engines.viewers[0];
+    viewer.dragRotate([0, 0.5, 0, 0.87]);
+
+    menuButton(node).click();
+    await flush();
+    framejsButton(node)!.click();
+    await flush();
+
+    const posted = JSON.parse(String((fetchSpy.mock.calls[0][1] as RequestInit).body)) as { js: string };
+    const seeded = JSON.parse(
+      posted.js.match(/globalThis\["ALCHEMY_VIZ_VIEW_STATE"\] = (\{.*?\});/)![1],
+    ) as Record<string, { camera: number[] }>;
+
+    // Keyed as the view reads it back: the tag with `gufe-` dropped.
+    expect(seeded.complex.camera).toEqual(viewer.getView());
+    expect(seeded.complex.camera.slice(4)).toEqual([0, 0.5, 0, 0.87]);
   });
 
   it("leaves the menu behind, and closes one an earlier frame left open", async () => {

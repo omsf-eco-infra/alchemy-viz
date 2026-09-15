@@ -31,7 +31,7 @@ Edit this file, run `pixi run types`, commit both. CI's `check-generated` job
 rebuilds `types.ts` and fails if it differs, so the two cannot drift.
 
 Python is downstream of this file too: the payload builders return plain dicts
-and are validated against it with `jsonschema` in the test suite. 
+and are validated against it with `jsonschema` in the test suite.
 
 `mutations.json` is for the tests that check for correctness against common expected changes.
 
@@ -40,7 +40,7 @@ and are validated against it with `jsonschema` in the test suite.
 SDF, PDB, and flat plain JSON. That is the whole list.
 
 **gufe's own `to_json` never crosses.** Deduplicated key-chains, `:custom:`
-codecs, the `to_dict`/`to_json` divergence - all of that stays in Python. 
+codecs, the `to_dict`/`to_json` divergence - all of that stays in Python.
 
 When the input is a saved gufe `.json`, Python deserializes it into live gufe
 objects first, then builds the payload from those.

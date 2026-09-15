@@ -2,7 +2,7 @@
 
 
 
-Two files: one to run in a real notebook environment with kernel, the other is generated and uses static images instead of the live visualizations so that humans can see an example of the notebook in places like github that otherwise would strip out the iframe and code that generates the interactive visualizations. 
+Two files: one to run in a real notebook environment with kernel, the other is generated and uses static images instead of the live visualizations so that humans can see an example of the notebook in places like github that otherwise would strip out the iframe and code that generates the interactive visualizations.
 
 
 
@@ -15,10 +15,19 @@ Two files: one to run in a real notebook environment with kernel, the other is g
 
 ## `alchemy-viz-demo.ipynb` - real notebook to run
 
-Every payload type, the live-gufe-object path, and every way of delivering a
-view: static only, live with update-in-place, `static=False`, `to_html` to a
-file, the CLI, the byte costs, and the three degradation cases. This is the file
-to open when you have changed something and want to know whether it still works.
+It opens with **Start here: your own OpenFE objects**, which is the only section
+written for a user rather than for this repository: the `network_setup/` directory
+`openfe plan-rbfe-network` writes and how to read each of the three files in it,
+the same campaign planned in Python instead, and the shell equivalent. It runs
+without openfe installed - the openfe-only cells report and skip, and the rest
+falls back to `scripts/data/tyk2_network.graphml`, which is a real
+`ligand_network.graphml` from OpenFE's RBFE tutorial.
+
+After that, the repository's own test bench: every payload type, the live-gufe-object
+path, and every way of delivering a view - static only, live with update-in-place,
+`static=False`, `to_html` to a file, the CLI, the byte costs, and the three
+degradation cases. This is the part to run when you have changed something and
+want to know whether it still works.
 
 ```bash
 pixi run notebook    # JupyterLab, on this file

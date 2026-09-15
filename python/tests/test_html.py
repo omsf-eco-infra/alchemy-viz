@@ -14,7 +14,7 @@ from alchemy_viz import bundle_source, to_html
 from alchemy_viz.cli import main
 from alchemy_viz.html import _script_safe, default_output_path
 
-from .conftest import read_example
+from .conftest import REPO, read_example
 
 
 class TestToHtml:
@@ -164,8 +164,8 @@ class TestCli:
             main([str(source)])
         assert "not valid JSON" in str(exc.value)
 
-    def test_unreadable_gufe_json_points_at_the_open_question(self, tmp_path):
-        """Which gufe loader to use is unsettled; the CLI says so rather than guess."""
+    def test_unreadable_gufe_json_says_what_does_work(self, tmp_path):
+        """JSON that is neither of our formats gets the three that are."""
         source = tmp_path / "mystery.json"
         source.write_text(json.dumps({"some": "other", "json": True}))
 
@@ -174,3 +174,52 @@ class TestCli:
         message = str(exc.value)
         assert "alchemy_viz.to_html" in message
         assert "examples/" in message
+
+    @pytest.mark.parametrize("form", ["to_json", "to_dict", "to_keyed_dict"])
+    def test_reads_every_form_gufe_writes(self, tmp_path, form):
+        """The CLI reads a saved gufe object however gufe chose to write it.
+
+        ``to_json`` is the one that matters: it is what
+        ``openfe plan-rbfe-network`` calls for every file it leaves in its
+        output directory, and it writes a keyed chain - a JSON list, not the
+        mapping the other two write.
+        """
+        gufe = pytest.importorskip("gufe")
+        from gufe.tokenization import JSON_HANDLER
+        from rdkit import Chem
+        from rdkit.Chem import AllChem
+
+        mol = Chem.AddHs(Chem.MolFromSmiles("CCO"))
+        AllChem.EmbedMolecule(mol, randomSeed=7)
+        mol.SetProp("_Name", "ethanol")
+        ligand = gufe.SmallMoleculeComponent.from_rdkit(mol)
+
+        source = tmp_path / f"{form}.json"
+        if form == "to_json":
+            source.write_text(ligand.to_json(), encoding="utf-8")
+        else:
+            source.write_text(json.dumps(getattr(ligand, form)(), cls=JSON_HANDLER.encoder), encoding="utf-8")
+
+        assert main([str(source), "-o", str(tmp_path / "out.html")]) == 0
+        assert "SmallMoleculeComponentViz" in (tmp_path / "out.html").read_text(encoding="utf-8")
+
+    def test_reads_a_graphml_ligand_network(self, tmp_path):
+        """`ligand_network.graphml` is one of the three files openfe's planner writes."""
+        pytest.importorskip("gufe")
+        source = REPO / "scripts" / "data" / "tyk2_network.graphml"
+
+        destination = tmp_path / "network.html"
+        assert main([str(source), "-o", str(destination)]) == 0
+        assert "LigandNetworkViz" in destination.read_text(encoding="utf-8")
+
+    def test_unreadable_graphml_does_not_complain_about_json(self, tmp_path):
+        """A .graphml is never parsed as JSON, so it never gets a JSON error."""
+        pytest.importorskip("gufe")
+        source = tmp_path / "broken.graphml"
+        source.write_text("<graphml>not really</graphml>")
+
+        with pytest.raises(SystemExit) as exc:
+            main([str(source)])
+        message = str(exc.value)
+        assert "LigandNetwork" in message
+        assert "not valid JSON" not in message

@@ -293,6 +293,7 @@ describe("keeping the camera between views of one structure", () => {
   afterEach(() => {
     clearFakeEngines();
     document.body.replaceChildren();
+    delete (globalThis as Record<string, unknown>).ALCHEMY_VIZ_VIEW_STATE;
   });
 
   /** What a viewer did about its camera, in order. */
@@ -323,6 +324,41 @@ describe("keeping the camera between views of one structure", () => {
     mount("gufe-protein", readExample("protein_membrane.json"));
     await flush();
     expect(framings(1)).toEqual(["zoomTo"]);
+  });
+
+  it("opens on the camera a shared frame carried, rather than framing itself", async () => {
+    // What the framejs export puts on the page for the next view to pick up. A
+    // link to "this pocket, from here" is only that if the camera survives the
+    // trip, and the trip is this global.
+    const camera = [1, 2, 3, 120, 0, 0.5, 0, 0.87];
+    (globalThis as Record<string, unknown>).ALCHEMY_VIZ_VIEW_STATE = { complex: { camera } };
+
+    mount("gufe-complex", complexPayload());
+    await flush();
+    expect(framings(0)).toEqual(["setView"]);
+    // The camera that was handed over, not merely some camera: a viewer framed
+    // by `zoomTo` would also have a camera to read back.
+    expect(engines.viewers[0].rotation()).toEqual(camera.slice(4));
+  });
+
+  it("does not haul the reader back to a shared camera on every later scene", async () => {
+    // One-shot, like every other seeded view state. A frame that reapplied its
+    // opening camera each time a scene was rebuilt would undo every move the
+    // reader made after arriving.
+    (globalThis as Record<string, unknown>).ALCHEMY_VIZ_VIEW_STATE = {
+      complex: { camera: [1, 2, 3, 120, 0, 0.5, 0, 0.87] },
+    };
+    const first = mount("gufe-complex", complexPayload());
+    await flush();
+    expect(framings(0)).toEqual(["setView"]);
+    first.remove();
+
+    // The second scene falls back to the sitting's own memory of this
+    // structure, which is the camera the first one was left at.
+    mount("gufe-complex", complexPayload());
+    await flush();
+    expect(framings(1)).toEqual(["setView"]);
+    expect(engines.viewers[1].rotation()).toEqual(engines.viewers[0].rotation());
   });
 
   it("still reframes when asked, so a restored camera is not a trap", async () => {

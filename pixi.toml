@@ -20,6 +20,7 @@ rdkit = "*"
 pytest = "*"
 jsonschema = "*"
 ruff = "*"
+pre-commit = "*"
 pip = "*"
 python-build = ">=1.6.0,<2"
 twine = ">=7.0.0,<8"
@@ -30,6 +31,14 @@ alchemy-viz = { path = ".", editable = true }
 # --------------------------------------------------------------------------- #
 # Node                                                                          #
 # --------------------------------------------------------------------------- #
+
+[tasks.hooks]
+description = "Install the git pre-commit hooks (ruff, whitespace, and nbstripout on the demo notebook)."
+cmd = "pre-commit install"
+
+[tasks.hooks-run]
+description = "Run every pre-commit hook over the whole tree, not just the staged files."
+cmd = "pre-commit run --all-files"
 
 [tasks.npm-install]
 description = "Install the Node toolchain (vite, typescript, vitest, ajv)."
@@ -78,13 +87,13 @@ depends-on = ["build"]
 # --------------------------------------------------------------------------- #
 #
 # A separate environment, because JupyterLab and marimo are heavyweight compared
-# to the non-notebook infrastructure and nothing else here needs them. 
+# to the non-notebook infrastructure and nothing else here needs them.
 # `pixi run notebook` still works from anywhere:
 # the task exists in only one environment, so pixi picks it.
 
 [feature.notebook.dependencies]
 anywidget = ">=0.9"
-# anywidget requires ipywidgets>=7.6.0 but jupyterlab >= 4 needs ipywidgets 8 
+# anywidget requires ipywidgets>=7.6.0 but jupyterlab >= 4 needs ipywidgets 8
 ipywidgets = ">=8"
 jupyterlab = ">=4"
 marimo = "*"

@@ -301,8 +301,9 @@ export function framejsModule(bundle: string, payload: unknown, state: UiState):
  *
  * The view's own key is its tag with the `gufe-` dropped, which is what every
  * view already namespaces its settings by, so nothing new has to agree about
- * anything. A view with no `viewState` contributes nothing and costs nothing,
- * which is every view but the network today.
+ * anything. A view with no `viewState` contributes nothing and costs nothing;
+ * the graph views send their camera, selection and layout, and a protein scene
+ * sends where the structure is being looked at from.
  */
 function uiState(view: ViewElement): UiState {
   const views: Record<string, unknown> = {};
