@@ -293,7 +293,20 @@ pip install "alchemy-viz[notebook]"   # anywidget, for update-in-place in a cell
 >     conda install -c conda-forge gufe
 > ```
 >
-> `python/alchemy_viz/_gufe.py` is the whole of that mechanism.
+> The same check catches a gufe that is present but too old, which is reachable
+> because `pip install gufe` succeeds and lands 0.4:
+>
+> ```
+> ImportError: alchemy-viz needs gufe >= 1.12, but gufe 0.4.0 is installed.
+> gufe 0.4.0 is almost certainly the PyPI build, which is stuck at 0.4 and
+> predates the 1.0 API this package is written against. Replace it from
+> conda-forge:
+>     conda install -c conda-forge "gufe>=1.12"
+> ```
+>
+> `python/alchemy_viz/_gufe.py` is the whole of that mechanism, and
+> `python/tests/test_packaging.py` is what keeps `dependencies` empty and the
+> floor in those two files agreeing.
 >
 > `import alchemy_viz` and `to_html(payload_dict)` need no gufe at all - the
 > import is lazy - so a gufe-less install is a valid way to get just the
@@ -757,6 +770,44 @@ keyed-chain form is different again. Rather than guess, the CLI tries the
 documented entry point and, on failure, says so and names the two routes that
 always work - a payload JSON, or building the object in Python and calling
 `to_html` directly.
+
+### Why gufe is not a hard dependency, and what changes when it can be
+
+The wheel declares no dependencies at all. The note in
+[Quickstart](#what-a-user-of-the-library-needs) covers the mechanism; this is
+the reasoning behind it, and how it ends.
+
+gufe's presence on PyPI is a single 0.4 release predating the 1.0 API.
+conda-forge carries 1.12, which is what the payload builders are written
+against. A hard `gufe>=1.12` in `pyproject.toml` is therefore unsatisfiable
+from PyPI: `pip install alchemy-viz` would fail at resolution time for
+*everyone*, including the openfe users who already have a working gufe in the
+environment they are installing into. Those users are the entire audience, so
+the requirement moved to import time instead. `python/alchemy_viz/_gufe.py`
+raises with the conda-forge command for both failure modes - gufe missing, and
+gufe present but older than the floor, which is reachable because `pip install
+gufe` succeeds today and lands 0.4.
+
+This is not a workaround waiting to be removed. It is what makes the wheel
+installable into the environments that can use it.
+
+The OpenFE maintainers intend to publish a current gufe to PyPI. When that
+lands, there are two ways to go:
+
+- **Keep the arrangement as it is.** conda-forge stays the primary install
+  route for openfe users regardless of what PyPI carries, and an undeclared
+  dependency is what stops pip from resolving and installing a second gufe
+  beside the conda one. `pip install "alchemy-viz[gufe]"` is already the
+  declarative form for anyone whose resolver can reach it.
+- **Promote the extra to a hard dependency.** Move the contents of
+  `optional-dependencies.gufe` into `dependencies`, and update
+  `TestPyprojectAgrees` in `python/tests/test_packaging.py`, which asserts the
+  list stays empty precisely so that the change has to be deliberate. Keep
+  `_gufe.py` either way: the version floor is still worth checking at runtime,
+  and a conda-installed gufe is invisible to pip's resolver.
+
+Keeping it as it is - the first option - is the recommendation. Nothing about a
+PyPI release changes which gufe an openfe environment already has.
 
 ---
 

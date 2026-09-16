@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import builtins
 import importlib
+import pathlib
 import sys
 
 import alchemy_viz
@@ -99,3 +100,57 @@ class TestWithGufe:
 def test_the_hint_names_the_one_command_that_works():
     """conda-forge is the only place a usable gufe comes from today."""
     assert "conda install -c conda-forge gufe" in INSTALL_HINT
+
+
+class TestTooOldGufe:
+    """An importable gufe is not necessarily a usable one.
+
+    `pip install gufe` succeeds and lands 0.4, so this is a state a real user
+    can reach - it is the whole reason the dependency is not declared.
+    """
+
+    def test_an_old_gufe_is_rejected_with_the_conda_forge_instruction(self, monkeypatch):
+        import gufe
+
+        monkeypatch.setattr(gufe, "__version__", "0.4.0", raising=False)
+
+        with pytest.raises(ImportError) as excinfo:
+            require_gufe()
+
+        message = str(excinfo.value)
+        assert "0.4.0" in message
+        assert "conda-forge" in message
+        assert MINIMUM in message
+
+    @pytest.mark.parametrize("version", ["1.12.0", "1.13.0.dev4+g1a2b3c", "2.0", "", "not-a-version"])
+    def test_versions_at_or_above_the_floor_pass(self, monkeypatch, version):
+        """Unreadable versions pass too: guessing wrong must not block a user."""
+        import gufe
+
+        monkeypatch.setattr(gufe, "__version__", version, raising=False)
+
+        assert require_gufe() is gufe
+
+
+PYPROJECT = pathlib.Path(__file__).resolve().parents[2] / "pyproject.toml"
+
+
+@pytest.mark.skipif(not PYPROJECT.exists(), reason="not running from a source checkout")
+class TestPyprojectAgrees:
+    """The floor is written in two places; they must not drift apart."""
+
+    @staticmethod
+    def _pyproject():
+        import tomllib
+
+        with PYPROJECT.open("rb") as f:
+            return tomllib.load(f)
+
+    def test_dependencies_stay_empty(self):
+        """Adding gufe here is the regression this whole module guards against."""
+        assert self._pyproject()["project"]["dependencies"] == []
+
+    def test_the_gufe_extra_matches_MINIMUM(self):
+        extra = self._pyproject()["project"]["optional-dependencies"]["gufe"]
+
+        assert extra == [f"gufe>={MINIMUM}"]
