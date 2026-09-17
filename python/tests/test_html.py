@@ -1,4 +1,4 @@
-"""``to_html`` and the dev CLI.
+"""``to_html`` and the command line interface.
 
 The page is one file, it loads nothing at parse time, and ``to_html`` returns a
 string rather than writing one anywhere.
@@ -10,11 +10,11 @@ import json
 import re
 
 import pytest
-from gufe_viz import bundle_source, to_html
-from gufe_viz.cli import main
-from gufe_viz.html import _script_safe, default_output_path
+from alchemy_viz import bundle_source, to_html
+from alchemy_viz.cli import main
+from alchemy_viz.html import _script_safe, default_output_path
 
-from .conftest import read_example
+from .conftest import REPO, read_example
 
 
 class TestToHtml:
@@ -25,7 +25,7 @@ class TestToHtml:
 
         assert html.startswith("<!doctype html>"), name
         assert bundle_source()[:200] in html.replace("<\\/script", "</script")
-        assert "<gufe-view></gufe-view>" in html, name
+        assert "<alchemy-view></alchemy-view>" in html, name
 
     def test_payload_survives_the_round_trip(self, example):
         name, payload = example
@@ -46,7 +46,7 @@ class TestToHtml:
 
     def test_accepts_a_gufe_object_and_a_payload_dict(self):
         import gufe
-        from gufe_viz import payload_for
+        from alchemy_viz import payload_for
 
         solvent = gufe.SolventComponent()
         assert to_html(solvent) == to_html(payload_for(solvent))
@@ -88,16 +88,16 @@ class TestToHtml:
         assert _script_safe("no tags here") == "no tags here"
 
     def test_debug_is_off_unless_asked_for(self):
-        """The `<gufe-view>` a normal page carries has no attributes at all."""
-        assert "<gufe-view></gufe-view>" in to_html(read_example("solvent.json"))
+        """The `<alchemy-view>` a normal page carries has no attributes at all."""
+        assert "<alchemy-view></alchemy-view>" in to_html(read_example("solvent.json"))
 
     def test_debug_marks_the_element_the_bundle_reads(self):
         """A bare `debug` attribute, which is what `debugEnabled` tests for."""
         html = to_html(read_example("solvent.json"), debug=True)
 
-        assert "<gufe-view debug></gufe-view>" in html
+        assert "<alchemy-view debug></alchemy-view>" in html
         # Nothing else about the page changes: same bundle, same payload block.
-        assert html.replace("<gufe-view debug>", "<gufe-view>") == to_html(read_example("solvent.json"))
+        assert html.replace("<alchemy-view debug>", "<alchemy-view>") == to_html(read_example("solvent.json"))
 
     def test_refuses_an_object_it_cannot_visualize(self):
         with pytest.raises(TypeError):
@@ -149,7 +149,7 @@ class TestCli:
         source.write_text(json.dumps(read_example("small_molecule.json")))
 
         assert main([str(source), "--debug", "-o", "-"]) == 0
-        assert "<gufe-view debug></gufe-view>" in capsys.readouterr().out
+        assert "<alchemy-view debug></alchemy-view>" in capsys.readouterr().out
 
     def test_missing_input_is_a_clean_error(self, tmp_path):
         with pytest.raises(SystemExit) as exc:
@@ -164,13 +164,62 @@ class TestCli:
             main([str(source)])
         assert "not valid JSON" in str(exc.value)
 
-    def test_unreadable_gufe_json_points_at_the_open_question(self, tmp_path):
-        """Which gufe loader to use is unsettled; the CLI says so rather than guess."""
+    def test_unreadable_gufe_json_says_what_does_work(self, tmp_path):
+        """JSON that is neither of our formats gets the three that are."""
         source = tmp_path / "mystery.json"
         source.write_text(json.dumps({"some": "other", "json": True}))
 
         with pytest.raises(SystemExit) as exc:
             main([str(source)])
         message = str(exc.value)
-        assert "gufe_viz.to_html" in message
+        assert "alchemy_viz.to_html" in message
         assert "examples/" in message
+
+    @pytest.mark.parametrize("form", ["to_json", "to_dict", "to_keyed_dict"])
+    def test_reads_every_form_gufe_writes(self, tmp_path, form):
+        """The CLI reads a saved gufe object however gufe chose to write it.
+
+        ``to_json`` is the one that matters: it is what
+        ``openfe plan-rbfe-network`` calls for every file it leaves in its
+        output directory, and it writes a keyed chain - a JSON list, not the
+        mapping the other two write.
+        """
+        gufe = pytest.importorskip("gufe")
+        from gufe.tokenization import JSON_HANDLER
+        from rdkit import Chem
+        from rdkit.Chem import AllChem
+
+        mol = Chem.AddHs(Chem.MolFromSmiles("CCO"))
+        AllChem.EmbedMolecule(mol, randomSeed=7)
+        mol.SetProp("_Name", "ethanol")
+        ligand = gufe.SmallMoleculeComponent.from_rdkit(mol)
+
+        source = tmp_path / f"{form}.json"
+        if form == "to_json":
+            source.write_text(ligand.to_json(), encoding="utf-8")
+        else:
+            source.write_text(json.dumps(getattr(ligand, form)(), cls=JSON_HANDLER.encoder), encoding="utf-8")
+
+        assert main([str(source), "-o", str(tmp_path / "out.html")]) == 0
+        assert "SmallMoleculeComponentViz" in (tmp_path / "out.html").read_text(encoding="utf-8")
+
+    def test_reads_a_graphml_ligand_network(self, tmp_path):
+        """`ligand_network.graphml` is one of the three files openfe's planner writes."""
+        pytest.importorskip("gufe")
+        source = REPO / "scripts" / "data" / "tyk2_network.graphml"
+
+        destination = tmp_path / "network.html"
+        assert main([str(source), "-o", str(destination)]) == 0
+        assert "LigandNetworkViz" in destination.read_text(encoding="utf-8")
+
+    def test_unreadable_graphml_does_not_complain_about_json(self, tmp_path):
+        """A .graphml is never parsed as JSON, so it never gets a JSON error."""
+        pytest.importorskip("gufe")
+        source = tmp_path / "broken.graphml"
+        source.write_text("<graphml>not really</graphml>")
+
+        with pytest.raises(SystemExit) as exc:
+            main([str(source)])
+        message = str(exc.value)
+        assert "LigandNetwork" in message
+        assert "not valid JSON" not in message

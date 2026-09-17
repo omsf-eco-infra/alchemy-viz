@@ -1,40 +1,80 @@
 /**
  * The bundle entry point.
  *
- * Importing this registers every `<gufe-*>` custom element and sets it's payload.
- * Each gufe/schema type as a corresponding <gufe-*> element.
- * This is for the HTML export and soon the notebook widget
+ * Importing this registers every `<gufe-*>` custom element. Each gufe/schema
+ * type has a corresponding `<gufe-*>` element. This is what `to_html` inlines
+ * and what the notebook widget loads.
+ *
+ * ## Why there is almost nothing exported here
+ *
+ * The whole of the browser-facing contract is two lines a host writes:
+ *
+ *     document.querySelector("alchemy-view").payload = payload;
+ *
+ * That is what `python/alchemy_viz/html.py` does, what `notebook.py` does, and what
+ * `ts/tests/bundle.test.ts` drives the built artifact through. Every test in the
+ * suite imports this file for its side effects alone and then reaches into
+ * `src/**` directly for anything it needs to inspect.
+ *
+ * What is exported is what something outside actually reads, and nothing else.
+ * A file that re-exports the internals reads as a public API, which makes every
+ * rename inside `shared/` look like a breaking change and pulls `export` onto
+ * things that have one caller.
+ *
+ * `VIEW_TAGS` and `PAYLOAD_TYPES` stay because `bundle.test.ts` asks the built
+ * bundle which types it draws, rather than being told in a fixture that goes
+ * stale the day a view lands. Anything else a host turns out to need is one line
+ * to add back, with a caller to justify it.
  */
 
-import "./gufe-view.js";
+import "./alchemy-view.js";
 import "./views/small-molecule.js";
 import "./views/protein.js";
 import "./views/ligand-network.js";
+import "./views/alchemical-network.js";
+import "./views/atom-mapping.js";
+import "./views/chemical-system.js";
+import "./views/complex.js";
+import "./views/protocol.js";
+import "./views/solvent.js";
+import "./views/transformation.js";
+import "./views/unknown-component.js";
 
-export { GufeView, VIEW_TAGS, describeProblem, dispatchProblem } from "./gufe-view.js";
-export { PAYLOAD_TYPES, SCHEMA_TYPES, formatIssues, validateAs, validatePayload } from "./schema/validate.js";
-export { buildRegistry, entryLabel, lookup, lookupOfType, type RegistryEntry, type RegistryIndex } from "./schema/registry.js";
-export { GufeSmallMolecule } from "./views/small-molecule.js";
-export { GufeProtein } from "./views/protein.js";
-export { GufeLigandNetwork, mappingPayloadFor } from "./views/ligand-network.js";
-export { GufeElement, defineElement, type ViewHandle } from "./shared/element.js";
-export { DEBUG_ATTRIBUTE, DEBUG_GLOBAL, debugEnabled, logPayload, payloadJson } from "./shared/debug.js";
-export type * from "./schema/types.js";
+import { resetSettings, settings } from "./shared/settings.js";
+import { installTheme } from "./shared/theme.js";
 
 /**
- * Put a `<gufe-view>` inside `host` and give it `payload`.
+ * The palette, as soon as the bundle is evaluated.
  *
- * Reuses an existing `<gufe-view>` if the host already has one, so calling this
- * again is an update rather than a rebuild - the create/update/destroy cycle
- * as seen from outside.
+ * `AlchemyElement.connectedCallback` installs it too, which covers a host that
+ * builds an element without going through this file. This call is for everything
+ * *around* the elements: the dev pages build their own chrome out of `V` and may
+ * draw it before any `<gufe-*>` has connected - a dropzone with nothing dropped
+ * on it yet is the whole page - and a `var()` with nothing behind it is not a
+ * colour. Guarded for a document that does not exist, and idempotent by id.
  */
-export function mount(host: HTMLElement, payload?: unknown): HTMLElement & { payload: unknown } {
-  let view = host.querySelector("gufe-view") as (HTMLElement & { payload: unknown }) | null;
-  if (!view) {
-    view = document.createElement("gufe-view") as HTMLElement & { payload: unknown };
-    view.style.cssText = "display:block;width:100%;height:100%;";
-    host.appendChild(view);
-  }
-  if (payload !== undefined) view.payload = payload;
-  return view;
+installTheme();
+
+/** The dispatch table, for a caller asking the bundle what it can draw. */
+export { VIEW_TAGS } from "./alchemy-view.js";
+
+/** Every `type` the schema declares, drawn or not. */
+export { PAYLOAD_TYPES } from "./schema/validate.js";
+
+/**
+ * The settings a view has remembered, on the console.
+ *
+ * `window.alchemyViz.settings()` answers "what state was this actually in" without
+ * a hunt through a storage inspector, and `reset()` puts every view back to how
+ * a new reader would find it. Attached the same way the debug switch is: a
+ * global, because the thing you need it for is a page you are already looking
+ * at and cannot rebuild.
+ */
+declare global {
+  // eslint-disable-next-line no-var
+  var alchemyViz: { settings: typeof settings; reset: typeof resetSettings } | undefined;
+}
+
+if (typeof globalThis !== "undefined") {
+  globalThis.alchemyViz = { settings, reset: resetSettings };
 }

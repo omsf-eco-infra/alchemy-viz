@@ -1,8 +1,8 @@
 /**
  * The TypeScript half of the gate.
  *
- * `<gufe-view>` validates before it dispatches, against the very same
- * `schema/gufe-viz.schema.json` that Python validates against. A payload that
+ * `<alchemy-view>` validates before it dispatches, against the very same
+ * `schema/alchemy-viz.schema.json` that Python validates against. A payload that
  * passes on one side passes on the other; a payload that fails, fails with the
  * same reason. That is the property the cross-language mutation suite exists to
  * hold onto.
@@ -17,7 +17,7 @@ import Ajv2020, {
   type ValidateFunction,
 } from "ajv/dist/2020.js";
 
-import schema from "../../../schema/gufe-viz.schema.json" with { type: "json" };
+import schema from "../../../schema/alchemy-viz.schema.json" with { type: "json" };
 import type { Payload, PayloadType } from "./types.js";
 
 export { PAYLOAD_TYPES } from "./types.js";

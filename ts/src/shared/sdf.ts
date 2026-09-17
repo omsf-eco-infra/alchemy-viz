@@ -10,6 +10,7 @@
  */
 
 import { errText } from "./dom.js";
+import type { Layout2D } from "./depict-layout.js";
 import type { RDKitModule } from "./engines.js";
 
 export interface Molecule {
@@ -114,20 +115,80 @@ export function parseCounts(sdf: string): { atoms: number; bonds: number } | nul
   return isNaN(atoms) || isNaN(bonds) ? null : { atoms, bonds };
 }
 
-/** 2D depiction SVG from a molblock or a SMILES string. */
-export function depictSVG(RDKit: RDKitModule, source: string, size: number): string | null {
+/**
+ * 2D depiction SVG from a molblock or a SMILES string.
+ *
+ * `layout` says where the coordinates come from, and is the style document's
+ * `layout` at every call site; it is a parameter rather than a read of the
+ * document so that this file stays about SDF and RDKit and knows nothing about
+ * anyone's taste. Under `conformer` a molblock keeps the pose it arrived with,
+ * which for a `SmallMoleculeComponent` is a real 3D conformer flattened onto
+ * the page rather than a drawn structure.
+ *
+ * `highlight` paints a subset of the atoms, which is how a SMARTS match shows
+ * itself inside a structure. Its indices address the molecule *this* function
+ * parses - hydrogens removed - so whatever produced them has to have parsed it
+ * the same way, or every index above the first hydrogen marks the wrong atom.
+ * A build too old for `get_svg_with_highlights` simply draws without them.
+ *
+ * `drawOptions` is anything else RDKit should be told, already in the JSON form
+ * its options take: `depict-theme.ts` produces the palette and inks a dark
+ * ground needs, and a caller drawing on white passes nothing. Same bargain as
+ * `highlight` - this file stays about SDF and RDKit and knows nothing about
+ * anyone's palette. A build too old for `get_svg_with_highlights` ignores them,
+ * which draws a paper depiction rather than no depiction.
+ */
+export interface DepictHighlight {
+  atoms: readonly number[];
+  /**
+   * The 0-to-1 RGB triple RDKit's drawing options take, which is what
+   * `rgbTriple` in `depict-style.ts` produces. Converted by the caller so this
+   * file stays about SDF and RDKit and knows nothing about anyone's palette.
+   */
+  color: readonly [number, number, number];
+  /** The disc radius behind each atom, in RDKit's own units. */
+  radius: number;
+}
+
+export function depictSVG(
+  RDKit: RDKitModule,
+  source: string,
+  size: number,
+  layout: Layout2D,
+  highlight?: DepictHighlight,
+  drawOptions?: Record<string, unknown>,
+): string | null {
   let rdmol = null;
   try {
     rdmol = RDKit.get_mol(source, JSON.stringify({ removeHs: true }));
     if (!rdmol) return null;
-    try {
-      rdmol.set_new_coords(true);
-    } catch {
-      /* SMILES have no coords to replace */
+    if (layout !== "conformer") {
+      try {
+        rdmol.set_new_coords(layout === "coordgen");
+      } catch {
+        /* SMILES have no coords to replace */
+      }
+    }
+    const marks = highlight?.atoms.length ? highlight : null;
+    const styled = !!drawOptions && Object.keys(drawOptions).length > 0;
+    if ((marks || styled) && rdmol.get_svg_with_highlights) {
+      const details: Record<string, unknown> = { width: size, height: size, ...drawOptions };
+      if (marks) {
+        const colors: Record<number, readonly [number, number, number]> = {};
+        const radii: Record<number, number> = {};
+        for (const atom of marks.atoms) {
+          colors[atom] = marks.color;
+          radii[atom] = marks.radius;
+        }
+        details.atoms = [...marks.atoms];
+        details.highlightAtomColors = colors;
+        details.highlightAtomRadii = radii;
+      }
+      return rdmol.get_svg_with_highlights(JSON.stringify(details)) || null;
     }
     return rdmol.get_svg(size, size) || null;
   } catch (e) {
-    console.warn("[gufe-viz] depictSVG threw -", errText(e));
+    console.warn("[alchemy-viz] depictSVG threw -", errText(e));
     return null;
   } finally {
     if (rdmol) {

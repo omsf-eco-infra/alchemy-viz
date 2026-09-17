@@ -9,9 +9,15 @@
 
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
-import { _resetEnginesForTests, type RDKitModule, type ThreeDmolModule, type ThreeDmolViewer } from "../src/shared/engines.js";
+import {
+  _resetEnginesForTests,
+  type RDKitMol,
+  type RDKitModule,
+  type ThreeDmolModule,
+  type ThreeDmolViewer,
+} from "../src/shared/engines.js";
 
-export const EXAMPLES_DIR = join(import.meta.dirname, "..", "..", "examples");
+const EXAMPLES_DIR = join(import.meta.dirname, "..", "..", "examples");
 
 export function exampleNames(): string[] {
   return readdirSync(EXAMPLES_DIR)
@@ -26,8 +32,35 @@ export function readExample(name: string): Record<string, unknown> {
 /** Every call a view makes on a 3Dmol viewer, recorded rather than rendered. */
 export interface FakeViewer extends ThreeDmolViewer {
   calls: string[];
+  /**
+   * Every `setStyle` as the pair it was given. `calls` records only the
+   * selection, which cannot distinguish "style these atoms" from "style nothing"
+   * - and turning a representation off is `setStyle(selection, {})`.
+   */
+  styles: { selection: unknown; style: unknown }[];
+  /** Spheres and cylinders, as the specs they were given. */
+  shapes: { kind: "sphere" | "cylinder"; spec: Record<string, unknown> }[];
   cleared: boolean;
+  /** The limits `setZoomLimits` was last given, null until it is called. */
+  zoomLimits: { lower: number; upper: number } | null;
+  /** How far the camera sits from the model, the number the zoom clamp reads. */
+  distance(): number;
+  /**
+   * Move the camera without going through `zoom`, the way a drag or a pinch
+   * does: 3Dmol handles those itself, so nothing of ours is called.
+   */
+  dragZoom(factor: number): void;
+  /** Turn the camera the same way: a drag, which nothing of ours sees. */
+  dragRotate(quaternion: [number, number, number, number]): void;
+  /** The camera's quaternion, which `getView` reports at indices 4 to 7. */
+  rotation(): [number, number, number, number];
 }
+
+/** 3Dmol's own default, and what `interact.ts` assumes when a viewer is silent. */
+const FAKE_CAMERA_Z = 150;
+
+/** Whatever `zoomTo` settles on. Arbitrary: only ratios to it are asserted. */
+const FAKE_OPENING_DISTANCE = 30;
 
 export function makeFakeViewer(): FakeViewer {
   const calls: string[] = [];
@@ -36,17 +69,97 @@ export function makeFakeViewer(): FakeViewer {
     (...args: unknown[]) => {
       calls.push(args.length ? `${name}(${JSON.stringify(args[0])})` : name);
     };
+  const styles: { selection: unknown; style: unknown }[] = [];
+  const shapes: { kind: "sphere" | "cylinder"; spec: Record<string, unknown> }[] = [];
+
+  // 3Dmol's camera in miniature, because the zoom clamp reads it rather than
+  // counting its own calls: `zoom(f)` divides the camera-to-model distance,
+  // `setZoomLimits` bounds that distance, and `getView` reports it back as
+  // `CAMERA_Z - distance` at index 3. A fake that ignored all this would let a
+  // broken clamp pass.
+  let distance = FAKE_OPENING_DISTANCE;
+  // The camera's orientation, which `setView` writes and `getView` reads back.
+  // Only a pose carried between ligands cares what is in it, and that one cares
+  // that the number it stored is the number that comes out.
+  let rotation: [number, number, number, number] = [0, 0, 0, 1];
+  let limits: { lower: number; upper: number } | null = null;
+  const clampDistance = (d: number): number => {
+    if (!limits) return d;
+    return Math.min(Math.max(d, limits.lower), limits.upper);
+  };
+  const position = () => [0, 0, 0, FAKE_CAMERA_Z - distance, ...rotation];
   const viewer = {
     calls,
+    styles,
+    shapes,
     cleared: false,
     addModel: record("addModel"),
-    setStyle: record("setStyle"),
+    setStyle: (selection: object, style: object) => {
+      calls.push(`setStyle(${JSON.stringify(selection)})`);
+      styles.push({ selection, style });
+    },
     removeAllSurfaces: record("removeAllSurfaces"),
     addSurface: () => {
       calls.push("addSurface");
       return Promise.resolve(1);
     },
-    zoomTo: record("zoomTo"),
+    zoomLimits: null,
+    distance: () => distance,
+    dragZoom: (factor: number) => {
+      distance = clampDistance(distance / factor);
+    },
+    dragRotate: (next: [number, number, number, number]) => {
+      rotation = [...next];
+    },
+    rotation: () => [...rotation] as [number, number, number, number],
+    zoomTo: (selection?: object) => {
+      // A framing of the whole scene stays plain `zoomTo`, which is what every
+      // single-structure view records; a framing of part of it says which part,
+      // because that selection is the whole of what a complex view is deciding.
+      calls.push(selection === undefined ? "zoomTo" : `zoomTo(${JSON.stringify(selection)})`);
+      distance = clampDistance(FAKE_OPENING_DISTANCE);
+    },
+    zoom: (factor: number) => {
+      calls.push(`zoom(${JSON.stringify(factor)})`);
+      distance = clampDistance(distance / factor);
+    },
+    setZoomLimits: (lower: number, upper: number) => {
+      calls.push(`setZoomLimits(${lower},${upper})`);
+      limits = { lower, upper };
+      viewer.zoomLimits = limits;
+      distance = clampDistance(distance);
+    },
+    addSphere: (spec: Record<string, unknown>) => {
+      calls.push("addSphere");
+      shapes.push({ kind: "sphere", spec });
+    },
+    addCylinder: (spec: Record<string, unknown>) => {
+      calls.push("addCylinder");
+      shapes.push({ kind: "cylinder", spec });
+    },
+    removeAllShapes: () => {
+      calls.push("removeAllShapes");
+      shapes.length = 0;
+    },
+    addStyle: (selection: object, style: object) => {
+      calls.push(`addStyle(${JSON.stringify(selection)})`);
+      styles.push({ selection, style });
+    },
+    // A camera the sync loop can read back, so two boxes agree without anything
+    // actually rendering.
+    getView: () => position(),
+    setView: (next: unknown) => {
+      // Unclamped, as in 3Dmol: `setView` restores a camera rather than moving
+      // it by hand.
+      const view = next as number[];
+      const z = view[3];
+      if (typeof z === "number") distance = FAKE_CAMERA_Z - z;
+      if (view.length >= 8) rotation = view.slice(4, 8) as [number, number, number, number];
+      calls.push("setView");
+    },
+    rotate: (angle: number, axis: string) => {
+      calls.push(`rotate(${angle},${axis})`);
+    },
     render: record("render"),
     resize: record("resize"),
     spin: record("spin"),
@@ -66,6 +179,10 @@ export function makeFakeViewer(): FakeViewer {
  * nodes on the deterministic circle the view seeds them on. What it does prove
  * is that the view configures the simulation it says it does, and - because the
  * force path is what runs by default - that the view draws at all.
+ *
+ * It does stamp the nodes the way d3-force stamps them, because a payload cut
+ * loose from a laid-out graph has to survive that and used to carry the
+ * simulation's own bookkeeping into a view that validates it.
  */
 function makeFakeD3(result: SeededEnginesResult): unknown {
   const force = (): unknown => {
@@ -77,8 +194,17 @@ function makeFakeD3(result: SeededEnginesResult): unknown {
   };
 
   return {
-    forceSimulation: () => {
+    forceSimulation: (nodes?: Record<string, unknown>[]) => {
       result.simulations++;
+      // d3-force decorates every node it is handed: an index, and a velocity
+      // per axis. Anything cut loose from a laid-out graph has to survive that,
+      // so the fake stamps them too. Positions are left alone, as d3 leaves the
+      // ones a view seeded itself.
+      (nodes ?? []).forEach((node, index) => {
+        node.index = index;
+        node.vx ??= 0;
+        node.vy ??= 0;
+      });
       const simulation: Record<string, () => unknown> = {
         force: () => simulation,
         stop: () => simulation,
@@ -103,6 +229,19 @@ export interface SeededEnginesResult {
   depicted: string[];
   /** Force simulations the network view asked d3 for. */
   simulations: number;
+  /** SMARTS patterns handed to `get_qmol`, including the ones it refused. */
+  queried: string[];
+  /** Depictions asked for with highlighted atoms, as the details RDKit was given. */
+  highlighted: string[];
+  /**
+   * RDKit objects handed out and not yet deleted.
+   *
+   * Real ones are WebAssembly heap allocations that only `delete()` frees, and
+   * a sweep over several hundred ligands per keystroke is where leaking one
+   * each stops being survivable. So the fake counts them and a test can assert
+   * the ledger came back to zero.
+   */
+  live(): number;
 }
 
 export interface SeedOptions {
@@ -115,8 +254,31 @@ export interface SeedOptions {
  *
  * Call in `beforeEach`; the returned object accumulates what the views did.
  */
+/** Something for a depiction to consist of, so it is not an empty drawing. */
+const FAKE_PATH = '<path d="M 0,0 L 10,10" stroke="#000"/>';
+
+/** Whether every bracket in a pattern closes, which is all the fake validates. */
+const balanced = (smarts: string): boolean => {
+  let depth = 0;
+  for (const ch of smarts) {
+    if (ch === "(" || ch === "[") depth++;
+    else if (ch === ")" || ch === "]") depth--;
+    if (depth < 0) return false;
+  }
+  return depth === 0;
+};
+
 export function seedFakeEngines(options: SeedOptions = {}): SeededEnginesResult {
-  const result: SeededEnginesResult = { viewers: [], depicted: [], simulations: 0 };
+  let allocated = 0;
+  let freed = 0;
+  const result: SeededEnginesResult = {
+    viewers: [],
+    depicted: [],
+    simulations: 0,
+    queried: [],
+    highlighted: [],
+    live: () => allocated - freed,
+  };
 
   const threeDmol: ThreeDmolModule = {
     createViewer: () => {
@@ -127,14 +289,63 @@ export function seedFakeEngines(options: SeedOptions = {}): SeededEnginesResult 
     SurfaceType: { VDW: "VDW" },
   };
 
+  /**
+   * A stand-in for substructure matching: the pattern is looked for in the
+   * molblock as plain text.
+   *
+   * Not chemistry, and not trying to be - whether RDKit matches a ring is
+   * RDKit's business, and re-testing it here would only test the fake. What
+   * this makes testable is everything around the match: what gets coloured,
+   * what a refused pattern does, what a superseded run does, and that nothing
+   * leaks. A SMARTS of `Cl` therefore hits every molblock containing that text.
+   */
+  const fakeQuery = (smarts: string) => ({
+    ...fakeMol(smarts),
+    get_substruct_matches: () => "[]",
+    smarts,
+  });
+
+  const fakeMol = (source: string) => ({
+    set_new_coords: () => {},
+    // Handing the source straight back stands in for RDKit generating a
+    // layout: the coordinates do not move, but the views still run the
+    // whole layout and alignment path rather than skipping it.
+    get_molblock: () => source,
+    // With a drawable element in it, deliberately: a title alone is what the
+    // network view discards as an empty depiction, so an SVG that is only a
+    // title would make every structure silently fail to inject and leave that
+    // whole path untested. No class attributes, so the probe for whether this
+    // build tags atoms and bonds still answers no.
+    get_svg: (w: number, h: number) => `<svg viewBox="0 0 ${w} ${h}"><title>fake</title>${FAKE_PATH}</svg>`,
+    get_svg_with_highlights: (details: string) => {
+      result.highlighted.push(details);
+      return `<svg viewBox="0 0 100 100"><title>fake-highlighted</title>${FAKE_PATH}</svg>`;
+    },
+    // The pattern travels on the query object the way it would on a real one:
+    // RDKit keeps it in WebAssembly, the fake keeps it in a property.
+    get_substruct_matches: (query: RDKitMol) => {
+      const pattern = (query as RDKitMol & { smarts?: string }).smarts ?? "";
+      if (!pattern || !source.includes(pattern)) return "[]";
+      return JSON.stringify([{ atoms: [0, 1], bonds: [0] }]);
+    },
+    delete: () => {
+      freed++;
+    },
+  });
+
   const rdkit: RDKitModule = {
     get_mol: (source: string) => {
       result.depicted.push(source);
-      return {
-        set_new_coords: () => {},
-        get_svg: (w: number, h: number) => `<svg viewBox="0 0 ${w} ${h}"><title>fake</title></svg>`,
-        delete: () => {},
-      };
+      allocated++;
+      return fakeMol(source);
+    },
+    // Unbalanced brackets stand in for a pattern RDKit refuses, which is what
+    // half-typed ones mostly are.
+    get_qmol: (smarts: string) => {
+      result.queried.push(smarts);
+      if (!balanced(smarts)) return null;
+      allocated++;
+      return fakeQuery(smarts);
     },
   };
 
@@ -153,6 +364,19 @@ export function clearFakeEngines(): void {
 /** Let queued microtasks (the engine promises) settle. */
 export const flush = (): Promise<void> => new Promise((r) => setTimeout(r, 0));
 
+/** Wait out something the view debounces, in real time. */
+export const wait = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * The fake RDKit that `seedFakeEngines` installed.
+ *
+ * For the modules that take an `RDKitModule` directly rather than going through
+ * a view, so both paths exercise the same stand-in.
+ */
+export function seededRDKit(): RDKitModule {
+  return globalThis.__gufeEngines!.rdkit as RDKitModule;
+}
+
 // --- the mutation matrix ---------------------------------------------------
 //
 // Declared once in `python/tests/mutations.json` and applied identically here and in
@@ -166,6 +390,8 @@ export interface Mutation {
   path: string;
   value?: unknown;
   types?: string[];
+  /** Types the object the path lands *inside* must be one of. See `appliesTo`. */
+  pathType?: string[];
   expect: "valid" | "invalid";
   pointerContains?: string;
 }
@@ -175,8 +401,34 @@ export function mutations(): Mutation[] {
   return JSON.parse(readFileSync(path, "utf-8")).mutations as Mutation[];
 }
 
+/**
+ * Whether `mutation` is meant for `payload`.
+ *
+ * `types` selects on the payload's own type. `pathType` selects on the type of
+ * the object the path lands *inside*, which is what a row aimed at one entry of
+ * a registry needs: entries are sorted by `(type, gufe-key)`, so an index naming
+ * a small molecule in one fixture names a protein in the next, and "a small
+ * molecule carrying a pdb" applied to a protein asserts nothing - the field is
+ * native there, and the payload stays valid. `python/tests/conftest.py` selects
+ * the same way, deliberately: the two suites must run identical cases.
+ */
 export function appliesTo(mutation: Mutation, payload: Record<string, unknown>): boolean {
-  return !mutation.types || mutation.types.includes(payload.type as string);
+  if (mutation.types && !mutation.types.includes(payload.type as string)) return false;
+  if (!mutation.pathType) return true;
+
+  let node: unknown = payload;
+  for (const part of splitPointer(mutation.path).slice(0, -1)) {
+    if (Array.isArray(node)) {
+      const index = Number(part);
+      if (!Number.isInteger(index) || index < 0 || index >= node.length) return false;
+      node = node[index];
+      continue;
+    }
+    if (node == null || typeof node !== "object") return false;
+    node = (node as Record<string, unknown>)[part];
+  }
+  if (node == null || typeof node !== "object" || Array.isArray(node)) return false;
+  return mutation.pathType.includes((node as Record<string, unknown>).type as string);
 }
 
 /** Thrown when a mutation's path is absent - a silent no-op would pass as a test. */
