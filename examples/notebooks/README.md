@@ -7,15 +7,19 @@
 
 ## alchemy-viz-demo.ipynb
 
-Opens with **Start here: your own OpenFE objects** - the `network_setup/`
-directory `openfe plan-rbfe-network` writes, the same campaign planned in
-Python, and the shell equivalent. It runs without openfe installed: the
-openfe-only cells report and skip, and the rest falls back to
+Opens on a drawn network in the second cell, then **Your own objects** - the
+`network_setup/` directory `openfe plan-rbfe-network` writes, the same campaign
+planned in Python, and the shell equivalent. It runs without openfe installed:
+the openfe-only cells report and skip, and the rest falls back to
 `scripts/data/tyk2_network.graphml`, a real `ligand_network.graphml` from
 OpenFE's RBFE tutorial.
 
 After that is the repository's own test bench - every payload type, and every
 way of delivering a view. Run this when you have changed something.
+
+**Reference** is the last section, and holds everything that is only worth
+reading once: the two output layers, the environment check, the byte
+costs, and the four ways a payload fails to draw.
 
 ```bash
 pixi run notebook    # JupyterLab, on this file

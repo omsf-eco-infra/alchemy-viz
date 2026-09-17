@@ -14,7 +14,7 @@ atom mappings, ligand networks and alchemical campaigns.
 ## Install
 
 Install into the environment that already has openfe or gufe. The compiled
-JavaScript ships in the wheel, so there is no Node toolchain involved.
+JavaScript ships in the wheel, so there are no javascript related dependencies at runtime.
 
 ```bash
 conda activate my-openfe-env
@@ -23,12 +23,11 @@ pip install "alchemy-viz[notebook]"   # the notebook extra is optional
 
 gufe is **not** declared as a dependency: the only gufe on PyPI is 0.4, which
 predates the 1.0 API, so a hard requirement would make `pip install` fail for
-everyone. The check moved to import time instead, and points at conda-forge.
+everyone. The check is at import time instead, and points at conda-forge.
 
 ## Use
 
-There is no conversion step and no alchemy-viz object model - `view()` takes
-whatever openfe handed you.
+Pass in your openfe gufe object to the `view(...)` function:
 
 ```python
 from alchemy_viz import view, to_html
@@ -38,8 +37,8 @@ view(ligand)         # a SmallMoleculeComponent, ProteinComponent, ChemicalSyste
 html = to_html(obj)  # the same page as a string; writes nothing
 ```
 
-`view()` is always an explicit call: nothing is patched, no `_repr_html_` is
-overridden, and uninstalling changes nothing.
+`view()`takes a live gufe object or an alchemy-viz payload dict (see
+[how it fits together](#how-it-fits-together) for the whole picture).
 
 From the shell, on files `openfe plan-rbfe-network` wrote:
 
@@ -51,6 +50,8 @@ alchemy-viz ligand.json -o -                         # or stdout
 
 The input may be a serialized gufe object or an alchemy-viz payload JSON; both
 produce one self-contained HTML file. `alchemy-viz --help` has the rest.
+
+From the html (you open with your browser), if there is a menu button in the top left, one option is to share a live snapshot of the data to anyone via framejs.
 
 The [demo notebook](./examples/notebooks/alchemy-viz-demo.ipynb) runs all of the
 above. The [gallery notebook](./examples/notebooks/alchemy-viz-gallery.ipynb) is
@@ -106,6 +107,44 @@ Only SDF, PDB and flat JSON cross the boundary. gufe's own `to_json` never does,
 including via GraphML, whose nodes *are* gufe moldicts - keeping deduplicated
 key-chains and `:custom:` codecs a Python problem.
 
+```mermaid
+flowchart LR
+  G["live gufe object<br/>LigandNetwork, ChemicalSystem, ..."]
+  J["serialized gufe<br/>to_json, to_dict, .graphml"]
+  V["alchemy-viz payload<br/>type: ...Viz, examples/*.json"]
+  E["&lt;alchemy-view&gt;<br/>TypeScript custom elements"]
+
+  J -- "GufeTokenizable.from_json<br/>LigandNetwork.from_graphml<br/>cli.py, needs gufe" --> G
+  G -- "payload_for()<br/>__init__.py, needs gufe" --> V
+  V -- "schema/alchemy-viz.schema.json" --> E
+
+  classDef py fill:#e8f0fe,stroke:#4a6fa5,color:#1a2b40
+  classDef ts fill:#fdf0e3,stroke:#b07a3a,color:#402b1a
+  class G,J,V py
+  class E ts
+```
+
+Which entry point accepts which is not symmetric:
+
+| | live gufe object | serialized gufe | alchemy-viz payload |
+|---|---|---|---|
+| `view()`, `to_html()` | yes | no | yes |
+| `alchemy-viz` CLI | n/a | yes | yes |
+
+`payload_for()` is the only converter, and it dispatches on `isinstance`, so the
+Python API needs a live object. Deserializing gufe's own JSON lives in the CLI
+alone; from a script, rehydrate it first:
+
+```python
+from gufe.tokenization import GufeTokenizable
+
+view(GufeTokenizable.from_json(content=Path("network_setup.json").read_text()))
+```
+
+A `dict` handed to `view()` or `to_html()` is taken as a payload and passed
+through unchecked, so a gufe `to_dict()` mapping reaches the browser and fails
+there rather than at the call site.
+
 A payload has no envelope: it is its `type`, its `gufe-key` and its own fields.
 References to other objects are by key, and the objects themselves are carried
 once in the root payload's `registry`.
@@ -133,7 +172,7 @@ fails on any drift:
 pixi run examples && pixi run types && pixi run build   # the fix, always
 ```
 
-### Keeping the two sides honest
+### Keeping the two sides in sync
 
 `examples/*.json` feeds pytest, vitest, the dropzone and the gallery.
 `python/tests/mutations.json` declares a mutation matrix once, as data, and both
@@ -164,17 +203,6 @@ anything actually draws.
 
 A declared type with no view renders as "no visualization for X yet", which is
 correct behaviour; a view whose type the schema does not declare fails the tests.
-
-### Layout
-
-```
-schema/     the Python<->TypeScript contract, and the mutation matrix
-python/     alchemy_viz - payload builders, HTML writer, notebook view, CLI
-ts/         the custom elements; src/views one per payload type, src/shared
-            the machinery they are built from
-examples/   golden payloads, shared by pytest, vitest, the dropzone and the gallery
-scripts/    the generators
-```
 
 ## Releasing
 

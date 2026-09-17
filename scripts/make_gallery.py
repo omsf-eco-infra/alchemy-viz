@@ -290,10 +290,10 @@ Every view alchemy-viz draws today, as a picture.
 **Using OpenFE?** These pictures are of committed example payloads, which is not
 how you will call this. Your own objects go in directly - `view(network)`,
 `view(campaign)` - because openfe re-exports gufe's classes rather than defining
-its own, so there is no conversion step. The demo notebook opens with that path:
-a `network_setup/` directory from `openfe plan-rbfe-network`, the same thing
-planned in Python, and the shell equivalent. See
-[**Start here: your own OpenFE objects**](./alchemy-viz-demo.ipynb).
+its own, so there is no conversion step. The demo notebook opens on one view and
+then on that path: a `network_setup/` directory from `openfe plan-rbfe-network`,
+the same thing planned in Python, and the shell equivalent. See
+[**Your own objects**](./alchemy-viz-demo.ipynb).
 >
 > **You can run this one too.** Its cells hold the real `view()` call, so
 > running it replaces each screenshot with the live, interactive view - a good
