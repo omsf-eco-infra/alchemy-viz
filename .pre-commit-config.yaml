@@ -6,7 +6,7 @@ ci:
 
 exclude: |
   (?x)^(
-    python/gufe_viz/_assets/gufe-viz\.js|
+    python/alchemy_viz/_assets/alchemy-viz\.js|
     ts/src/schema/types\.ts|
     package-lock\.json|
     pixi\.lock
@@ -43,3 +43,17 @@ repos:
       - id: ruff
         args: [--fix]
       - id: ruff-format
+
+  - repo: https://github.com/kynan/nbstripout
+    rev: 0.9.1
+    hooks:
+      - id: nbstripout
+        # The demo notebook's outputs are an `<iframe srcdoc>` holding a whole
+        # page each - a quarter of a megabyte per view, none of which GitHub
+        # will render. Strip them.
+        #
+        # The gallery notebook is excluded because its outputs are the entire
+        # point of the file: they are the screenshots that make the views
+        # visible on GitHub, and `pixi run gallery` is what puts them there.
+        # Stripping it would silently delete what it exists to carry.
+        exclude: ^examples/notebooks/alchemy-viz-gallery\.ipynb$

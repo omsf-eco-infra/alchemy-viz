@@ -4,7 +4,7 @@ import { defineConfig } from "vite";
 /**
  * The library build: many TypeScript sources in, one artifact out.
  *
- * The output lands directly in `python/gufe_viz/_assets/` and is **committed**,
+ * The output lands directly in `python/alchemy_viz/_assets/` and is **committed**,
  * so `pip install .` and install-from-git need no Node toolchain. CI's
  * `check-generated` task rebuilds it and diffs, so the committed copy cannot go
  * stale.
@@ -14,7 +14,7 @@ import { defineConfig } from "vite";
  */
 export default defineConfig({
   build: {
-    outDir: resolve(import.meta.dirname, "python/gufe_viz/_assets"),
+    outDir: resolve(import.meta.dirname, "python/alchemy_viz/_assets"),
     emptyOutDir: false,
     target: "es2022",
     minify: "esbuild",
@@ -22,7 +22,7 @@ export default defineConfig({
     lib: {
       entry: resolve(import.meta.dirname, "ts/src/index.ts"),
       formats: ["es"],
-      fileName: () => "gufe-viz.js",
+      fileName: () => "alchemy-viz.js",
     },
     rollupOptions: {
       // The engine loaders `import()` absolute CDN URLs, which must survive the

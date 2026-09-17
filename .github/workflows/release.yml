@@ -1,0 +1,181 @@
+# Tag -> PyPI, through PyPI Trusted Publishing.
+#
+# No API token is stored anywhere. PyPI is configured once to trust this
+# repository and this workflow filename, and the `id-token: write` permission
+# below is what lets the publish step mint the short-lived OIDC credential it
+# trades for an upload token. Renaming this file breaks that trust and the
+# publisher has to be re-pointed on PyPI.
+#
+# Publishing is driven by a `v*` tag, which is also what setuptools-scm reads to
+# decide the version. There is no version string to edit: `git tag v0.1.0` makes
+# the version 0.1.0, and an untagged commit builds a dev version that this
+# workflow never uploads.
+#
+#   git tag -a v0.1.0 -m "v0.1.0" && git push origin v0.1.0
+#
+# workflow_dispatch publishes to TestPyPI instead, for rehearsing the whole path
+# without spending a version number. PyPI refuses a re-upload of a filename it
+# already has, so a real release is a one-shot and worth rehearsing.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  # Freshness gates the release, rather than being assumed from CI.
+  #
+  # The wheel check below proves the bundle is present and large enough to be a
+  # real build, but not that it matches the TypeScript it was built from. CI
+  # proves that on `main` and on every pull request - a tag can land on a commit
+  # covered by neither, and publishing is one-shot, so a stale bundle reaching
+  # PyPI cannot be taken back. The same task CI runs, run again here.
+  generated:
+    name: generated artifacts are fresh
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # setuptools-scm needs the tags
+
+      - uses: prefix-dev/setup-pixi@v0.8.1
+        with:
+          cache: true
+
+      - run: pixi run check-generated
+
+  build:
+    name: build sdist and wheel
+    needs: generated
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # setuptools-scm reads the tags to find the version
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: python -m pip install --upgrade build twine
+
+      # The bundle is committed, so this needs no Node toolchain. If it were
+      # missing from the wheel every page this package renders would be blank,
+      # which is why the check below is part of building rather than a later job.
+      - run: python -m build
+
+      - name: the compiled bundle is inside the wheel
+        run: |
+          python - <<'PY'
+          import pathlib, zipfile, sys
+
+          wheel = next(pathlib.Path("dist").glob("*.whl"))
+          names = zipfile.ZipFile(wheel).namelist()
+
+          bundle = "alchemy_viz/_assets/alchemy-viz.js"
+          if bundle not in names:
+              sys.exit(f"{bundle} is not in {wheel.name}: {names}")
+
+          size = zipfile.ZipFile(wheel).getinfo(bundle).file_size
+          if size < 100_000:
+              sys.exit(f"{bundle} is {size} bytes, which is too small to be a real build")
+
+          # A `tests` package here would land in site-packages and collide with
+          # every other project that ships one.
+          stray = [n for n in names if n.startswith("tests/")]
+          if stray:
+              sys.exit(f"{wheel.name} ships a top-level tests package: {stray}")
+
+          print(f"{wheel.name}: bundle is {size:,} bytes")
+          PY
+
+      - run: twine check --strict dist/*
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  # Install the built wheel the way a user gets it: no repository checkout, no
+  # Node, and no gufe. gufe is not on PyPI at a usable version, so `pip install
+  # alchemy-viz` landing in a gufe-less environment is the normal case, not an
+  # edge case, and the package has to import and render payloads there.
+  smoke:
+    name: install the wheel and use it
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: pip install dist/*.whl
+
+      - name: it imports, renders, and asks for gufe in words
+        run: |
+          python - <<'PY'
+          import alchemy_viz
+
+          assert len(alchemy_viz.bundle_source()) > 100_000
+
+          html = alchemy_viz.to_html({"type": "SmallMoleculeComponentViz", "name": "x"})
+          assert "<alchemy-view" in html
+
+          try:
+              alchemy_viz.payload_for(object())
+          except ImportError as e:
+              assert "conda-forge" in str(e), e
+              print("missing gufe reported as:", str(e).splitlines()[0])
+          else:
+              raise SystemExit("expected ImportError without gufe installed")
+          PY
+
+      - run: alchemy-viz --help
+
+  publish:
+    name: publish to PyPI
+    needs: smoke
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/alchemy-viz
+    permissions:
+      id-token: write # mints the OIDC token; replaces a stored API token
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - uses: pypa/gh-action-pypi-publish@release/v1
+
+  # The rehearsal. Same artifacts, same path, a throwaway index.
+  publish-testpypi:
+    name: publish to TestPyPI
+    needs: smoke
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/p/alchemy-viz
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/

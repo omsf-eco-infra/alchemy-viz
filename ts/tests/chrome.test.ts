@@ -1,0 +1,365 @@
+/**
+ * The chrome menu: the one control every view shares.
+ *
+ * These assert the three properties a user would notice breaking, rather than
+ * restating the helper's implementation:
+ *
+ *   - the menu starts closed, so a view is never wearing its controls open;
+ *   - opening it does not rebuild anything, because a rebuild would take the
+ *     3D camera, the graph layout and the selection with it;
+ *   - the contents are not built until they are first wanted.
+ */
+
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { el } from "../src/shared/dom.js";
+import { buttonGroup } from "../src/shared/controls.js";
+import { headerStrip } from "../src/shared/panels.js";
+import { CHROME_OPEN_BY_DEFAULT, chromeMenu, splitter } from "../src/shared/chrome.js";
+import { num } from "../src/shared/settings.js";
+import { HEADER_LINE } from "../src/shared/style.js";
+
+describe("chromeMenu", () => {
+  let header: ReturnType<typeof headerStrip>;
+
+  beforeEach(() => {
+    document.body.replaceChildren();
+    header = headerStrip("A view");
+    document.body.appendChild(header);
+  });
+
+  const button = (): HTMLButtonElement => header.toggleEl.querySelector("button")!;
+
+  it("starts closed", () => {
+    const menu = chromeMenu(header, () => document.createElement("div"));
+    expect(CHROME_OPEN_BY_DEFAULT).toBe(false);
+    expect(menu.isOpen()).toBe(false);
+    expect(menu.panel.style.display).toBe("none");
+  });
+
+  it("does not build its contents until first opened", () => {
+    const build = vi.fn(() => document.createElement("div"));
+    const menu = chromeMenu(header, build);
+    expect(build).not.toHaveBeenCalled();
+
+    menu.setOpen(true);
+    expect(build).toHaveBeenCalledTimes(1);
+    // Only what was built. The share row is a view's `extras`, not something
+    // this helper reaches for - see the `extras` cases below.
+    expect(menu.panel.childElementCount).toBe(1);
+  });
+
+  it("builds its contents exactly once across many toggles", () => {
+    const build = vi.fn(() => document.createElement("div"));
+    const menu = chromeMenu(header, build);
+    for (const open of [true, false, true, false, true]) menu.setOpen(open);
+    expect(build).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps the same contents across a close and reopen", () => {
+    // The point of the whole design: a view holds references into what it built,
+    // so closing must not discard it.
+    const menu = chromeMenu(header, () => {
+      const marker = document.createElement("div");
+      marker.id = "built-once";
+      return marker;
+    });
+    menu.setOpen(true);
+    const first = menu.panel.firstElementChild;
+    menu.setOpen(false);
+    menu.setOpen(true);
+    expect(menu.panel.firstElementChild).toBe(first);
+    expect(menu.panel.childElementCount).toBe(1);
+  });
+
+  /**
+   * `extras` is how the share button reaches every menu without this helper
+   * importing the module that uploads to framejs. That import used to run the
+   * other way too, so the two modules were a value cycle held together only by
+   * nothing in `framejs.ts` reading an import at module scope.
+   */
+  it("appends extras after what the view built, on the same first open", () => {
+    const extras = vi.fn((panel: HTMLElement) => {
+      const row = document.createElement("div");
+      row.id = "extra";
+      panel.appendChild(row);
+    });
+    const menu = chromeMenu(header, () => el("div", "", "built"), { extras });
+    expect(extras).not.toHaveBeenCalled();
+
+    menu.setOpen(true);
+    expect(extras).toHaveBeenCalledTimes(1);
+    expect(menu.panel.childElementCount).toBe(2);
+    // Last, so a view's own controls stay above it.
+    expect(menu.panel.lastElementChild?.id).toBe("extra");
+  });
+
+  it("appends extras exactly once across many toggles", () => {
+    const extras = vi.fn();
+    const menu = chromeMenu(header, () => document.createElement("div"), { extras });
+    for (const open of [true, false, true, false, true]) menu.setOpen(open);
+    expect(extras).toHaveBeenCalledTimes(1);
+  });
+
+  it("reports the change so a view can re-lay-out", () => {
+    const onToggle = vi.fn();
+    const menu = chromeMenu(header, () => document.createElement("div"), { onToggle });
+    menu.setOpen(true);
+    menu.setOpen(false);
+    expect(onToggle.mock.calls.map(([open]) => open)).toEqual([true, false]);
+  });
+
+  it("does not report a set that changes nothing", () => {
+    const onToggle = vi.fn();
+    const menu = chromeMenu(header, () => document.createElement("div"), { onToggle });
+    menu.setOpen(false);
+    expect(onToggle).not.toHaveBeenCalled();
+  });
+
+  it("puts its button at the top left, before the title", () => {
+    chromeMenu(header, () => document.createElement("div"));
+    // Placement is the helper's job, not each view's, so it is asserted here:
+    // the slot is the strip's first child, and the button is in it.
+    expect(header.firstElementChild).toBe(header.toggleEl);
+    expect(header.toggleEl.contains(button())).toBe(true);
+    expect(header.toggleEl.compareDocumentPosition(header.titleEl) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it("keeps the button on the header's first line", () => {
+    // The button is taller than a line of title text, and a baseline-aligned
+    // strip puts its baseline group flush to the top, which left the title
+    // riding above the button. So every line of the strip is given the button's
+    // own height and the two are aligned to the top of it: centring instead put
+    // the button halfway down a header whose stats had wrapped, level with the
+    // gap between the lines rather than with the title. The text keeps its
+    // shared baseline in a row of its own. jsdom has no layout engine, so this
+    // checks the rules are set rather than the pixels they produce - the pixels
+    // are what the gallery is for.
+    expect(header.style.alignItems).toBe("flex-start");
+    expect(header.style.lineHeight).toBe(HEADER_LINE);
+    expect(header.toggleEl.style.height).toBe(HEADER_LINE);
+    expect(header.textEl.style.alignItems).toBe("baseline");
+    expect(header.textEl.contains(header.titleEl)).toBe(true);
+    expect(header.textEl.contains(header.statsEl)).toBe(true);
+  });
+
+  it("takes no room in a header with no menu", () => {
+    // Every view builds a header strip; most have no menu, and an empty slot
+    // must not indent their titles.
+    expect(header.firstElementChild).toBe(header.toggleEl);
+    expect(header.toggleEl.childElementCount).toBe(0);
+    expect(header.toggleEl.style.marginRight).toBe("");
+  });
+
+  it("puts its button in the header's toggle slot", () => {
+    chromeMenu(header, () => document.createElement("div"), { label: "Network options" });
+    expect(button()).toBeTruthy();
+    expect(button().getAttribute("aria-label")).toBe("Network options");
+    expect(button().getAttribute("aria-expanded")).toBe("false");
+  });
+
+  it("toggles from the button, and says so to a screen reader", () => {
+    const menu = chromeMenu(header, () => document.createElement("div"));
+    button().click();
+    expect(menu.isOpen()).toBe(true);
+    expect(button().getAttribute("aria-expanded")).toBe("true");
+    button().click();
+    expect(menu.isOpen()).toBe(false);
+    expect(button().getAttribute("aria-expanded")).toBe("false");
+  });
+
+  it("can be opened from the start when a caller asks", () => {
+    const build = vi.fn(() => document.createElement("div"));
+    const menu = chromeMenu(header, build, { open: true });
+    expect(menu.isOpen()).toBe(true);
+    expect(build).toHaveBeenCalledTimes(1);
+    // Shown as a flex column, not merely un-hidden: the panel hands its height
+    // down to what a view built into it, so a list too long for the view
+    // scrolls inside the menu instead of running off the bottom of the page.
+    expect(menu.panel.style.display).toBe("flex");
+    expect(menu.panel.style.flexDirection).toBe("column");
+    expect(menu.panel.style.minHeight).toBe("0");
+  });
+
+});
+
+/**
+ * The divider between a graph and its detail pane.
+ *
+ * Both panes are driven from one fraction, which is what makes a remembered
+ * position restore as the same picture at a different window size. The drag
+ * itself is asserted through synthesized pointer events, because what a reader
+ * would notice breaking is the divider not moving.
+ */
+describe("splitter", () => {
+  const row = (): { row: HTMLDivElement; before: HTMLDivElement; after: HTMLDivElement } => {
+    const wrap = el("div", "display:flex;") as HTMLDivElement;
+    const before = el("div") as HTMLDivElement;
+    const after = el("div") as HTMLDivElement;
+    wrap.append(before, after);
+    document.body.replaceChildren(wrap);
+    return { row: wrap, before, after };
+  };
+
+  /** jsdom lays nothing out and captures no pointers, so both are supplied. */
+  const draggable = (handle: HTMLElement, host: HTMLElement, width: number, height = 100): void => {
+    handle.setPointerCapture = () => {};
+    handle.releasePointerCapture = () => {};
+    host.getBoundingClientRect = () =>
+      ({ left: 0, top: 0, width, height, right: width, bottom: height, x: 0, y: 0, toJSON: () => ({}) }) as DOMRect;
+  };
+
+  /** The shape of a host, before there is a splitter in it to measure it. */
+  const shaped = (host: HTMLElement, width: number, height: number): void => {
+    host.getBoundingClientRect = () =>
+      ({ left: 0, top: 0, width, height, right: width, bottom: height, x: 0, y: 0, toJSON: () => ({}) }) as DOMRect;
+  };
+
+  /** The percentage a pane was given, however the host chose to serialize it. */
+  const share = (pane: HTMLElement): number => Number(/([\d.]+)%/.exec(pane.style.flex)![1]);
+
+  const pointer = (type: string, clientX: number, clientY = 0): MouseEvent => {
+    const event = new MouseEvent(type, { bubbles: true, clientX, clientY });
+    Object.defineProperty(event, "pointerId", { value: 1 });
+    return event;
+  };
+
+  it("sizes both panes from one fraction", () => {
+    const { row: host, before, after } = row();
+    host.appendChild(splitter(host, before, after, { remember: undefined }));
+    // The two shares are complements, so the divider is never showing one thing
+    // while the panes do another.
+    expect(share(before)).toBeCloseTo(50, 5);
+    expect(share(after)).toBeCloseTo(50, 5);
+  });
+
+  it("opens where it was left", () => {
+    const remember = num("test.splitter.remembered", 0.5, 0.2, 0.8);
+    remember.set(0.7);
+    const { row: host, before, after } = row();
+    host.appendChild(splitter(host, before, after, { remember }));
+    expect(share(before)).toBeCloseTo(70, 5);
+    expect(share(after)).toBeCloseTo(30, 5);
+  });
+
+  it("moves on a drag, remembers where it stopped, and redraws once", () => {
+    const remember = num("test.splitter.dragged", 0.5, 0.2, 0.8);
+    const onResize = vi.fn();
+    const { row: host, before, after } = row();
+    const handle = splitter(host, before, after, { remember, onResize });
+    host.appendChild(handle);
+    draggable(handle, host, 1000);
+
+    handle.dispatchEvent(pointer("pointerdown", 500));
+    handle.dispatchEvent(pointer("pointermove", 300));
+    // Mid-drag the panes have moved, and nothing has been asked to redraw yet:
+    // on the far side of that callback is a force simulation.
+    expect(share(before)).toBeCloseTo(30, 5);
+    expect(share(after)).toBeCloseTo(70, 5);
+    expect(onResize).not.toHaveBeenCalled();
+
+    handle.dispatchEvent(pointer("pointerup", 300));
+    expect(onResize).toHaveBeenCalledTimes(1);
+    expect(remember.get()).toBeCloseTo(0.3, 5);
+  });
+
+  it("stays inside its bounds however far the pointer goes", () => {
+    const { row: host, before } = row();
+    const after = host.lastElementChild as HTMLDivElement;
+    const handle = splitter(host, before, after, { min: 0.3, max: 0.6 });
+    host.appendChild(handle);
+    draggable(handle, host, 1000);
+
+    handle.dispatchEvent(pointer("pointerdown", 500));
+    handle.dispatchEvent(pointer("pointermove", -400));
+    expect(share(before)).toBeCloseTo(30, 5);
+    handle.dispatchEvent(pointer("pointermove", 4000));
+    expect(share(before)).toBeCloseTo(60, 5);
+  });
+
+  it("ignores a pointer that never went down on it", () => {
+    const { row: host, before, after } = row();
+    const handle = splitter(host, before, after);
+    host.appendChild(handle);
+    draggable(handle, host, 1000);
+
+    handle.dispatchEvent(pointer("pointermove", 100));
+    expect(share(before)).toBeCloseTo(50, 5);
+  });
+
+  /**
+   * A phone held upright is twice as tall as it is wide, and two panes side by
+   * side in it are two columns too narrow to hold anything - a graph in one and
+   * a molecule in the other, neither readable. So the shape of the row decides
+   * which way it divides, and nothing a view says overrides it.
+   */
+  it("stacks the panes when the row is taller than it is wide", () => {
+    const { row: host, before, after } = row();
+    shaped(host, 390, 780);
+    const orientations: boolean[] = [];
+    const handle = splitter(host, before, after, { onOrient: (stacked) => orientations.push(stacked) });
+    host.appendChild(handle);
+
+    expect(host.style.flexDirection).toBe("column");
+    expect(handle.style.cursor).toBe("row-resize");
+    expect(handle.getAttribute("aria-orientation")).toBe("horizontal");
+    // Told once, as it is set up, so a pane that has to look different stacked
+    // does not have to wait for the first flip to find out.
+    expect(orientations).toEqual([true]);
+  });
+
+  it("divides side by side when there is width for it", () => {
+    const { row: host, before, after } = row();
+    shaped(host, 1000, 600);
+    const handle = splitter(host, before, after, { onOrient: () => {} });
+    host.appendChild(handle);
+
+    expect(host.style.flexDirection).toBe("row");
+    expect(handle.style.cursor).toBe("col-resize");
+    expect(handle.getAttribute("aria-orientation")).toBe("vertical");
+  });
+
+  it("drags down the row rather than across it once it is stacked", () => {
+    const { row: host, before, after } = row();
+    shaped(host, 400, 1000);
+    const handle = splitter(host, before, after);
+    host.appendChild(handle);
+    draggable(handle, host, 400, 1000);
+
+    // The same numbers as the side-by-side drag, on the other axis: what moves
+    // the divider is where the pointer is along whichever axis is being divided.
+    handle.dispatchEvent(pointer("pointerdown", 200, 500));
+    handle.dispatchEvent(pointer("pointermove", 200, 300));
+    expect(share(before)).toBeCloseTo(30, 5);
+    expect(share(after)).toBeCloseTo(70, 5);
+  });
+});
+
+describe("a row of buttons", () => {
+  // jsdom has no layout engine, so these check the rules are set rather than
+  // the pixels they produce - the pixels are what the gallery is for.
+  it("wraps rather than running off the edge of what holds it", () => {
+    const group = buttonGroup(
+      [
+        { id: "a", label: "Cartoon" },
+        { id: "b", label: "Surface" },
+        { id: "c", label: "Stick" },
+        { id: "d", label: "Sphere" },
+      ],
+      "a",
+      () => {},
+    );
+    // The same four buttons sit in a wide toolbar in one view and in a menu
+    // column in another, so the group cannot assume the width it is given.
+    expect(group.style.flexWrap).toBe("wrap");
+    expect(group.style.minWidth).toBe("0");
+  });
+
+  it("keeps a button inside the panel it is in, however wide its label", () => {
+    const group = buttonGroup([{ id: "a", label: "A label wider than any menu column" }], "a", () => {});
+    const button = group.querySelector("button")!;
+    expect(button.style.maxWidth).toBe("100%");
+    // A padded, bordered button set to `width:100%` is 100% plus the padding
+    // and the border without this, which is twenty pixels past the edge.
+    expect(button.style.boxSizing).toBe("border-box");
+  });
+});
