@@ -6,7 +6,6 @@ build/
 dist/
 .pytest_cache/
 .ruff_cache/
-.ipynb_checkpoints
 python/alchemy_viz/_version.py
 
 # Node
@@ -21,6 +20,11 @@ ts/dist/
 .ipynb_checkpoints/
 # `pixi run marimo` converts the demo notebook into here; the .ipynb is the source
 examples/notebooks/.marimo/
+
+# scratch
+# Where `pixi run parity-reference` and `pixi run big-network` write. Both run
+# to megabytes and neither is an input to anything the repository builds.
+scratch/
 
 # editors / OS
 .DS_Store

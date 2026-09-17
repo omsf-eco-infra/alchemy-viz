@@ -1,34 +1,19 @@
 """payload -> one self-contained HTML file.
 
-Deliberately minimal: :func:`to_html` **returns a string and writes nothing**.
-Where that string goes is a decision for whoever owns the calling code, not for
-this module. :mod:`alchemy_viz.cli` is one answer to that question, not the answer.
+:func:`to_html` **returns a string and writes nothing**; where it goes is the
+caller's decision. The page is four things and no others: the compiled bundle in
+a ``<script type="module">``, the payload in a ``<script type="application/json">``,
+one ``<alchemy-view>``, and the bootstrap handing the second to the third. No
+fetches, no iframe, no server - except that a view needing RDKit or 3Dmol still
+pulls it from a CDN.
 
-The page is four things and no others:
+The bootstrap uses only the custom-element API, so it depends on no name the
+bundler chose. :func:`shell_html` is the same document without the payload block
+and bootstrap, for a host that delivers the payload itself - the notebook widget.
 
-* the compiled bundle, inlined in a ``<script type="module">``;
-* the payload, inlined in a ``<script type="application/json">``;
-* one ``<alchemy-view>`` element;
-* three lines of bootstrap that hand the second to the third.
-
-No fetches, no iframe, no server. The one thing it does reach for today is
-RDKit / 3Dmol from their CDNs, and only from a view that needs them.
-A future ``engines="bundled"`` mode inlines those too, for environments with no
-network access at all.
-
-The bootstrap uses only the custom-element API (``document.querySelector`` plus
-a ``.payload`` assignment). That is on purpose: it does not depend on any name
-the bundler chose, and it is the same two lines the notebook widget uses.
-
-:func:`shell_html` is that same document with the payload block and the
-bootstrap left out, for a host that delivers the payload itself - which is what
-the notebook widget does. One template, two fillings.
-
-``to_html(obj, debug=True)`` puts a ``debug`` attribute on the ``<alchemy-view>``,
-which makes the bundle print the payload it was handed to the browser console.
-It is not the only way in: any page this writes also answers to ``?debug`` in
-its URL, so a file already on disk can be re-opened as
-``file:///.../out.html?debug`` and print the same thing without being rebuilt.
+``to_html(obj, debug=True)`` bakes in the debug switch, which makes the bundle
+print the payload to the console; a page written without it still answers to
+``?debug`` in its URL.
 """
 
 from __future__ import annotations
@@ -50,9 +35,8 @@ BUNDLE = "alchemy-viz.js"
 class BundleMissing(RuntimeError):
     """The compiled TypeScript is not in the installed package.
 
-    Only reachable in a source checkout that has never run ``pixi run build``;
-    the bundle is committed and ships in the wheel precisely so that installing
-    this package never needs a Node toolchain.
+    Only reachable in a source checkout that has never run ``pixi run build`` - the
+    bundle is committed and ships in the wheel.
     """
 
 
@@ -120,11 +104,10 @@ _CDN_ENGINES_NOTE = (
 
 
 def _script_safe(text: str) -> str:
-    """Neutralize the one sequence that can close a ``<script>`` block early.
+    r"""Neutralize the one sequence that can close a ``<script>`` block early.
 
     ``</script`` inside minified JavaScript only ever occurs within a string or
-    regex literal, where ``<\\/script`` is an identity escape meaning exactly the
-    same thing.
+    regex literal, where ``<\/script`` is an identity escape meaning the same thing.
     """
     return re.sub(r"</(script)", r"<\\/\1", text, flags=re.IGNORECASE)
 
@@ -144,32 +127,15 @@ def _as_payload_dict(obj: GufeTokenizable | dict[str, Any]) -> dict[str, Any]:
 
 
 def to_html(obj: GufeTokenizable | dict[str, Any], *, title: str | None = None, debug: bool = False) -> str:
-    """Return a standalone HTML page that renders ``obj`` as a string.
+    """Return a standalone HTML page that renders ``obj``, as a string.
 
-    Parameters
-    ----------
-    obj
-        A GufeTokenizable object, or an already-built payload dict.
-    title
-        The page ``<title>``. Defaults to the payload's name, then its type.
-    debug
-        Bake the debug switch into the page, so it prints the payload it was
-        handed to the browser console before drawing anything. The same page
-        without this also prints it when opened as ``<url>?debug``; the flag is
-        for handing someone a file that does it on its own.
+    ``obj`` is a GufeTokenizable or an already-built payload dict. ``title`` defaults
+    to the payload's name, then its type. ``debug`` bakes in the switch that prints
+    the payload to the browser console, for handing someone a file that does it on
+    its own; the same page also answers to ``<url>?debug``.
 
-    Returns
-    -------
-    str
-        The complete page. **Nothing is written to disk** - see the module
-        docstring.
-
-    Raises
-    ------
-    TypeError
-        If ``obj`` is not something this can visualize.
-    BundleMissing
-        If the compiled bundle is not present in the installed package.
+    Nothing is written to disk. Raises ``TypeError`` for an object this cannot
+    visualize, and :exc:`BundleMissing` if the compiled bundle is not installed.
     """
     payload = _as_payload_dict(obj)
 
@@ -195,16 +161,13 @@ def to_html(obj: GufeTokenizable | dict[str, Any], *, title: str | None = None, 
 def shell_html(*, title: str = "alchemy-viz") -> str:
     """Return the same page as :func:`to_html`, minus the payload.
 
-    The notebook widget writes this into an iframe and then sets ``.payload`` on
-    the ``<alchemy-view>`` inside it, so the payload arrives over the widget comm
-    rather than baked into the document. Everything else - the bundle, the
-    element, the stylesheet - is the page ``to_html`` produces, from the same
-    template, which is the point: there is one document to get right.
+    The notebook widget writes this into an iframe and then sets ``.payload`` on the
+    ``<alchemy-view>`` inside it, so the payload arrives over the widget comm. One
+    template, two fillings.
 
-    The elements are defined by the time the iframe's ``load`` event fires,
-    because a module script delays it. That is the whole handshake; a host that
-    sets ``.payload`` before then would be assigning to an element that has not
-    been upgraded yet, where the assignment would shadow the class's accessor.
+    The elements are defined by the time the iframe's ``load`` event fires, because
+    a module script delays it. A host that set ``.payload`` before then would be
+    assigning to an un-upgraded element, shadowing the class's accessor.
     """
     return _TEMPLATE.substitute(
         title=_escape_html(title),

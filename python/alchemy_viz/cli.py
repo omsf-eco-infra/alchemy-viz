@@ -1,20 +1,15 @@
 """``alchemy-viz <input> [-o out.html]`` - render an object on disk.
 
-This is one of the two supported ways in, and the one that does not need a
-Python session. The other is :func:`alchemy_viz.view` in a notebook. Neither is
-invoked by gufe or by openfe: alchemy-viz is a standalone package that uses the
-gufe library to read objects, and nothing in gufe or openfe calls back into it.
-
 Input may be an alchemy-viz payload JSON - the files in ``examples/`` - or a
 serialized gufe object, which is deserialized into live gufe objects first and
 only then turned into a payload. TypeScript never sees gufe's JSON.
 
-That second form covers everything ``openfe plan-rbfe-network`` writes: the
+The second form covers everything ``openfe plan-rbfe-network`` writes: the
 campaign at ``<output_dir>/<output_dir>.json``, each edge under
 ``transformations/``, and ``ligand_network.graphml``.
 
-The payload path needs no gufe installed at all. Reading a serialized gufe
-object does, and gufe has to come from conda-forge; see :mod:`alchemy_viz._gufe`.
+The payload path needs no gufe installed; reading a serialized gufe object does,
+from conda-forge. See :mod:`alchemy_viz._gufe`.
 """
 
 from __future__ import annotations
@@ -36,11 +31,10 @@ if TYPE_CHECKING:  # gufe is imported inside _load_gufe_object, never at module 
 def _looks_like_payload(value: object) -> bool:
     """True if this JSON is already one of ours rather than a gufe object.
 
-    Every payload type is named ``<something>Viz``, which is enough to tell the
-    two input formats apart. This deliberately does not check the name against a
-    list of known types: a payload naming a type this build does not draw is
-    still one of ours, and the browser's "no visualization for X" panel says so
-    far better than the CLI could.
+    Every payload type is named ``<something>Viz``, which tells the two input formats
+    apart. Deliberately not checked against a list of known types: a payload naming
+    a type this build cannot draw is still one of ours, and the browser's "no
+    visualization for X" panel says so better than the CLI could.
     """
     return isinstance(value, dict) and isinstance(value.get("type"), str) and value["type"].endswith("Viz")
 
@@ -48,14 +42,10 @@ def _looks_like_payload(value: object) -> bool:
 def load(path: Path) -> GufeTokenizable | dict[str, Any]:
     """Return something :func:`alchemy_viz.to_html` can render.
 
-    Three input formats, told apart by suffix and then by shape: a GraphML
-    ligand network, an alchemy-viz payload, and a serialized gufe object.
-
-    GraphML is here because it is one of the three things
-    ``openfe plan-rbfe-network`` leaves in an output directory, and the only one
-    of them that is not JSON. Pointing this command at
-    ``network_setup/ligand_network.graphml`` is an obvious thing to try, and
-    "not valid JSON" would be a poor answer to it.
+    Three input formats, told apart by suffix and then by shape: a GraphML ligand
+    network, an alchemy-viz payload, and a serialized gufe object. GraphML is here
+    because ``openfe plan-rbfe-network`` leaves one in its output directory, and
+    "not valid JSON" would be a poor answer to pointing this command at it.
     """
     text = path.read_text(encoding="utf-8")
 
@@ -91,19 +81,12 @@ def _load_ligand_network(text: str, path: Path) -> GufeTokenizable:
 def _load_gufe_object(text: str, path: Path) -> GufeTokenizable:
     """Deserialize a saved gufe object, or explain why we could not.
 
-    ``GufeTokenizable.from_json`` is the entry point that reads every form gufe
-    writes: it tries the keyed chain first and falls back to the dict
-    representation. Both shapes reach this function in practice - ``to_json``
-    writes a keyed chain, which is a JSON list, and ``to_dict`` writes a
-    mapping - and going through ``from_json`` means this module does not have to
-    tell them apart.
-
-    That matters most for the files ``openfe plan-rbfe-network`` leaves in its
-    output directory. Every one of them - the campaign at
-    ``<output_dir>/<output_dir>.json`` and each edge under
-    ``transformations/`` - is written by ``to_json``, so they are keyed chains,
-    and reading one as a dict fails with a ``TypeError`` about a string not
-    being an integer that says nothing about what went wrong.
+    ``GufeTokenizable.from_json`` reads every form gufe writes: it tries the keyed
+    chain first and falls back to the dict representation, so this module does not
+    have to tell them apart. Both reach here in practice - ``to_json`` writes a
+    keyed chain and ``to_dict`` a mapping - and everything
+    ``openfe plan-rbfe-network`` leaves behind is a keyed chain, which read as a
+    dict fails with a ``TypeError`` that says nothing about what went wrong.
     """
     try:
         from gufe.tokenization import GufeTokenizable

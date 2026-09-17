@@ -1,101 +1,57 @@
 # Notebooks
 
-
-
-Two files: one to run in a real notebook environment with kernel, the other is generated and uses static images instead of the live visualizations so that humans can see an example of the notebook in places like github that otherwise would strip out the iframe and code that generates the interactive visualizations.
-
-
-
 | file | outputs in git | what it is |
 |---|---|---|
-| [`alchemy-viz-demo.ipynb`](./alchemy-viz-demo.ipynb) | **none** | Run it this locally |
-| [`alchemy-viz-gallery.ipynb`](./alchemy-viz-gallery.ipynb) | screenshots, ~660 kB | Renders on GitHub. |
+| [`alchemy-viz-demo.ipynb`](./alchemy-viz-demo.ipynb) | **none** | the one to run locally |
+| [`alchemy-viz-gallery.ipynb`](./alchemy-viz-gallery.ipynb) | screenshots, ~660 kB | the one that renders on GitHub |
 
----
+## alchemy-viz-demo.ipynb
 
-## `alchemy-viz-demo.ipynb` - real notebook to run
+Opens with **Start here: your own OpenFE objects** - the `network_setup/`
+directory `openfe plan-rbfe-network` writes, the same campaign planned in
+Python, and the shell equivalent. It runs without openfe installed: the
+openfe-only cells report and skip, and the rest falls back to
+`scripts/data/tyk2_network.graphml`, a real `ligand_network.graphml` from
+OpenFE's RBFE tutorial.
 
-It opens with **Start here: your own OpenFE objects**, which is the only section
-written for a user rather than for this repository: the `network_setup/` directory
-`openfe plan-rbfe-network` writes and how to read each of the three files in it,
-the same campaign planned in Python instead, and the shell equivalent. It runs
-without openfe installed - the openfe-only cells report and skip, and the rest
-falls back to `scripts/data/tyk2_network.graphml`, which is a real
-`ligand_network.graphml` from OpenFE's RBFE tutorial.
-
-After that, the repository's own test bench: every payload type, the live-gufe-object
-path, and every way of delivering a view - static only, live with update-in-place,
-`static=False`, `to_html` to a file, the CLI, the byte costs, and the three
-degradation cases. This is the part to run when you have changed something and
-want to know whether it still works.
+After that is the repository's own test bench - every payload type, and every
+way of delivering a view. Run this when you have changed something.
 
 ```bash
 pixi run notebook    # JupyterLab, on this file
 pixi run marimo      # the same file, converted, in marimo
 ```
 
-It is committed **with no outputs**, and should stay that way. Its outputs are
-`<iframe srcdoc="...">` carrying a whole page each, so a saved run adds a
-quarter of a megabyte per view to a file that is otherwise 20 kB - and none of
-it renders on GitHub anyway. Clear outputs before committing.
+Committed **with no outputs**, and should stay that way: each output is an
+`<iframe srcdoc="...">` carrying a whole page, a quarter of a megabyte per view
+in a file that is otherwise 20 kB, and none of it renders on GitHub anyway.
 
-## `alchemy-viz-gallery.ipynb` - the one you look at online
+## alchemy-viz-gallery.ipynb
 
-The same views, as pictures, so that **the visualizations are visible on GitHub
-to someone who is not going to install anything** - a reviewer on a pull
-request, mostly.
+The same views as pictures, so they are visible on GitHub to someone who is not
+going to install anything. GitHub's notebook renderer strips the `<iframe>` and
+`<script>` that `view()` emits, and `image/png` is the one output type that
+survives.
 
-### Why it has to exist
+The cells hold the real `alchemy_viz.view(...)` call, so running the notebook
+replaces every screenshot with the live view - a fine way to check that a
+picture is honest, and a bad way to leave the file. **Do not commit the result.**
+`pixi run gallery` restores it.
 
-GitHub's notebook renderer strips `<iframe>` and `<script>` from cell outputs.
-That is everything `view()` emits: the static layer is an
-`<iframe srcdoc>` holding the page, and the live layer is a widget that needs a
-kernel and a widget manager, neither of which GitHub has. So an executed copy of
-the demo notebook shows a blank under every single cell there, however well it
-works in a browser.
-
-`image/png` is the one output type that survives. Hence screenshots.
-
-### It is a picture of the truth, not the truth
-
-The cells hold the **real** `alchemy_viz.view(payloads[...])` call. Run the gallery
-notebook and every screenshot is replaced by the live, interactive view - which
-is a fine way to check that a picture is honest, and a bad way to leave the file.
-
-**If you run it, do not commit the result.** Running replaces the PNGs with the
-HTML outputs GitHub cannot show, which is the whole problem this file exists to
-solve. Restore it with:
-
-```bash
-pixi run gallery
-```
-
-### When to regenerate
-
-**Whenever you change what a view draws.** The screenshots are a snapshot; they
-do not know the drawing code moved on, and a stale gallery is worse than no
-gallery because it looks authoritative. `pixi run gallery` rebuilds the bundle
-first, so it always pictures the current source.
-
-Adding a new payload type means adding it to `NOTES` in
+Regenerate **whenever you change what a view draws**: the screenshots do not
+know the drawing code moved on, and a stale gallery looks authoritative. A new
+payload type needs a row in `NOTES` in
 [`scripts/make_gallery.py`](../../scripts/make_gallery.py), which is both the
 caption and the list of what gets captured.
 
-### How the pictures are made
+That script writes each payload through `to_html`, screenshots the page in
+headless Chrome, and embeds the PNG. Two details in it are not optional:
 
-`scripts/make_gallery.py` writes each example payload through `to_html`,
-screenshots the page in headless Chrome, and embeds the PNG as the cell's
-output. Two details in there are not optional and were both learned the hard
-way:
+- **`--enable-unsafe-swiftshader --use-gl=angle --use-angle=swiftshader`** -
+  without software WebGL, 3Dmol cannot create a context and every 3D pane comes
+  out as "error creating viewer".
+- **Watch for the file, then kill the browser** - given a throwaway profile,
+  Chrome writes the PNG and does not exit.
 
-- **`--enable-unsafe-swiftshader --use-gl=angle --use-angle=swiftshader`.** A
-  headless browser has no GPU, and without software WebGL 3Dmol cannot create a
-  context: every 3D pane comes out as *"error creating viewer"* rather than as a
-  molecule.
-- **Watch for the file, then kill the browser.** Given a throwaway profile,
-  Chrome writes the PNG and then does not exit. The script waits for the file's
-  size to settle and terminates it, rather than waiting out a timeout per page.
-
-It uses whatever Chrome or Chromium is on the machine; set `CHROME` to point at
-a different binary. Nothing else in this repository needs a browser installed,
-so this is the only task that will fail for the lack of one.
+It uses whatever Chrome or Chromium is on the machine; set `CHROME` to point
+elsewhere. This is the only task here that needs a browser.

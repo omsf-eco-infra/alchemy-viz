@@ -27,7 +27,7 @@ side by side.
 Deliberately not committed and not part of ``check-generated``. The bytes depend
 on the installed RDKit's drawing code, so committing them would turn an RDKit
 upgrade into a spurious CI failure, and the value here is in looking at the
-pictures rather than in diffing them. Output goes under ``do-not-commit`` by
+pictures rather than in diffing them. Output goes under ``scratch`` by
 default for that reason.
 
     pixi run parity-reference
@@ -43,7 +43,7 @@ import sys
 REPO = pathlib.Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO / "python"))
 
-DEFAULT_OUT = REPO / "do-not-commit" / "parity-reference"
+DEFAULT_OUT = REPO / "scratch" / "parity-reference"
 
 
 def _mappings() -> dict[str, object]:

@@ -32,7 +32,7 @@ They are large enough to cost more context than they can repay. Use `head`,
   `jak2_network_edges.json` (133K), `tyk2_protein.pdb`, `large_network.sdf`
   (~400K each)
 - `python/alchemy_viz/_assets/alchemy-viz.js` (~400K, generated)
-- `do-not-commit/` is scratch, not part of the project
+- `scratch/` is scratch, not part of the project
 
 `examples/small_molecule.json`, `ligand_network.json`, `transformation.json` and
 `solvent.json` are small and are the ones to read when you need payload shape.

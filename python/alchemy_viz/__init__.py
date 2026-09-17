@@ -1,43 +1,21 @@
 """alchemy-viz - interactive browser visualizations for gufe objects.
 
-    >>> from alchemy_viz import to_html, view
-    >>> html = to_html(small_molecule_component)  # returns a string
-    >>> view(small_molecule_component)  # the same page, in a notebook
+    >>> from alchemy_viz import to_html, view, payload_for
+    >>> html = to_html(small_molecule_component)  # the page, as a string
+    >>> view(small_molecule_component)  # the same page, in a cell
+    >>> payload = payload_for(small_molecule_component)  # the dict behind both
 
-A separate library from gufe, and one that depends on gufe. Both halves of that
-are load-bearing. alchemy-viz imports gufe itself, to read the objects it draws;
-it is never handed one by gufe. And it is not integrated into gufe's code -
-nothing in gufe or openfe imports this package, calls it, or knows it exists. It
-patches nothing, registers nothing, and overrides no method on any gufe class,
-so installing it changes the behaviour of nothing already installed and
-uninstalling it breaks nothing.
+Three entry points, one per context: :func:`to_html`, :func:`view` (see
+:mod:`alchemy_viz.notebook`) and ``alchemy-viz <input>`` (see
+:mod:`alchemy_viz.cli`). Nothing in gufe or openfe calls back into this package;
+installing it patches nothing and overrides no method on any gufe class.
 
-That makes it a library you call independently: you import one of the entry
-points below and call it yourself, on an object you already have.
+``schema/alchemy-viz.schema.json`` is the contract a payload satisfies, and the
+compiled TypeScript in ``alchemy_viz/_assets/`` is what draws it.
 
-There are three, one per context:
-
-* :func:`to_html` returns the page as a string and writes nothing - where it
-  goes is the caller's decision;
-* :func:`view` is the notebook's answer to the same question, see
-  :mod:`alchemy_viz.notebook` for what a cell gets and why it is in an iframe;
-* ``alchemy-viz <input> -o out.html`` renders an object already on disk, see
-  :mod:`alchemy_viz.cli`.
-
-The intermediate value is a plain, schema-valid dict:
-
-    >>> from alchemy_viz import payload_for
-    >>> payload = payload_for(small_molecule_component)
-
-``schema/alchemy-viz.schema.json`` in this repository is the contract it satisfies,
-and the compiled TypeScript in ``alchemy_viz/_assets/`` is what draws it.
-
-gufe is imported lazily, inside :func:`payload_for`, rather than at module
-scope. That is what lets ``import alchemy_viz`` and :func:`to_html` on an
-existing payload dict work in an environment that has the wheel but not gufe -
-which is the normal state after ``pip install alchemy-viz``, since gufe is not
-installable from PyPI. :mod:`alchemy_viz._gufe` explains that, and is what turns
-the missing import into an instruction rather than a ``ModuleNotFoundError``.
+gufe is imported lazily inside :func:`payload_for`, so ``import alchemy_viz`` and
+:func:`to_html` on an existing payload dict work without it. See
+:mod:`alchemy_viz._gufe`.
 """
 
 from __future__ import annotations
@@ -61,19 +39,13 @@ except PackageNotFoundError:  # pragma: no cover
 def payload_for(obj: GufeTokenizable) -> dict[str, Any]:
     """Serialize a gufe object into a schema-valid payload dict.
 
-    Dispatch is ``isinstance``, most-derived first. Ordering matters in one
-    place: every component goes through :func:`components.component_payload`,
-    which has its own most-derived-first table so that a membrane system is not
+    Dispatch is ``isinstance``, most-derived first, so a membrane system is not
     serialized as a plain protein.
 
-    Raises ``TypeError`` for anything this cannot visualize, including a gufe
-    object of a kind with no builder. That is deliberate and
-    is *not* in tension with the graceful-degradation rule: degrading matters
-    for an unrecognized component found *inside* a chemical system, where the
-    user did nothing wrong and the alternative is that the whole system fails to
-    draw. Those return an ``UnknownComponentViz`` and never raise. A top-level
-    call on an unsupported type is a mistake at the call site, and saying so
-    immediately is more useful than a panel.
+    Raises ``TypeError`` for anything this cannot visualize. That is not in tension
+    with graceful degradation: an unrecognized component found *inside* a chemical
+    system returns an ``UnknownComponentViz`` rather than failing the whole system,
+    but a top-level call on an unsupported type is a mistake at the call site.
     """
     from ._gufe import require_gufe
 

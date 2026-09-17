@@ -1,19 +1,14 @@
 """The registry: one copy of each gufe object, addressed by its gufe key.
 
-Every reference from one visualization payload to another is a gufe key, and the
-objects those keys name live in the ``registry`` array on the root payload. That
-is the whole deduplication story, and it is deliberately the *only* one: there
-are no reference-only or summary-only variants of any type, so what a key
-resolves to is always the complete, drawable object.
+Every reference from one payload to another is a gufe key, and the objects those
+keys name live in the ``registry`` array on the root payload. That is the only
+deduplication mechanism: there are no reference-only or summary-only variants,
+so a key always resolves to a complete, drawable object.
 
-A gufe key is content-derived, so two occurrences of the same molecule - a
-ligand-network node and the endpoint of three of its mappings - produce the same
-key and collapse into one entry without anyone having to notice they were the
-same. That is what :meth:`Registry.add` relies on.
-
-This is worth doing here rather than over a wire because a payload is a
-single-shot dump: there is no server to ask for the protein a node refers to, so
-the protein travels with the graph - once.
+gufe keys are content-derived, so the same molecule reached twice - as a network
+node and as a mapping endpoint - collapses into one entry without anyone having
+to notice. A payload is a single-shot dump with no server to ask, so the protein
+a node refers to travels with the graph, once.
 """
 
 from __future__ import annotations
@@ -30,9 +25,8 @@ class Registry:
     def add(self, payload: dict[str, Any]) -> str:
         """Register ``payload`` and return the key that now refers to it.
 
-        First writer wins. Equal keys mean equal gufe objects, so a second copy
-        is the duplicate this class exists to drop - keeping the first is not a
-        choice between two different things.
+        First writer wins: equal keys mean equal gufe objects, so keeping the first is
+        not a choice between two different things.
         """
         key = payload["gufe-key"]
         self._entries.setdefault(key, payload)
@@ -41,11 +35,9 @@ class Registry:
     def entries(self) -> list[dict[str, Any]]:
         """The pool, sorted by ``(type, gufe-key)``.
 
-        Sorted because the committed example payloads have to be byte-stable
-        across runs and gufe holds most of its collections in a ``frozenset``.
-        By type first so the ordering is legible in a diff - all the molecules,
-        then the protocols, then the systems - rather than alphabetical by
-        digest.
+        Sorted because the committed examples have to be byte-stable and gufe holds most
+        collections in a ``frozenset``. By type first so a diff is legible - all the
+        molecules, then the protocols, then the systems.
         """
         return sorted(self._entries.values(), key=lambda entry: (entry["type"], entry["gufe-key"]))
 

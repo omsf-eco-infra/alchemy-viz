@@ -18,7 +18,7 @@ to a chemist or read as a result.
     pixi run big-network -n 934 -o /tmp/x.json
     pixi run big-network -n 934 --html /tmp/x.html
 
-Its payloads are written to `do-not-commit/`, because they run to megabytes and
+Its payloads are written to `scratch/`, because they run to megabytes and
 are made fresh whenever a measurement is wanted. One output is committed, and
 only as an input: `--sdf` freezes the ligands as a mol file, and
 `scripts/data/large_network.sdf` is the 200 of them that
@@ -293,7 +293,7 @@ def main(argv: list[str] | None = None) -> int:
 
     mols, payload = build(args.ligands, args.edges_per_node, args.seed)
 
-    destination = args.output or REPO / "do-not-commit" / f"big_network_{args.ligands}.json"
+    destination = args.output or REPO / "scratch" / f"big_network_{args.ligands}.json"
     destination.parent.mkdir(parents=True, exist_ok=True)
     text = json.dumps(payload)
     destination.write_text(text, encoding="utf-8")

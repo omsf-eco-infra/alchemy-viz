@@ -1,20 +1,12 @@
 """One place to say "gufe is not here, and here is how to get it".
 
-gufe cannot be a hard requirement in ``pyproject.toml``. The only release on
-PyPI is 0.4, which predates the 1.0 API this package is written against, so
-declaring ``gufe>=1.12`` there would make ``pip install alchemy-viz`` fail its
-resolution step for everyone, including the people who already have a working
-gufe from conda-forge. Leaving it out is what lets the wheel install into an
-existing openfe environment and find the gufe that is already there.
-
-The cost of leaving it out is that the failure moves from install time to
-import time, where pip's own message would be a bare ``ModuleNotFoundError``
-naming a package the reader cannot pip-install. :func:`require_gufe` is what
-replaces that with the conda-forge instruction.
-
-Nothing in this module runs unless a caller actually needs gufe. Importing
-:mod:`alchemy_viz` and rendering a payload dict that some other process built
-stays free of it.
+gufe cannot be a hard requirement in ``pyproject.toml``: the only release on
+PyPI is 0.4, which predates the 1.0 API, so ``gufe>=1.12`` there would fail
+``pip install alchemy-viz`` for everyone - including the people who already have
+a working conda-forge gufe in the environment they are installing into. The cost
+is that the failure moves to import time, where pip's own message would be a
+bare ``ModuleNotFoundError`` naming a package the reader cannot pip-install.
+:func:`require_gufe` replaces that with the conda-forge instruction.
 """
 
 from __future__ import annotations
@@ -53,9 +45,8 @@ conda-forge:
 def _numeric_prefix(version: str) -> tuple[int, ...]:
     """The leading dotted integers of a version string, as a comparable tuple.
 
-    Stops at the first part that is not a plain integer, so a development
-    version like ``1.13.0.dev4+g1a2b3c`` compares as ``(1, 13, 0)`` and a
-    version this cannot read at all compares as ``()``.
+    Stops at the first non-integer part, so ``1.13.0.dev4+g1a2b3c`` compares as
+    ``(1, 13, 0)`` and an unreadable version as ``()``.
     """
     parts: list[int] = []
     for part in version.split("."):
@@ -69,10 +60,9 @@ def _numeric_prefix(version: str) -> tuple[int, ...]:
 def require_gufe() -> ModuleType:
     """Import and return :mod:`gufe`, or explain how to install a usable one.
 
-    Both failure modes land here: no gufe at all, and a gufe too old to have
-    the 1.0 API. Raises ``ImportError`` rather than a custom exception type so
-    that callers who already handle a missing optional dependency keep working;
-    the message is the part that matters.
+    Both failure modes land here: no gufe at all, and a gufe too old for the 1.0
+    API. Raises ``ImportError`` rather than a custom type, so callers that already
+    handle a missing optional dependency keep working.
     """
     try:
         import gufe

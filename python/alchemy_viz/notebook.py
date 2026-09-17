@@ -1,29 +1,19 @@
 """``alchemy_viz.view(obj)`` - the visualization page in a notebook cell.
 
-Two layers come out of one call, because two different things are being asked
-for and they are not the same thing:
+One call produces two layers, and the frontend picks:
 
-* **static** - the page :func:`alchemy_viz.to_html` produces, in an
-  ``<iframe srcdoc>``, offered as ``text/html``. Needs no dependency and no
-  kernel, so a saved notebook still draws when it is mailed, exported by
-  nbconvert, or opened by someone who has none of this installed.
-* **live** - an anywidget carrying a shell page and the payload as widget
-  state, offered as a widget view. Setting ``.payload`` again redraws in place,
-  which is the update beat of the element lifecycle.
+* **static** - the :func:`alchemy_viz.to_html` page in an ``<iframe srcdoc>``,
+  offered as ``text/html``. Needs no dependency and no kernel, so a saved
+  notebook still draws when exported or mailed.
+* **live** - an anywidget carrying a shell page and the payload as widget state.
+  Setting ``.payload`` again redraws in place.
 
-Both end at the same two lines the HTML export ends at: create a
-``<alchemy-view>``, set its ``.payload``. The frontend chooses which layer it
-renders; a live kernel with a widget manager takes the widget, everything else
-falls back to the page.
+Both end at the same two lines: create a ``<alchemy-view>``, set its
+``.payload``. Both use an iframe rather than the cell's own DOM, so notebook CSS
+and third-party visualization libraries cannot collide.
 
-Both put the view in an **iframe** rather than in the cell's own DOM to avoid
-CSS pollution and other javascript and DOM errors. Third party modules for
-visualization will also likely conflict with notebook webpage logic, so keeping
-things cleanly separate as an Iframe is necessary and costs nothing.
-
-anywidget is an optional dependency (``pip install alchemy-viz[notebook]``).
-Without it, :func:`view` returns the static layer alone and says nothing about
-it - a picture is a picture.
+anywidget is optional (``pip install alchemy-viz[notebook]``); without it
+:func:`view` returns the static layer alone.
 """
 
 from __future__ import annotations
@@ -126,8 +116,7 @@ def _widget_type():
     """The anywidget subclass, built on first use.
 
     Defined inside a function because ``anywidget`` is optional: importing it at
-    module scope would make ``import alchemy_viz`` fail without it, which is the
-    opposite of what an optional dependency means.
+    module scope would make ``import alchemy_viz`` fail without it.
     """
     global _widget_class
     if _widget_class is not None:
@@ -139,8 +128,8 @@ def _widget_type():
     class GufeWidget(anywidget.AnyWidget):
         """One ``<alchemy-view>``, live.
 
-        Assign a new payload - or a new gufe object, which is coerced - and the
-        view redraws in place::
+        Assign a new payload - or a new gufe object, which is coerced - and the view
+        redraws in place::
 
             w = alchemy_viz.view(ligand)
             w.payload = other_ligand
@@ -204,41 +193,21 @@ def view(
     static: bool = True,
     live: bool = True,
 ):
-    """Display ``obj`` in a notebook cell.
+    """Display ``obj`` - a gufe object or a payload dict - in a notebook cell.
 
-    Parameters
-    ----------
-    obj
-        A gufe object, or an already-built payload dict.
-    height
-        The iframe's CSS height.
-    title
-        The page ``<title>``, used only by the static layer.
-    static
-        Embed the standalone page, so the cell still draws with no kernel.
-        ``False`` halves what a live view costs to display and leaves an
-        exported notebook blank where this cell was.
-    live
-        Use anywidget when it is installed. ``False`` forces the static layer.
+    ``height`` is the iframe's CSS height and ``title`` the static layer's page
+    title. ``static=False`` halves what a live view costs and leaves an exported
+    notebook blank; ``live=False`` forces the static layer.
 
-    Returns
-    -------
-    A widget when anywidget is installed and ``live``, otherwise a
+    Returns a widget when anywidget is installed and ``live``, otherwise a
     :class:`StaticView`. Both display; only the widget updates.
 
-    Notes
-    -----
-    Displaying a view sends the bundle to the browser, per view: once in the
-    page when ``static``, once in the widget's shell when live, and both when
-    both. On JupyterLab those messages share the kernel's iopub channel with its
-    default rate limit, so a notebook that creates many views in one burst can
-    have messages dropped by the server rather than delivered slowly. ``static``
-    and ``live`` are the two knobs for that.
+    Each displayed view sends the bundle to the browser - once per layer - and on
+    JupyterLab those messages share the kernel's rate-limited iopub channel, so many
+    views in one burst can have messages dropped. ``static`` and ``live`` are the
+    two knobs for that.
 
-    Raises
-    ------
-    TypeError
-        If ``obj`` is not something alchemy-viz can visualize.
+    Raises ``TypeError`` for an object alchemy-viz cannot visualize.
     """
     payload = _as_payload_dict(obj)
     summary = _summary(payload)

@@ -26,7 +26,7 @@ import { depictGround, setDarkDepictions } from "../shared/depict-theme.js";
 import { V } from "../shared/theme.js";
 
 /** gufe's drawings, if they have been generated. */
-const REFERENCE = import.meta.glob<string>("../../../do-not-commit/parity-reference/*.svg", {
+const REFERENCE = import.meta.glob<string>("../../../scratch/parity-reference/*.svg", {
   query: "?raw",
   import: "default",
   eager: true,

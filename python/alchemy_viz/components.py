@@ -1,20 +1,16 @@
 """Components and chemical systems: live gufe objects to visualization payloads.
 
-This is the Python half of the contract. It reads **live gufe objects** and asks
-them to serialize themselves the way they already know how - ``to_sdf()``,
-``to_pdb_file()`` - rather than touching gufe's own JSON representation.
+Builders read **live gufe objects** and ask them to serialize themselves the way
+they already know how - ``to_sdf()``, ``to_pdb_file()`` - rather than touching
+gufe's own JSON. A saved gufe ``.json`` is deserialized into live objects first.
 
-When the input is a saved gufe ``.json`` file, Python deserializes it into live
-gufe objects *first* and then builds the payload from those. TypeScript never
-sees gufe JSON.
-
-Builders return **plain dicts**. ``schema/alchemy-viz.schema.json`` is the source of
-truth for their shape, and it is hand-written rather than generated from
-anything here: a schema derived from Python carries across only what the
-derivation step happens to translate, so a rule can be enforced in the code and
-missing from the schema the browser reads. Correctness is enforced by tests
-instead - every builder's output is validated against the schema, and
-``python/tests/mutations.json`` proves the schema rejects what it claims to reject.
+They return **plain dicts**. ``schema/alchemy-viz.schema.json`` is the source of
+truth for their shape, and is hand-written rather than derived from anything
+here: a derived schema carries across only what the derivation step translates,
+so a rule could hold in the code and be missing from the schema the browser
+reads. Tests close that instead - every builder's output is validated against
+the schema, and ``python/tests/mutations.json`` proves the schema rejects what it
+claims to.
 """
 
 from __future__ import annotations
@@ -32,16 +28,9 @@ from .registry import Registry
 def gufe_key(obj: Any) -> str:
     """The object's gufe key, as a string.
 
-    Every payload that stands for a ``GufeTokenizable`` carries one. It is what
-    the registry addresses an object by, and - because a gufe key is
-    deterministic and repeatable within a software environment - it is also the
-    identifier worth having in front of you when a payload does not draw.
-
-    Note the two spellings, which are the two gufe uses. In JSON the field is
-    ``gufe-key``, hyphenated, the way gufe writes it in its own serialized form -
-    which is what ``gufe.tokenization.is_gufe_key_dict`` looks for. In Python it
-    is ``gufe_key``, an identifier, because a hyphen is not one. This function is
-    the Python spelling and the string it is assigned to is the JSON one.
+    Two spellings, both gufe's: ``gufe-key`` in JSON, the way gufe writes it and
+    what ``gufe.tokenization.is_gufe_key_dict`` looks for, and ``gufe_key`` in
+    Python, because a hyphen is not an identifier.
     """
     return str(obj.key)
 
@@ -49,10 +38,9 @@ def gufe_key(obj: Any) -> str:
 def display_name(obj: GufeTokenizable) -> str:
     """The object's name, as a string that is never ``None``.
 
-    Every ``name`` in the schema is a required, non-nullable string. gufe's own
-    fixtures are full of unnamed molecules, so "" is the normal case rather than
-    an error, and a view that wants to show something else falls back on its own
-    terms rather than having to distinguish "" from ``None``.
+    Every ``name`` in the schema is a required, non-nullable string. Unnamed
+    molecules are the normal case rather than an error, so "" is what a view falls
+    back from - it never has to distinguish "" from ``None``.
     """
     return getattr(obj, "name", "")
 
@@ -68,10 +56,9 @@ def json_safe(value: Any) -> Any:
     """Coerce ``value`` into something ``json.dumps`` can handle.
 
     Free-form gufe metadata - ``LigandAtomMapping.annotations`` most of all - can
-    hold ``openff.units.Quantity`` and other rich objects. A visualization only
-    ever *displays* these, so rendering the leftovers with ``str()``
-    ("1.2 nanometer") is both lossless enough and far more readable than gufe's
-    ``:custom:`` JSON codec.
+    hold ``openff.units.Quantity`` and friends. A visualization only ever displays
+    these, so ``str()`` ("1.2 nanometer") is lossless enough and far more readable
+    than gufe's ``:custom:`` codec.
     """
     return json.loads(json.dumps(value, default=str))
 
@@ -144,12 +131,10 @@ def unknown_component_payload(component: gufe.Component) -> dict[str, Any]:
 
 
 def protocol_payload(protocol: Any) -> dict[str, Any]:
-    """A gufe Protocol, named.
+    """A gufe Protocol, named by its class.
 
-    A Protocol has no ``name`` of its own, so the class name is what identifies
-    it and ``name`` is normally empty. Settings are left out for now: they are
-    large, deeply nested and nothing draws them, and adding them later is an
-    additive change.
+    A Protocol has no ``name`` of its own. Settings are left out: they are large,
+    deeply nested and nothing draws them, and adding them later is additive.
     """
     return {
         "type": "ProtocolViz",
@@ -190,17 +175,12 @@ COMPONENT_BUILDERS: tuple[tuple[type[gufe.Component], Any], ...] = (
 def component_payload(component: gufe.Component) -> dict[str, Any]:
     """Build the visualization payload for one gufe component.
 
-    The failure rule is three-way, and the middle case is the one worth stating.
-    Handed something that is not a gufe Component, this raises ``TypeError``,
-    because that is programmer error. Handed an **unrecognized** Component
-    subclass, it returns an ``UnknownComponentViz`` and does not raise: gufe
-    plans for custom components, and raising would stop the process - in a
-    notebook widget that leaves the frontend disconnected from the backend.
-
-    But a **recognized** component whose serializer then fails is left to raise.
-    A ``SmallMoleculeComponent`` whose ``to_sdf()`` blows up is a real bug, and
-    catching it here would file it under "sorry, I cannot draw this" where
-    nobody would ever find it.
+    Three-way failure rule. Something that is not a gufe Component raises
+    ``TypeError``. An **unrecognized** Component subclass returns an
+    ``UnknownComponentViz`` without raising, because gufe plans for custom
+    components. But a **recognized** component whose serializer fails is left to
+    raise: a ``SmallMoleculeComponent`` whose ``to_sdf()`` blows up is a real bug,
+    and filing it under "sorry, I cannot draw this" would bury it.
     """
     if not isinstance(component, gufe.Component):
         raise TypeError(f"expected a gufe.Component, got {type(component).__name__}")
@@ -215,19 +195,13 @@ def component_payload(component: gufe.Component) -> dict[str, Any]:
 def chemical_system_payload(system: gufe.ChemicalSystem, registry: Registry | None = None) -> dict[str, Any]:
     """A chemical system, as its labels mapped to the gufe keys of its components.
 
-    The components go into ``registry``; the system carries only their keys.
-    That is what lets forty systems in an alchemical network share one protein
-    without carrying the PDB forty times, and it is the same shape whether this
-    system is the whole payload or one node of a network - there is no separate
-    "system inside a network" type.
+    The components go into ``registry``; the system carries only their keys, which
+    is what lets forty systems share one protein. The shape is the same whether this
+    system is the whole payload or one node of a network.
 
-    When no ``registry`` is passed this system *is* the root payload, so it
-    builds one and carries it. When a caller passes one, the caller is the root
-    and will carry the pool itself.
-
-    Components are sorted by label so a committed fixture is byte-stable across
-    runs: gufe holds them in a dict built from a mapping whose order is not
-    guaranteed to be the same twice.
+    With no ``registry`` passed this system is the root payload and builds one;
+    otherwise the caller is the root and carries the pool. Components are sorted by
+    label so a committed fixture is byte-stable.
     """
     if not isinstance(system, gufe.ChemicalSystem):
         raise TypeError(f"expected a gufe.ChemicalSystem, got {type(system).__name__}")
