@@ -14,7 +14,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { el } from "../src/shared/dom.js";
 import { buttonGroup } from "../src/shared/controls.js";
 import { headerStrip } from "../src/shared/panels.js";
-import { CHROME_OPEN_BY_DEFAULT, chromeMenu, splitter } from "../src/shared/chrome.js";
+import { CHROME_OPEN_BY_DEFAULT, chromeMenu, sidePane, splitter } from "../src/shared/chrome.js";
 import { num } from "../src/shared/settings.js";
 import { HEADER_LINE } from "../src/shared/style.js";
 
@@ -361,5 +361,133 @@ describe("a row of buttons", () => {
     // A padded, bordered button set to `width:100%` is 100% plus the padding
     // and the border without this, which is twenty pixels past the edge.
     expect(button.style.boxSizing).toBe("border-box");
+  });
+});
+
+/**
+ * The other arrangement of two panes: one column sized in pixels, the pane
+ * beside it taking what is left.
+ *
+ * What a reader would notice breaking is the column not moving, the drag
+ * escaping the numbers the view gave it, or a stacked pane still carrying a
+ * handle that divides nothing. Those are what these assert; the width itself is
+ * read back off `flex`, because that is the property the two callers handed over
+ * and the one a second owner of it would silently take back.
+ */
+describe("sidePane", () => {
+  const row = (): { row: HTMLDivElement; column: HTMLDivElement; rest: HTMLDivElement } => {
+    const wrap = el("div", "display:flex;") as HTMLDivElement;
+    const column = el("div") as HTMLDivElement;
+    const rest = el("div") as HTMLDivElement;
+    wrap.append(column, rest);
+    document.body.replaceChildren(wrap);
+    return { row: wrap, column, rest };
+  };
+
+  /** jsdom lays nothing out and captures no pointers, so both are supplied. */
+  const draggable = (handle: HTMLElement, column: HTMLElement, left: number): void => {
+    handle.setPointerCapture = () => {};
+    handle.releasePointerCapture = () => {};
+    column.getBoundingClientRect = () =>
+      ({ left, top: 0, width: 200, height: 100, right: left + 200, bottom: 100, x: left, y: 0, toJSON: () => ({}) }) as DOMRect;
+  };
+
+  const pixels = (pane: HTMLElement): number => Number(/(\d+)px/.exec(pane.style.flex)![1]);
+
+  const pointer = (type: string, clientX: number): MouseEvent => {
+    const event = new MouseEvent(type, { bubbles: true, clientX });
+    Object.defineProperty(event, "pointerId", { value: 1 });
+    return event;
+  };
+
+  it("sizes the column in pixels and caps its share of the row", () => {
+    const { row: host, column } = row();
+    const pane = sidePane(column, { initial: 210, maxShare: "42%" });
+    host.insertBefore(pane.element, host.lastElementChild);
+    expect(pixels(column)).toBe(210);
+    expect(column.style.maxWidth).toBe("42%");
+  });
+
+  it("opens where it was left", () => {
+    const remember = num("test.sidePane.remembered", 210, 150, 460);
+    remember.set(330);
+    const { row: host, column } = row();
+    const pane = sidePane(column, { initial: 210, min: 150, max: 460, remember });
+    host.insertBefore(pane.element, host.lastElementChild);
+    expect(pixels(column)).toBe(330);
+  });
+
+  it("moves on a drag, remembers where it stopped, and redraws once", () => {
+    const remember = num("test.sidePane.dragged", 210, 150, 460);
+    const onResize = vi.fn();
+    const { row: host, column } = row();
+    const pane = sidePane(column, { initial: 210, min: 150, max: 460, remember, onResize });
+    host.insertBefore(pane.element, host.lastElementChild);
+    // The column starts 40px into the row, so the width is measured from there
+    // rather than from the row's own edge.
+    draggable(pane.element, column, 40);
+
+    pane.element.dispatchEvent(pointer("pointerdown", 250));
+    pane.element.dispatchEvent(pointer("pointermove", 340));
+    // Mid-drag the column has moved and nothing has been asked to redraw yet:
+    // on the far side of that callback is a 3D viewer resizing its canvas.
+    expect(pixels(column)).toBe(300);
+    expect(onResize).not.toHaveBeenCalled();
+
+    pane.element.dispatchEvent(pointer("pointerup", 340));
+    expect(onResize).toHaveBeenCalledTimes(1);
+    expect(remember.get()).toBe(300);
+  });
+
+  it("stays inside its bounds however far the pointer goes", () => {
+    const { row: host, column } = row();
+    const pane = sidePane(column, { initial: 210, min: 150, max: 460 });
+    host.insertBefore(pane.element, host.lastElementChild);
+    draggable(pane.element, column, 0);
+
+    pane.element.dispatchEvent(pointer("pointerdown", 210));
+    pane.element.dispatchEvent(pointer("pointermove", -800));
+    expect(pixels(column)).toBe(150);
+    pane.element.dispatchEvent(pointer("pointermove", 4000));
+    expect(pixels(column)).toBe(460);
+  });
+
+  it("ignores a pointer that never went down on it", () => {
+    const { row: host, column } = row();
+    const pane = sidePane(column, { initial: 210 });
+    host.insertBefore(pane.element, host.lastElementChild);
+    draggable(pane.element, column, 0);
+
+    pane.element.dispatchEvent(pointer("pointermove", 400));
+    expect(pixels(column)).toBe(210);
+  });
+
+  it("lets the column size itself once the panes are stacked, and hides the handle", () => {
+    const { row: host, column } = row();
+    const pane = sidePane(column, { initial: 210, maxShare: "42%" });
+    host.insertBefore(pane.element, host.lastElementChild);
+
+    pane.orient(true);
+    // Stacked there is no column to widen: the caller has capped the height
+    // instead, and a handle left in the row would rule across the middle of it.
+    expect(column.style.flex).toBe("0 0 auto");
+    expect(column.style.maxWidth).toBe("none");
+    expect(pane.element.style.display).toBe("none");
+
+    pane.orient(false);
+    expect(pixels(column)).toBe(210);
+    expect(pane.element.style.display).toBe("block");
+  });
+
+  it("does not drag while it is stacked", () => {
+    const { row: host, column } = row();
+    const pane = sidePane(column, { initial: 210 });
+    host.insertBefore(pane.element, host.lastElementChild);
+    draggable(pane.element, column, 0);
+    pane.orient(true);
+
+    pane.element.dispatchEvent(pointer("pointerdown", 210));
+    pane.element.dispatchEvent(pointer("pointermove", 400));
+    expect(column.style.flex).toBe("0 0 auto");
   });
 });

@@ -865,11 +865,13 @@ describe("<gufe-chemical-system>", () => {
 
     const column = node.querySelector("button")!.parentElement!.parentElement!;
     expect(column.firstElementChild!.textContent).toBe(payload.name);
-    // The column and the drawing divide the pane between them, with nothing
-    // stacked above either, and no count where the name used to sit.
+    // The column, the handle that resizes it and the drawing divide the pane
+    // between them, with nothing stacked above any of the three, and no count
+    // where the name used to sit.
     const split = column.parentElement!;
-    expect(split.children).toHaveLength(2);
-    expect(split.children[1].querySelector("alchemy-view")).toBeTruthy();
+    expect(split.children).toHaveLength(3);
+    expect(split.children[1].getAttribute("role")).toBe("separator");
+    expect(split.children[2].querySelector("alchemy-view")).toBeTruthy();
     expect(node.textContent).not.toContain("components");
   });
 
@@ -1761,9 +1763,11 @@ describe("<gufe-transformation>", () => {
     await flush();
 
     const mapping = node.querySelector("gufe-atom-mapping")!;
-    // The diff column and the mapping side, and no third thing above them.
+    // The diff column, the handle that resizes it and the mapping side, and
+    // nothing stacked above the three of them.
     const body = mapping.parentElement!.parentElement!;
-    expect(body.children).toHaveLength(2);
+    expect(body.children).toHaveLength(3);
+    expect(body.children[1].getAttribute("role")).toBe("separator");
     const column = body.children[0];
     expect(column.firstElementChild!.textContent).toContain(payload.name);
     expect(column.firstElementChild!.textContent).toContain("DummyProtocol");

@@ -55,6 +55,16 @@ const SPLITTER_LIMITS = { min: 0.2, max: 0.8 };
 const SPLITTER_WIDTH = 5;
 
 /**
+ * How far a `sidePane` column may be dragged, where its caller says nothing.
+ *
+ * The floor is a label's worth of width, under which the column is a scrollbar
+ * with text behind it; the ceiling is the point past which the pane beside it
+ * stops being a picture. `maxShare` is what holds on a pane too narrow for
+ * either number to mean anything, which is where these views are read most.
+ */
+const SIDE_PANE_LIMITS = { min: 130, max: 560, maxShare: "60%" };
+
+/**
  * Turn the rule between two panes of a row into something draggable.
  *
  * Replaces the 1px divider the split views drew for themselves. Both panes are
@@ -161,6 +171,136 @@ export function splitter(
   handle.addEventListener("pointercancel", finish);
 
   return handle;
+}
+
+/** How wide the column a `sidePane` sizes may be dragged, in pixels. */
+export interface SidePaneOptions {
+  /** How wide the column is before anyone drags it. */
+  initial: number;
+  /** The narrowest it may be dragged. */
+  min?: number;
+  /** The widest. */
+  max?: number;
+  /**
+   * ... and the share of the row it may never exceed, whatever the pixels say.
+   *
+   * A CSS `max-width` rather than a clamp inside the drag, so a pane that is
+   * later made narrower - a detail pane whose own divider moved, a window
+   * resized - is capped by the same rule without this having to watch for it.
+   */
+  maxShare?: string;
+  /**
+   * Remember where the column was left. How wide someone wants a list of
+   * components or a diff is a preference about how they read one, and it is the
+   * same preference the next time they open one.
+   */
+  remember?: Setting<number>;
+  /**
+   * Fired when a drag finishes, and when the row changes arrangement. Not per
+   * pointer move: on the far side of both callers is a 3D viewer that resizes
+   * its canvas, and doing that per pixel is what melts a tab.
+   */
+  onResize?(): void;
+  /** Accessible name for the handle. */
+  label?: string;
+}
+
+/** The handle a `sidePane` hands back, and the row telling it how it is laid out. */
+export interface SidePane {
+  /** Put this between the column and what is beside it. */
+  element: HTMLDivElement;
+  /**
+   * Tell it which arrangement the row is in now.
+   *
+   * Which one that is stays the caller's to decide: both callers already watch
+   * their own width against `STACK_BELOW` and rewrite half a dozen styles at the
+   * threshold, and a second opinion about the same question - `splitter`'s, which
+   * is the row's aspect ratio - would have the two disagreeing at some widths.
+   */
+  orient(stacked: boolean): void;
+}
+
+/**
+ * A fixed-width column made draggable.
+ *
+ * The other arrangement of two panes the views use. `splitter` divides a row
+ * into two shares of it, which is what a graph beside a detail pane wants: both
+ * halves are pictures, and neither has a natural width. This is for a row where
+ * only one half has one - a list of components, a diff written down a column -
+ * and the other takes whatever is left. What is stored is therefore pixels
+ * rather than a fraction: a list of labels needs the width a label needs, and
+ * that does not change because the window did.
+ *
+ * It owns `flex` and `max-width` on the column, in both arrangements, so there
+ * is one answer to how wide it is rather than one here and one in the caller's
+ * own width watcher. What the caller keeps is everything else the threshold
+ * changes - which way the row runs, the height cap, which edge is ruled.
+ *
+ * The handle is that rule while the panes are side by side, exactly as
+ * `splitter`'s is, so a caller drawing its own 1px border on the column's
+ * trailing edge should stop: two rules a pixel apart read as a mistake.
+ */
+export function sidePane(before: HTMLElement, options: SidePaneOptions): SidePane {
+  const min = options.min ?? SIDE_PANE_LIMITS.min;
+  const max = options.max ?? SIDE_PANE_LIMITS.max;
+  const maxShare = options.maxShare ?? SIDE_PANE_LIMITS.maxShare;
+  const clamp = (value: number): number => Math.min(max, Math.max(min, value));
+
+  let width = clamp(options.remember?.get() ?? options.initial);
+  let stacked = false;
+
+  const handle = el(
+    "div",
+    `flex:0 0 ${SPLITTER_WIDTH}px;align-self:stretch;touch-action:none;cursor:col-resize;` +
+      `background:${V.splitBorder};`,
+  );
+  handle.setAttribute("role", "separator");
+  handle.setAttribute("aria-orientation", "vertical");
+  handle.setAttribute("aria-label", options.label ?? "Resize the panel");
+
+  const place = (): void => {
+    before.style.flex = stacked ? "0 0 auto" : `0 0 ${Math.round(width)}px`;
+    before.style.maxWidth = stacked ? "none" : maxShare;
+    // Stacked, there is no column to widen: the two panes are one above the
+    // other and the caller has capped the height instead. A handle left in the
+    // row would be a band of border across the middle that does nothing.
+    handle.style.display = stacked ? "none" : "block";
+  };
+  place();
+
+  let dragging = false;
+  handle.addEventListener("pointerdown", (event: PointerEvent) => {
+    if (stacked) return;
+    dragging = true;
+    handle.setPointerCapture(event.pointerId);
+    event.preventDefault();
+  });
+  handle.addEventListener("pointermove", (event: PointerEvent) => {
+    if (!dragging) return;
+    // Measured from the column's own rendered edge rather than the row's, so a
+    // row with something ahead of the column in it - a floating warning, a
+    // future third pane - does not offset every drag by its width.
+    width = clamp(event.clientX - before.getBoundingClientRect().left);
+    place();
+  });
+  const finish = (event: PointerEvent): void => {
+    if (!dragging) return;
+    dragging = false;
+    handle.releasePointerCapture(event.pointerId);
+    options.remember?.set(Math.round(width));
+    options.onResize?.();
+  };
+  handle.addEventListener("pointerup", finish);
+  handle.addEventListener("pointercancel", finish);
+
+  return {
+    element: handle,
+    orient(next: boolean): void {
+      if (next === stacked) return;
+      stacked = next;
+      place();
+    },
+  };
 }
 
 /**

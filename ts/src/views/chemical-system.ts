@@ -16,13 +16,14 @@
  */
 
 import { el, onNarrow } from "../shared/dom.js";
+import { sidePane } from "../shared/chrome.js";
 import { centredMessage, floatingWarning, HIDE_NAME_ATTRIBUTE, typeBadge } from "../shared/panels.js";
 import {
   defineElement,
   AlchemyElement,
   type ViewHandle,
 } from "../shared/element.js";
-import { text } from "../shared/settings.js";
+import { num, text } from "../shared/settings.js";
 import { pickable } from "../shared/controls.js";
 import { FONT, PICK, WEIGHT } from "../shared/style.js";
 import { V } from "../shared/theme.js";
@@ -76,8 +77,24 @@ export function systemPayloadFor(
  */
 const OPEN_LABEL = "chemical-system.component";
 
-/** How wide the strip is where there is room for it beside the drawing. */
+/**
+ * How wide the strip is where there is room for it beside the drawing, before
+ * anyone drags it.
+ */
 const STRIP_WIDTH = 200;
+
+/**
+ * How far it may be dragged.
+ *
+ * The floor is a component's name over its badge; the ceiling is where the
+ * drawing beside it stops being worth drawing. A system whose components are
+ * named at length is exactly the case the drag is for, and the case a fixed
+ * strip served worst.
+ */
+const STRIP_DRAG = { min: 140, max: 420 };
+
+/** ... and the share of a narrow pane it may take, whatever the pixels say. */
+const STRIP_MAX_SHARE = "45%";
 
 /** How tall it may become once it is a band, before it scrolls instead. */
 const STRIP_MAX_HEIGHT = "35%";
@@ -198,6 +215,23 @@ export class GufeChemicalSystem extends AlchemyElement<ChemicalSystemViz> {
       "min-width:0;min-height:0;overflow-y:auto;display:flex;gap:6px;padding:0 10px 10px;",
     );
     aside.appendChild(list);
+
+    // The rule between the strip and the drawing, and the grip on it. The fixed
+    // strip below is where a reader starts, not where they have to stay: how
+    // much of a few hundred pixels a list of component names needs is a fact
+    // about the system in front of them, and only they can see it.
+    const strip = sidePane(aside, {
+      initial: STRIP_WIDTH,
+      min: STRIP_DRAG.min,
+      max: STRIP_DRAG.max,
+      maxShare: STRIP_MAX_SHARE,
+      remember: num("chemical-system.stripWidth", STRIP_WIDTH, STRIP_DRAG.min, STRIP_DRAG.max),
+      label: "Resize the component list",
+      // What is mounted was drawn to the old shape, and a 3D viewer sizes its
+      // canvas once.
+      onResize: () => mounted?.resize?.(),
+    });
+    split.appendChild(strip.element);
 
     const detail = el(
       "div",
@@ -380,11 +414,14 @@ export class GufeChemicalSystem extends AlchemyElement<ChemicalSystemViz> {
     // column in one of those leaves the picture a slit. The strip is what gives,
     // because it is the half that still reads at any width: a picture in a slit
     // is not a smaller picture, it is no picture.
+    // How wide the strip is in either arrangement is `sidePane`'s, which is why
+    // neither `flex` nor `max-width` is set here: the handle is what the reader
+    // drags, and two owners of the same property means whichever ran last wins.
+    // The trailing rule is the handle too, so only the stacked one is drawn.
     const stopWatching = onNarrow(split, (narrow) => {
       split.style.flexDirection = narrow ? "column" : "row";
-      aside.style.flex = narrow ? "0 0 auto" : `0 0 ${STRIP_WIDTH}px`;
+      strip.orient(narrow);
       aside.style.maxHeight = narrow ? STRIP_MAX_HEIGHT : "none";
-      aside.style.borderRight = narrow ? "none" : `1px solid ${V.splitBorder}`;
       aside.style.borderBottom = narrow ? `1px solid ${V.splitBorder}` : "none";
       list.style.flexDirection = narrow ? "row" : "column";
       list.style.flexWrap = narrow ? "wrap" : "nowrap";

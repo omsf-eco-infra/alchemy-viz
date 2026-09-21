@@ -31,6 +31,8 @@
  */
 
 import { el, NO_VALUE, onNarrow } from "../shared/dom.js";
+import { sidePane } from "../shared/chrome.js";
+import { num } from "../shared/settings.js";
 import { buttonGroup } from "../shared/controls.js";
 import { centredMessage, statChip, typeBadge } from "../shared/panels.js";
 import { defineElement, AlchemyElement, type ViewHandle } from "../shared/element.js";
@@ -49,11 +51,20 @@ import type {
 
 export type DiffStatus = "unchanged" | "changed" | "added" | "removed";
 
-/** How wide that column is, where there is room for one. */
+/** How wide that column is, where there is room for one, before anyone drags it. */
 const STATES_WIDTH = 210;
 
 /** ... and how much of the view it may take, on a pane barely wider than it. */
 const STATES_MAX_SHARE = "42%";
+
+/**
+ * How far the column may be dragged.
+ *
+ * The floor is a component label and its A/B marks; past the ceiling the
+ * molecules stop being molecules, and the reader who wants the diff that badly
+ * wants the transformation on its own rather than beside a picture of it.
+ */
+const STATES_DRAG = { min: 150, max: 460 };
 
 /**
  * A transformation, cut loose as a payload that stands on its own.
@@ -292,6 +303,30 @@ export class GufeTransformation extends AlchemyElement<TransformationViz> {
     );
     body.appendChild(diff);
 
+    /**
+     * The embedded mapping, once there is one. Declared here because the handle
+     * below is built before it and has to reach it afterwards - and because a
+     * transformation carrying no mapping never sets it, while its handle is in
+     * the row all the same and still drags.
+     */
+    let mapping: { resize?(): void } | null = null;
+
+    // The rule between the two halves, and the grip on it. How much of a narrow
+    // detail pane goes to the diff rather than to the molecules is the whole
+    // argument this layout has with its reader, and `STATES_WIDTH` is only the
+    // answer they start from.
+    const states = sidePane(diff, {
+      initial: STATES_WIDTH,
+      min: STATES_DRAG.min,
+      max: STATES_DRAG.max,
+      maxShare: STATES_MAX_SHARE,
+      remember: num("transformation.statesWidth", STATES_WIDTH, STATES_DRAG.min, STATES_DRAG.max),
+      label: "Resize the state diff",
+      // The mapping is two 3D viewers, and a viewer sizes its canvas once.
+      onResize: () => mapping?.resize?.(),
+    });
+    body.appendChild(states.element);
+
     const mappingSide = el("div", "flex:1;min-width:0;min-height:0;display:flex;flex-direction:column;");
     body.appendChild(mappingSide);
 
@@ -371,12 +406,14 @@ export class GufeTransformation extends AlchemyElement<TransformationViz> {
     // Below the threshold, taking a column's worth of width off the picture
     // leaves it too little to draw two molecules in, and the diff is the one of
     // the two that still reads at any width.
+    // How wide the column is in either arrangement is `sidePane`'s, which is why
+    // neither `flex` nor `max-width` is set here: the handle is what the reader
+    // drags, and two owners of the same property means whichever ran last wins.
+    // The trailing rule is the handle too, so only the stacked one is drawn.
     const stopWatching = onNarrow(host, (narrow) => {
       body.style.flexDirection = narrow ? "column" : "row";
-      diff.style.flex = narrow ? "0 0 auto" : `0 0 ${STATES_WIDTH}px`;
-      diff.style.maxWidth = narrow ? "none" : STATES_MAX_SHARE;
+      states.orient(narrow);
       diff.style.maxHeight = narrow ? "45%" : "none";
-      diff.style.borderRight = narrow ? "none" : `1px solid ${V.splitBorder}`;
       diff.style.borderBottom = narrow ? `1px solid ${V.splitBorder}` : "none";
       mappingLabel.style.display = narrow ? "block" : "none";
     });
@@ -424,6 +461,7 @@ export class GufeTransformation extends AlchemyElement<TransformationViz> {
     }
 
     mappingSide.appendChild(child);
+    mapping = child;
 
     return {
       onResize: () => child.resize?.(),
