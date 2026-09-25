@@ -7,10 +7,16 @@
  * compared with "protein" in state B, and a label present on one side only is an
  * addition or a removal rather than a silent mismatch.
  *
- * The other embeds `<gufe-atom-mapping>` - the same element the standalone
- * mapping payload renders through, and the same one the ligand-network view
- * embeds. A NonTransformation arrives here as a diff with no differences and no
- * mappings, which is exactly what it is.
+ * The other is the picture, and what it draws depends on what the
+ * transformation is. A relative one carries a mapping, and that half embeds
+ * `<gufe-atom-mapping>` - the same element the standalone mapping payload
+ * renders through, and the same one the ligand-network view embeds. An absolute
+ * one - a binding or a solvation free energy - carries no mapping, because
+ * nothing is being turned into anything: a component is being taken out of the
+ * system, or put into it. So that half draws the components the two states do
+ * not agree on, through the same nested dispatcher the chemical-system view
+ * uses. A NonTransformation has neither a mapping nor a disagreement, and is the
+ * one case left with nothing to draw.
  *
  * They sit side by side, the diff in a column beside the molecules rather than
  * in a band above them, because the place this view is read most is an
@@ -222,6 +228,48 @@ function diffBlock(
   return block;
 }
 
+/**
+ * The strip that chooses what the picture half is showing.
+ *
+ * Shared by the two things that half can draw - one of several mappings, or one
+ * of several components the states disagree on - because it is the same question
+ * either way, and it is asked in the same place.
+ */
+function pickerStrip(items: { id: string; label: string }[], onPick: (index: number) => void): HTMLDivElement {
+  const picker = el(
+    "div",
+    `display:flex;align-items:center;gap:8px;padding:6px 10px;flex-shrink:0;font-size:${FONT.small};` +
+      `background:${V.toolbarBg};border-bottom:1px solid ${V.toolbarBorder};color:${V.textMuted};`,
+  );
+  picker.appendChild(buttonGroup(items, items[0].id, (id) => onPick(Number(id))));
+  return picker;
+}
+
+/**
+ * A component of one state that the other does not hold, or holds differently.
+ *
+ * What an absolute transformation is about, and the only thing there is to look
+ * at where no mapping says how two molecules line up.
+ */
+interface Change {
+  /** The diff label it sits under - "ligand", "protein", whatever the user wrote. */
+  label: string;
+  /**
+   * Which state it came from, and null where only one of them has it at all.
+   *
+   * A label the two states hold differently is two things to look at rather than
+   * one, and which of them is the interesting one is the reader's to decide - so
+   * both are offered, marked. A label only one state has needs no mark: the diff
+   * beside the picture has already said which side it is missing from.
+   */
+  side: "A" | "B" | null;
+  component: ComponentViz;
+}
+
+/** What the picker calls one of them. */
+const changeLabel = (change: Change): string =>
+  change.side ? `${change.label} (${change.side})` : change.label;
+
 /** "A to B" for a mapping whose endpoints are keys, for the picker. */
 function mappingLabelFor(mapping: { componentA: string; componentB: string }, registry: RegistryIndex): string {
   const from = lookup(registry, mapping.componentA);
@@ -304,12 +352,12 @@ export class GufeTransformation extends AlchemyElement<TransformationViz> {
     body.appendChild(diff);
 
     /**
-     * The embedded mapping, once there is one. Declared here because the handle
-     * below is built before it and has to reach it afterwards - and because a
-     * transformation carrying no mapping never sets it, while its handle is in
-     * the row all the same and still drags.
+     * Whatever the picture half ends up holding. Declared here because the
+     * handle below is built before it and has to reach it afterwards - and
+     * because a transformation with nothing to draw never sets it, while its
+     * handle is in the row all the same and still drags.
      */
-    let mapping: { resize?(): void } | null = null;
+    let picture: { resize?(): void } | null = null;
 
     // The rule between the two halves, and the grip on it. How much of a narrow
     // detail pane goes to the diff rather than to the molecules is the whole
@@ -323,12 +371,12 @@ export class GufeTransformation extends AlchemyElement<TransformationViz> {
       remember: num("transformation.statesWidth", STATES_WIDTH, STATES_DRAG.min, STATES_DRAG.max),
       label: "Resize the state diff",
       // The mapping is two 3D viewers, and a viewer sizes its canvas once.
-      onResize: () => mapping?.resize?.(),
+      onResize: () => picture?.resize?.(),
     });
     body.appendChild(states.element);
 
-    const mappingSide = el("div", "flex:1;min-width:0;min-height:0;display:flex;flex-direction:column;");
-    body.appendChild(mappingSide);
+    const pictureSide = el("div", "flex:1;min-width:0;min-height:0;display:flex;flex-direction:column;");
+    body.appendChild(pictureSide);
 
     // The name and the two facts about the whole transformation head the column
     // the diff is written down, rather than a strip across the pane. In the
@@ -393,13 +441,13 @@ export class GufeTransformation extends AlchemyElement<TransformationViz> {
       diff.appendChild(legend);
     }
 
-    // --- the mappings ---
+    // --- the picture ---
     // Named only where the two halves are stacked, which is the one arrangement
     // in which a reader could take the picture for more of the diff. Beside it,
     // the label is a band of height spent saying what the molecules under it
     // already say.
-    const mappingLabel = el("div", PANE_LABEL, "Atom mapping");
-    mappingSide.appendChild(mappingLabel);
+    const pictureLabel = el("div", PANE_LABEL, mappings.length ? "Atom mapping" : "What changes");
+    pictureSide.appendChild(pictureLabel);
 
     // A column beside the molecules while there is room for one, a band above
     // them when there is not.
@@ -415,61 +463,95 @@ export class GufeTransformation extends AlchemyElement<TransformationViz> {
       states.orient(narrow);
       diff.style.maxHeight = narrow ? "45%" : "none";
       diff.style.borderBottom = narrow ? `1px solid ${V.splitBorder}` : "none";
-      mappingLabel.style.display = narrow ? "block" : "none";
+      pictureLabel.style.display = narrow ? "block" : "none";
     });
 
+    /**
+     * Mount what the picture half is showing, and hand back the view's handle.
+     *
+     * The element is created by the caller and pointed at its first item here,
+     * before the picker that drives it is appended above it - so the picker's
+     * callback has something to point at from the first click.
+     */
+    const mountPicture = (
+      child: HTMLElement & { payload: unknown; resize?(): void },
+      items: { id: string; label: string }[],
+      show: (index: number) => void,
+    ): ViewHandle => {
+      show(0);
+      if (items.length > 1) pictureSide.appendChild(pickerStrip(items, show));
+      pictureSide.appendChild(child);
+      picture = child;
+      return {
+        onResize: () => child.resize?.(),
+        cleanup: () => {
+          stopWatching();
+          child.remove();
+        },
+      };
+    };
+
     if (!mappings.length) {
-      mappingSide.appendChild(
-        centredMessage(
-          "This transformation carries no atom mapping - nothing here maps one small molecule onto another.",
-        ),
+      // An absolute transformation, or a NonTransformation. The states are
+      // walked again rather than the diff blocks being remembered, because what
+      // the picture wants is not what the diff wanted: a changed label is one
+      // block up there and two things to look at here.
+      const changes: Change[] = [];
+      for (const label of labels) {
+        const keyA = stateA.components?.[label];
+        const keyB = stateB.components?.[label];
+        if (diffStatus(keyA, keyB) === "unchanged") continue;
+        const both = keyA !== undefined && keyB !== undefined;
+        const a = lookup(registry, keyA) as ComponentViz | undefined;
+        const b = lookup(registry, keyB) as ComponentViz | undefined;
+        if (a) changes.push({ label, side: both ? "A" : null, component: a });
+        if (b) changes.push({ label, side: both ? "B" : null, component: b });
+      }
+
+      if (!changes.length) {
+        pictureSide.appendChild(
+          centredMessage(
+            "This transformation carries no atom mapping, and its two states hold the same components - " +
+              "there is nothing here to draw.",
+          ),
+        );
+        return { cleanup: stopWatching };
+      }
+
+      // The top-level dispatcher rather than one component view: what a state
+      // gains or loses is a ligand most of the time and is not promised to be,
+      // and every type it could be already has an element that draws it.
+      const child = document.createElement("alchemy-view") as HTMLElement & {
+        payload: unknown;
+        resize?(): void;
+      };
+      child.style.cssText = "flex:1;min-height:0;min-width:0;";
+      return mountPicture(
+        child,
+        changes.map((change, index) => ({ id: String(index), label: changeLabel(change) })),
+        (index) => {
+          child.payload = changes[index].component;
+        },
       );
-      return { cleanup: stopWatching };
     }
 
-    // Created before the picker that drives it, and appended after it, so the
-    // picker's callback has something to point at from the first click.
     const child = document.createElement("gufe-atom-mapping") as HTMLElement & {
       payload: unknown;
       resize?(): void;
     };
     child.style.cssText = "flex:1;min-height:0;min-width:0;";
-    // Cut loose with a registry of its own, so the embedded element resolves its
-    // endpoints exactly as it would if the mapping were the whole payload.
-    const show = (index: number) => {
-      child.payload = mappingPayloadFor(mappings[index], registry);
-    };
-    show(0);
-
-    if (mappings.length > 1) {
-      const picker = el(
-        "div",
-        `display:flex;align-items:center;gap:8px;padding:6px 10px;flex-shrink:0;font-size:${FONT.small};` +
-          `background:${V.toolbarBg};border-bottom:1px solid ${V.toolbarBorder};color:${V.textMuted};`,
-      );
-      picker.appendChild(
-        buttonGroup(
-          mappings.map((mapping, index) => ({
-            id: String(index),
-            label: mapping.name || mappingLabelFor(mapping, registry),
-          })),
-          "0",
-          (id) => show(Number(id)),
-        ),
-      );
-      mappingSide.appendChild(picker);
-    }
-
-    mappingSide.appendChild(child);
-    mapping = child;
-
-    return {
-      onResize: () => child.resize?.(),
-      cleanup: () => {
-        stopWatching();
-        child.remove();
+    return mountPicture(
+      child,
+      mappings.map((mapping, index) => ({
+        id: String(index),
+        label: mapping.name || mappingLabelFor(mapping, registry),
+      })),
+      // Cut loose with a registry of its own, so the embedded element resolves
+      // its endpoints exactly as it would if the mapping were the whole payload.
+      (index) => {
+        child.payload = mappingPayloadFor(mappings[index], registry);
       },
-    };
+    );
   }
 }
 

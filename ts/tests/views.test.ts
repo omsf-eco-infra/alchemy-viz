@@ -1784,6 +1784,67 @@ describe("<gufe-transformation>", () => {
     // same way it would as a standalone payload.
     expect(embedded!.textContent).not.toContain("registry does not hold them");
   });
+
+  /** One edge of the absolute network, cut loose the way a detail pane cuts one. */
+  const absoluteTransformation = (): TransformationViz => {
+    const payload = readExample("alchemical_network_absolute.json") as unknown as { edges: TransformationViz[] };
+    return transformationPayloadFor(payload.edges[0], buildRegistry(payload))!;
+  };
+
+  it("draws what an absolute transformation takes away, where a relative one draws a mapping", async () => {
+    const node = mount("gufe-transformation", absoluteTransformation());
+    await flush();
+
+    // Nothing is being turned into anything, so there is no mapping to embed -
+    // and the half of the pane that would have drawn one is the whole picture,
+    // which must not be spent on a sentence saying there is no mapping.
+    expect(node.querySelector("gufe-atom-mapping")).toBeNull();
+    expect(node.textContent).not.toContain("there is nothing here to draw");
+
+    const child = node.querySelector("alchemy-view") as HTMLElement & { payload: { type: string } };
+    expect(child, "the picture half drew nothing").toBeTruthy();
+    // The ligand state B does not have: the one thing an absolute
+    // transformation is about, drawn by the view that draws a ligand anywhere.
+    expect(child.payload.type).toBe("SmallMoleculeComponentViz");
+    expect(child.querySelector("gufe-small-molecule")).toBeTruthy();
+  });
+
+  it("offers both sides of a label the two states hold differently", async () => {
+    const network = readExample("alchemical_network_absolute.json") as unknown as { edges: TransformationViz[] };
+    const registry = buildRegistry(network);
+    const payload = structuredClone(transformationPayloadFor(network.edges[0], registry)!);
+
+    // Give state B a ligand of its own - a different molecule, with no mapping
+    // to say how the two line up. A label held differently by the two states is
+    // two things to look at rather than one.
+    const other = lookupOfType<ChemicalSystemViz>(registry, network.edges[1].stateA, "ChemicalSystemViz")!;
+    const ligand = lookupOfType<SmallMoleculeComponentViz>(
+      registry,
+      other.components.ligand,
+      "SmallMoleculeComponentViz",
+    )!;
+    const stateB = payload.registry!.find((entry) => entry["gufe-key"] === payload.stateB) as ChemicalSystemViz;
+    stateB.components.ligand = ligand["gufe-key"];
+    payload.registry!.push(ligand);
+
+    const node = mount("gufe-transformation", payload);
+    await flush();
+    const labels = modeLabels(node);
+    expect(labels).toContain("ligand (A)");
+    expect(labels).toContain("ligand (B)");
+  });
+
+  it("says so where a transformation has neither a mapping nor a difference", async () => {
+    // Which is what a NonTransformation is: one system named twice.
+    const payload = structuredClone(absoluteTransformation());
+    payload.stateB = payload.stateA;
+    const node = mount("gufe-transformation", payload);
+    await flush();
+
+    expect(node.textContent).toContain("there is nothing here to draw");
+    expect(node.querySelector("alchemy-view")).toBeNull();
+    expect(node.querySelector("gufe-atom-mapping")).toBeNull();
+  });
 });
 
 describe("<gufe-alchemical-network>", () => {
@@ -1823,6 +1884,30 @@ describe("<gufe-alchemical-network>", () => {
     expect(text).not.toContain("not in its registry");
     // The nested dispatcher drew the ligand rather than stopping at the list.
     expect(embedded!.querySelector("gufe-small-molecule")).toBeTruthy();
+  });
+
+  it("draws an absolute transformation, and the system it leaves with no ligand", async () => {
+    // The other shape an alchemical network comes in: every edge ends at one
+    // shared reference state, so the graph is a star, that state is the only
+    // node with nothing to draw inside its box, and no edge carries a mapping.
+    const node = mount("gufe-alchemical-network", readExample("alchemical_network_absolute.json"));
+    await flush();
+
+    // Two compositions - with a ligand and without one - so the boxes are
+    // coloured by what they are made of and the strip says what that means.
+    expect(node.textContent).toContain("SmallMolecule + Solvent");
+    expect(node.textContent).toContain("systems made of");
+
+    const edge = node.querySelector("line") as SVGLineElement;
+    edge.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    await flush();
+
+    const embedded = node.querySelector("gufe-transformation");
+    expect(embedded, "the edge pane did not mount the transformation view").toBeTruthy();
+    expect(embedded!.textContent).not.toContain("registry does not hold them");
+    // No mapping to draw, and the ligand drawn in its place.
+    expect(embedded!.querySelector("gufe-atom-mapping")).toBeNull();
+    expect(embedded!.querySelector("gufe-small-molecule"), "the picture half drew nothing").toBeTruthy();
   });
 
   it("draws a selected transformation through the transformation view", async () => {

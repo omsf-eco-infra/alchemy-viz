@@ -234,6 +234,45 @@ def _alchemical_network(network: gufe.LigandNetwork, protocol: gufe.Protocol) ->
     )
 
 
+def _absolute_network(network: gufe.LigandNetwork, protocol: gufe.Protocol) -> gufe.AlchemicalNetwork:
+    """The same ligands once more, decoupled rather than mutated into each other.
+
+    The shape a set of absolute free energies makes, and the one no relative
+    fixture can show. A relative transformation carries a ligand at both ends and
+    a mapping between them; an absolute one carries a ligand at one end only, and
+    no mapping at all, because nothing is being turned into anything - the ligand
+    is being taken out of the system.
+
+    That makes two things the views have to answer for and had no fixture for:
+    a chemical system with no ligand in it, which is where every transformation
+    ends, and a transformation with no mapping, which is what the detail pane
+    draws when one is clicked. Every edge shares the one reference state, so the
+    graph is a star rather than a chain - the other shape an alchemical network
+    comes in.
+    """
+    from gufe import AlchemicalNetwork, ChemicalSystem, SolventComponent, Transformation
+
+    solvent = SolventComponent()
+    # One shared reference state, for the reason `_solvated_transformation`
+    # caches its systems: a fresh, equal-but-distinct ChemicalSystem per edge
+    # would make this a row of disjoint pairs rather than a star.
+    reference = ChemicalSystem({"solvent": solvent}, name="water")
+    molecules = sorted((_renamed(mol) for mol in network.nodes), key=lambda mol: (mol.name, str(mol.key)))
+    return AlchemicalNetwork(
+        [
+            Transformation(
+                stateA=ChemicalSystem({"ligand": mol, "solvent": solvent}, name=f"{mol.name} in water"),
+                stateB=reference,
+                mapping=None,
+                protocol=protocol,
+                name=f"{mol.name} decoupled from water",
+            )
+            for mol in molecules
+        ],
+        name="absolute hydration free energies",
+    )
+
+
 def _tyk2_rbfe_network() -> gufe.AlchemicalNetwork:
     """The ten TYK2 ligands as the binding campaign OpenFE plans from them.
 
@@ -291,6 +330,77 @@ def _tyk2_rbfe_network() -> gufe.AlchemicalNetwork:
         ],
         name="TYK2 RBFE campaign",
     )
+
+
+def _tyk2_mixed_network() -> gufe.AlchemicalNetwork:
+    """The TYK2 campaign run partly relative and partly absolute.
+
+    Four of the mappings run as RBFE, in both legs, exactly as they do in
+    :func:`_tyk2_rbfe_network`; two of the ligands are also run as ABFE, one
+    transformation each, out of the complex and into the apo protein. Absolute
+    anchors in a relative network are a real plan rather than a contrived one:
+    the relative edges give differences and the absolute ones give the series
+    something to be a difference from.
+
+    It is the fixture for what a mixed network does to the view. The apo system
+    is the only node in the graph carrying no ligand, so it is the one node whose
+    box has no structure drawn in it; it is a third composition beside the two
+    legs, which is what the colouring and the composition filter have to tell
+    apart; and the two transformations that end there carry no mapping, while
+    the eight around them do.
+    """
+    from gufe import AlchemicalNetwork, ChemicalSystem, ProteinComponent, SolventComponent, Transformation
+
+    protocol = _dummy_protocol()
+    solvent = SolventComponent()
+    protein = ProteinComponent.from_pdb_file(str(DATA / "tyk2_protein.pdb"), name="tyk2")
+
+    legs = {
+        "solvent": {"solvent": solvent},
+        "complex": {"solvent": solvent, "protein": protein},
+    }
+    systems: dict[tuple[str, str], gufe.ChemicalSystem] = {}
+
+    def system(mol: gufe.SmallMoleculeComponent, leg: str) -> gufe.ChemicalSystem:
+        return systems.setdefault(
+            (str(mol.key), leg),
+            ChemicalSystem({"ligand": mol, **legs[leg]}, name=f"{mol.name}_{leg}"),
+        )
+
+    # The apo protein, and the same one for both anchors: the absolute
+    # transformations meet there, which is what joins them to each other rather
+    # than leaving two more disjoint pairs on the canvas.
+    apo = ChemicalSystem({"protein": protein, "solvent": solvent}, name="apo_tyk2")
+
+    # Sorted by gufe key, then cut to four, so which mappings are relative here
+    # does not depend on set iteration order.
+    edges = sorted(_tyk2_network().edges, key=lambda e: (str(e.componentA.key), str(e.componentB.key)))[:4]
+    # The anchors are ligands the relative edges already reach, so the absolute
+    # transformations hang off the complex leg rather than beside it.
+    anchors = sorted({edge.componentA for edge in edges}, key=lambda mol: mol.name)[:2]
+
+    relative = [
+        Transformation(
+            stateA=system(edge.componentA, leg),
+            stateB=system(edge.componentB, leg),
+            mapping=edge,
+            protocol=protocol,
+            name=f"{edge.componentA.name} to {edge.componentB.name} ({leg})",
+        )
+        for edge in edges
+        for leg in legs
+    ]
+    absolute = [
+        Transformation(
+            stateA=system(mol, "complex"),
+            stateB=apo,
+            mapping=None,
+            protocol=protocol,
+            name=f"{mol.name} decoupled from tyk2",
+        )
+        for mol in anchors
+    ]
+    return AlchemicalNetwork(relative + absolute, name="TYK2 mixed RBFE and ABFE campaign")
 
 
 def _tyk2_ligand(name: str) -> gufe.SmallMoleculeComponent:
@@ -683,6 +793,13 @@ def build() -> dict[str, GufeTokenizable]:
         "alchemical_network_charged.json": _alchemical_network(_eg5_network(), protocol),
         "alchemical_network_medium.json": _tyk2_rbfe_network(),
         "alchemical_network_large.json": _large_alchemical_network(),
+        # The two shapes an absolute free energy makes, which the four above
+        # cannot: a set of ASFE runs on the same three ligands as the first of
+        # them, and a binding campaign whose relative edges are anchored by two
+        # ABFE transformations. Between them they are the fixtures for a system
+        # with no ligand and a transformation with no mapping.
+        "alchemical_network_absolute.json": _absolute_network(network, protocol),
+        "alchemical_network_mixed.json": _tyk2_mixed_network(),
         # Not a gufe class at all, which is the only way to produce this type.
         "unknown_component.json": _somebodys_own_component(),
         # A chemical system on its own, in the two shapes a campaign is built

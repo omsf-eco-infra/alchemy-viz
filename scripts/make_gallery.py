@@ -129,6 +129,18 @@ NOTES = {
         "edges - the level-of-detail rule seen on the alchemical view at the size it was written for. "
         "**The mappings are synthetic**, as they are in the ligand view of the same graph."
     ),
+    "alchemical_network_absolute": (
+        "Absolute rather than relative: every transformation decouples one ligand from water, so "
+        "none of them carries an atom mapping and they all end at the same reference state - a "
+        "chemical system with no ligand in it, which is why the graph is a star. Clicking an edge "
+        "shows the ligand it removes where a relative edge would show its mapping."
+    ),
+    "alchemical_network_mixed": (
+        "Both kinds in one campaign, which is what a planner produces when part of a series can be "
+        "mapped onto itself and part of it cannot: four TYK2 mappings run in both legs, and two of "
+        "the ligands are anchored by an absolute transformation into the apo protein. Three "
+        "compositions rather than two, and the apo system is the one node with nothing drawn in it."
+    ),
     "chemical_system": (
         "The system's components down the left, the selected one drawn on the right in whichever "
         "view its own type gets - so a chemical system is a chooser over the views above rather "

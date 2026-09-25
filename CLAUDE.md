@@ -24,12 +24,13 @@ Run one vitest file with `npx vitest run ts/tests/<name>.test.ts`.
 They are large enough to cost more context than they can repay. Use `head`,
 `jq`, or `grep` if you need a fact from one.
 
-- `examples/ligand_network_docked.json` (2.4M),
+- `examples/ligand_network_docked.json` (2.9M),
   `alchemical_network_large.json` (1.9M), `ligand_network_large.json` (1.4M),
-  `alchemical_network_medium.json` (511K), `chemical_system_ensemble.json`
-  (433K), `chemical_system_complex.json` (398K), `protein.json` (217K)
+  `alchemical_network_medium.json` (511K), `alchemical_network_mixed.json`
+  (448K), `chemical_system_ensemble.json` (433K),
+  `chemical_system_complex.json` (398K), `protein.json` (217K)
 - `scripts/data/jak2_docked_poses.sdf` (1.4M), `jak2_protein.pdb` (389K),
-  `jak2_network_edges.json` (133K), `tyk2_protein.pdb`, `large_network.sdf`
+  `jak2_network_edges.json` (191K), `tyk2_protein.pdb`, `large_network.sdf`
   (~400K each)
 - `python/alchemy_viz/_assets/alchemy-viz.js` (~400K, generated)
 - `scratch/` is scratch, not part of the project

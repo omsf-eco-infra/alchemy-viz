@@ -24,6 +24,10 @@ export const CURATED: CuratedExample[] = [
     note: "tyk2 RBFE - both legs, protocol and all",
   },
   {
+    file: "alchemical_network_mixed.json",
+    note: "tyk2 again, part relative and part absolute - edges with no mapping, and a system with no ligand",
+  },
+  {
     file: "ligand_network_docked.json",
     note: "jak2, docked poses - the heaviest network we draw",
   },
