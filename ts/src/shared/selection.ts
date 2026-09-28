@@ -104,10 +104,17 @@ function download(text: string, filename: string): void {
   URL.revokeObjectURL(url);
 }
 
-/** What one of the two buttons is called, and what its rows are called in a sentence. */
-export interface ExportWord {
-  /** On the button: "Ligands", "Transformations". */
-  button: string;
+/**
+ * What one of a network menu's two lists is called.
+ *
+ * One pair of words serves the tab that opens the list, the count line above it
+ * and the copy button under it, because a reader who clicked "Transformations"
+ * and is then told about "edges" has to work out for themselves that the two are
+ * the same thing.
+ */
+export interface ListWords {
+  /** On the tab, and capitalised: "Ligands", "Transformations". */
+  tab: string;
   /** In a sentence and in a file name: "ligands", "transformations". */
   plural: string;
 }
@@ -117,13 +124,22 @@ export interface ExportBlockOptions<N extends SelectableNode> {
   edges: readonly SelectableEdge<N>[];
   /** The keys picked out of `nodes`, read at click time rather than captured. */
   selected: ReadonlySet<string>;
-  words: { nodes: ExportWord; edges: ExportWord };
+  words: { nodes: ListWords; edges: ListWords };
   /** Where the "copy as" choice is kept, so it survives a reload. */
   setting: string;
+  /**
+   * Which of the two lists is on screen, read at click time.
+   *
+   * There is one button rather than two because the menu already asks this
+   * question once, on its tabs: a reader looking at the transformations has
+   * said which of the two they mean, and a second pair of buttons underneath
+   * asking it again was the thing that read as a choice with no consequence.
+   */
+  what(): "nodes" | "edges";
 }
 
 /**
- * The copy-out block: what to copy it as, the two buttons, and what they did.
+ * The copy-out block: what to copy it as, one button, and what it did.
  *
  * The note is its own line because the alternative is to return on an empty
  * selection and leave the button looking broken. Copying is
@@ -132,11 +148,13 @@ export interface ExportBlockOptions<N extends SelectableNode> {
  *
  * `clearNote` is handed back because a selection that has changed makes
  * whatever the note last said untrue, and a count of what was copied from a
- * previous selection is worse than silence.
+ * previous selection is worse than silence. `relabel` is handed back because
+ * the button names what it will copy, and what that is changes when the menu
+ * changes tab.
  */
 export function exportBlock<N extends SelectableNode>(
   options: ExportBlockOptions<N>,
-): { box: HTMLDivElement; clearNote(): void } {
+): { box: HTMLDivElement; clearNote(): void; relabel(): void } {
   const { words } = options;
   const exportAsSetting = choice<ExportAs>(options.setting, "names", ["names", "keys"]);
 
@@ -161,48 +179,55 @@ export function exportBlock<N extends SelectableNode>(
     exportNote.textContent = text;
   };
 
-  const row = el("div", "display:flex;gap:4px;");
-  const buttons: ["nodes" | "edges", ExportWord, string][] = [
-    ["nodes", words.nodes, `Copy the selected ${words.nodes.plural}, one per line`],
-    ["edges", words.edges, `Copy the ${words.edges.plural} between the selected ${words.nodes.plural}, one pair per line`],
-  ];
-  for (const [what, word, title] of buttons) {
-    const copy = button("flex:1;", word.button);
-    copy.title = title;
-    copy.onclick = (event) => {
-      const as = asPicker.value as ExportAs;
-      const content = selectionText(options.nodes, options.edges, options.selected, what, as);
-      if (!content) {
-        // Naming which of the two reasons it is, because they need different
-        // things done about them: one is "pick something", the other is "the
-        // ones you picked have nothing between them".
-        note(
-          options.selected.size === 0
-            ? `Nothing selected. Click one of the ${words.nodes.plural} above.`
-            : what === "edges"
-              ? `No ${words.edges.plural} between the ${options.selected.size} selected ${words.nodes.plural}. ${MULTI_SELECT_HINT}`
-              : "Nothing to copy.",
-        );
-        return;
-      }
-      const lines = content.split("\n").length;
-      if (event.shiftKey) {
-        download(content, `selected-${word.plural}.txt`);
-        note(`Saved ${lines} ${word.plural} to a file.`);
-      } else {
-        copyOut(content, box);
-        note(
-          what === "edges"
-            ? `Copied ${lines} ${words.edges.plural}.`
-            : `Copied ${options.selected.size} ${words.nodes.plural}.`,
-        );
-      }
-    };
-    row.appendChild(copy);
-  }
-  box.appendChild(row);
+  const copy = button("width:100%;");
+  const relabel = (): void => {
+    const what = options.what();
+    const word = what === "nodes" ? words.nodes : words.edges;
+    // Naming the list rather than saying "Copy", because the button sits below
+    // a list that is one of two and a reader who has scrolled the tabs out of
+    // sight still has to be able to tell which one they are about to take.
+    copy.textContent = `Copy ${word.plural}`;
+    copy.title =
+      what === "nodes"
+        ? `Copy the selected ${words.nodes.plural}, one per line`
+        : `Copy the ${words.edges.plural} between the selected ${words.nodes.plural}, one pair per line`;
+  };
+  relabel();
+
+  copy.onclick = (event) => {
+    const what = options.what();
+    const word = what === "nodes" ? words.nodes : words.edges;
+    const as = asPicker.value as ExportAs;
+    const content = selectionText(options.nodes, options.edges, options.selected, what, as);
+    if (!content) {
+      // Naming which of the two reasons it is, because they need different
+      // things done about them: one is "pick something", the other is "the
+      // ones you picked have nothing between them".
+      note(
+        options.selected.size === 0
+          ? `Nothing selected. Click one of the ${words.nodes.plural} above.`
+          : what === "edges"
+            ? `No ${words.edges.plural} between the ${options.selected.size} selected ${words.nodes.plural}. ${MULTI_SELECT_HINT}`
+            : "Nothing to copy.",
+      );
+      return;
+    }
+    const lines = content.split("\n").length;
+    if (event.shiftKey) {
+      download(content, `selected-${word.plural}.txt`);
+      note(`Saved ${lines} ${word.plural} to a file.`);
+      return;
+    }
+    copyOut(content, box);
+    note(
+      what === "edges"
+        ? `Copied ${lines} ${words.edges.plural}.`
+        : `Copied ${options.selected.size} ${words.nodes.plural}.`,
+    );
+  };
+  box.appendChild(copy);
   box.appendChild(exportNote);
   box.appendChild(el("div", `font-size:${FONT.tiny};color:${V.textMuted2};`, "Shift-click to save as a file instead."));
 
-  return { box, clearNote: () => note("") };
+  return { box, clearNote: () => note(""), relabel };
 }

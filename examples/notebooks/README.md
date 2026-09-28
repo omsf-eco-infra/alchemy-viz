@@ -5,30 +5,34 @@
 | [`alchemy-viz-demo.ipynb`](./alchemy-viz-demo.ipynb) | **none** | the one to run locally |
 | [`alchemy-viz-gallery.ipynb`](./alchemy-viz-gallery.ipynb) | screenshots, ~660 kB | the one that renders on GitHub |
 
+Prose that is not about notebooks lives in [`docs/`](../../docs/README.md): the
+[command line](../../docs/cli.md), [your own openfe
+objects](../../docs/openfe.md), [every view](../../docs/views.md),
+[embedding](../../docs/embedding.md) and
+[troubleshooting](../../docs/troubleshooting.md).
+
 ## alchemy-viz-demo.ipynb
 
-Opens on a drawn network in the second cell, then **Your own objects** - the
-`network_setup/` directory `openfe plan-rbfe-network` writes, the same campaign
-planned in Python, and the shell equivalent. It runs without openfe installed:
-the openfe-only cells report and skip, and the rest falls back to
-`scripts/data/tyk2_network.graphml`, a real `ligand_network.graphml` from
-OpenFE's RBFE tutorial.
+Ten cells, and deliberately only about the notebook: a drawn network, the same
+network from the file a planner wrote, one view updating in place, and the
+static/live knobs. [`docs/notebooks.md`](../../docs/notebooks.md) is the same
+material in prose, with the byte costs and the iframe rationale.
 
-After that is the repository's own test bench - every payload type, and every
-way of delivering a view. Run this when you have changed something.
-
-**Reference** is the last section, and holds everything that is only worth
-reading once: the two output layers, the environment check, the byte
-costs, and the four ways a payload fails to draw.
+It needs gufe, for the one cell that reads
+`scripts/data/tyk2_network.graphml` - a real `ligand_network.graphml` from
+OpenFE's RBFE tutorial, committed because neither the ligands nor the planner is a
+dependency here. Paths in it are relative to this directory, which is where a
+kernel started on the file will be.
 
 ```bash
 pixi run notebook    # JupyterLab, on this file
 pixi run marimo      # the same file, converted, in marimo
 ```
 
-Committed **with no outputs**, and should stay that way: each output is an
-`<iframe srcdoc="...">` carrying a whole page, a quarter of a megabyte per view
-in a file that is otherwise 20 kB, and none of it renders on GitHub anyway.
+Committed **with no outputs**, and it should stay that way: each output is an
+`<iframe srcdoc="...">` carrying a whole page, a quarter of a megabyte per view in
+a file that is otherwise 6 kB, and none of it renders on GitHub anyway. The
+`nbstripout` pre-commit hook enforces it; `pixi run hooks` installs it.
 
 ## alchemy-viz-gallery.ipynb
 
@@ -38,13 +42,13 @@ going to install anything. GitHub's notebook renderer strips the `<iframe>` and
 survives.
 
 The cells hold the real `alchemy_viz.view(...)` call, so running the notebook
-replaces every screenshot with the live view - a fine way to check that a
-picture is honest, and a bad way to leave the file. **Do not commit the result.**
+replaces every screenshot with the live view - a fine way to check that a picture
+is honest, and a bad way to leave the file. **Do not commit the result.**
 `pixi run gallery` restores it.
 
-Regenerate **whenever you change what a view draws**: the screenshots do not
-know the drawing code moved on, and a stale gallery looks authoritative. A new
-payload type needs a row in `NOTES` in
+Regenerate **whenever you change what a view draws**: the screenshots do not know
+the drawing code moved on, and a stale gallery looks authoritative. A new payload
+type needs a row in `NOTES` in
 [`scripts/make_gallery.py`](../../scripts/make_gallery.py), which is both the
 caption and the list of what gets captured.
 

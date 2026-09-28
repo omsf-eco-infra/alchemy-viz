@@ -77,20 +77,26 @@ describe("chromeMenu", () => {
    * other way too, so the two modules were a value cycle held together only by
    * nothing in `framejs.ts` reading an import at module scope.
    */
-  it("appends extras after what the view built, on the same first open", () => {
+  it("appends extras into what the view built, on the same first open", () => {
     const extras = vi.fn((panel: HTMLElement) => {
       const row = document.createElement("div");
       row.id = "extra";
       panel.appendChild(row);
     });
-    const menu = chromeMenu(header, () => el("div", "", "built"), { extras });
+    const built = el("div", "", "built");
+    const menu = chromeMenu(header, () => built, { extras });
     expect(extras).not.toHaveBeenCalled();
 
     menu.setOpen(true);
     expect(extras).toHaveBeenCalledTimes(1);
-    expect(menu.panel.childElementCount).toBe(2);
+    // Into the panel the view built rather than beside it: what carries the
+    // padding a menu's controls sit in is that panel, and a row appended to the
+    // wrapper is a row outside it - which is how the share button came to run
+    // from edge to edge under a panel that stopped above it.
+    expect(extras).toHaveBeenCalledWith(built);
+    expect(menu.panel.childElementCount).toBe(1);
     // Last, so a view's own controls stay above it.
-    expect(menu.panel.lastElementChild?.id).toBe("extra");
+    expect(built.lastElementChild?.id).toBe("extra");
   });
 
   it("appends extras exactly once across many toggles", () => {
@@ -155,6 +161,21 @@ describe("chromeMenu", () => {
     expect(button()).toBeTruthy();
     expect(button().getAttribute("aria-label")).toBe("Network options");
     expect(button().getAttribute("aria-expanded")).toBe("false");
+  });
+
+  it("looks like a button that opens a menu", () => {
+    // The OpenFE mark was tried here first and reported as not looking like a
+    // control at all: a logo in the corner of a page is a logo, and nobody
+    // clicks one to find a search box behind it. Three bars, which is the glyph
+    // that reads as a menu everywhere else a reader has met one.
+    chromeMenu(header, () => document.createElement("div"), { label: "Network options" });
+    expect(button().firstElementChild!.childElementCount).toBe(3);
+    expect(button().querySelector("svg")).toBeNull();
+    // No word beside them, so the accessible name and the tooltip are the whole
+    // of what the button says - and both say what is behind it rather than
+    // "Menu".
+    expect(button().textContent).toBe("");
+    expect(button().title).toBe("Network options");
   });
 
   it("toggles from the button, and says so to a screen reader", () => {

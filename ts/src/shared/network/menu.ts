@@ -1,6 +1,20 @@
 /**
- * The menu both network views carry: search, filters, a list, and the copy-out
- * block.
+ * The menu both network views carry: two tabs, search, filters, a list, and the
+ * copy-out block.
+ *
+ * ## Two tabs over one list
+ *
+ * A network is nodes and the lines between them, and both are things a reader
+ * wants listed: which ligands are in the campaign, and which transformations
+ * were run. They are one list in two states rather than two lists stacked,
+ * because everything above the list - the search, the SMARTS box, the filters -
+ * narrows both, and a panel that showed both lists at once would show each of
+ * them half as much of the column as it needs.
+ *
+ * The tabs are also what the copy button reads: one button that copies the list
+ * a reader is looking at, rather than the pair of buttons that used to ask which
+ * of the two lists was meant a second time, underneath, after the tabs had
+ * already said.
  *
  * ## Why it is one function
  *
@@ -10,11 +24,11 @@
  *
  * Everything else is the same for both and is here - the order the controls sit
  * in, that the search writes to a `Setting`, that the count line says "n of m",
- * that the list is `MENU_LIST` so it is the part that gives when the panel is
- * short, that the hint sits under the list rather than over it, that a plain
- * click replaces the selection and a modifier-click adds to it, that the export
- * note is cleared whenever the selection moves. A view says what its menu *is*
- * rather than how to build one.
+ * that both lists are in name order, that the list is `MENU_LIST` so it is the
+ * part that gives when the panel is short, that the hint sits under the list
+ * rather than over it, that a plain click replaces the selection and a
+ * modifier-click adds to it, that the export note is cleared whenever the
+ * selection moves. A view says what its menu *is* rather than how to build one.
  *
  * ## Lazily built
  *
@@ -25,25 +39,39 @@
  *
  * ## What is remembered
  *
- * The search text, the SMARTS pattern and whatever `filters` stores: all of them
- * preferences, all keyed under `spec.namespace`. The *selection* deliberately is
- * not. It names nodes in the network on screen, and restoring it onto a
- * different one would restore nonsense.
+ * The open tab, the search text, the SMARTS pattern and whatever `filters`
+ * stores: all of them preferences, all keyed under `spec.namespace`. The
+ * *selection* deliberately is not. It names nodes in the network on screen, and
+ * restoring it onto a different one would restore nonsense.
  */
 
-import { button, pickable } from "../controls.js";
+import { button, buttonGroup, pickable } from "../controls.js";
 import { el } from "../dom.js";
 import { FONT, INPUT, MENU_LIST, MENU_PANEL, PICK, SPACE } from "../style.js";
 import { V } from "../theme.js";
-import { text as textSetting } from "../settings.js";
+import { choice, text as textSetting } from "../settings.js";
 import { smartsBox, type MatchOutcome, type MatchSummary } from "../smarts.js";
 import {
   exportBlock,
   MULTI_SELECT_HINT,
-  type ExportWord,
+  type ListWords,
   type SelectableEdge,
   type SelectableNode,
 } from "../selection.js";
+
+/** Which of the two lists the menu is showing. */
+type Tab = "nodes" | "edges";
+
+/**
+ * Name order, with runs of digits compared as numbers.
+ *
+ * Asked for because a list in payload order is a list with no order at all to
+ * anyone reading it: the only way to check whether a ligand is in the network
+ * was to read every row. Numeric collation is what makes `lig_ejm_3` come
+ * before `lig_ejm_31` rather than after `lig_ejm_311`, which is the whole
+ * benefit of sorting a series that is numbered.
+ */
+const byName = new Intl.Collator(undefined, { numeric: true, sensitivity: "base" });
 
 /** What one row of the list holds, beside the name every row has. */
 export interface MenuRow {
@@ -59,17 +87,23 @@ export interface MenuRow {
   title: string;
 }
 
-export interface NetworkMenuSpec<N extends SelectableNode> {
+/**
+ * `N` is what a node is to the view, `E` what an edge is.
+ *
+ * Both, rather than nodes alone, because the edge list draws rows from a view's
+ * own edge - a bundle of legs in one view, a scored mapping in the other - and
+ * the menu would otherwise hand `edgeRow` back the two endpoints and nothing
+ * else about the thing it is a row for.
+ */
+export interface NetworkMenuSpec<N extends SelectableNode, E extends SelectableEdge<N>> {
   /**
    * The prefix every `Setting` this menu writes is keyed under, e.g.
    * `"ligand-network"`. One namespace per view, so two networks on one page do
    * not read each other's search box.
    */
   namespace: string;
-  /** What the rows are, in the plural: "ligands", "systems". Used in the count. */
-  noun: string;
   nodes: readonly N[];
-  edges: readonly SelectableEdge<N>[];
+  edges: readonly E[];
   /** Shared with the canvas, so the list and the picture cannot disagree. */
   selected: Set<string>;
   /** Written by the search box; the view reads it when it recomputes emphasis. */
@@ -97,13 +131,29 @@ export interface NetworkMenuSpec<N extends SelectableNode> {
   filters?(rerender: () => void): HTMLElement[];
   /** Whether a node survives every filter now in force. */
   shows(node: N, index: number): boolean;
-  /** What one row holds. */
+  /** What one row of the node list holds. */
   row(node: N, index: number): MenuRow;
-  export: { nodes: ExportWord; edges: ExportWord };
+  /**
+   * Whether an edge survives every filter now in force.
+   *
+   * Its own predicate rather than "both ends survive", because the two views
+   * answer it differently: a ligand network also has a score below which a
+   * mapping is not worth listing, and a search for one ligand should still list
+   * the transformations that ligand is an end of.
+   */
+  edgeShows(edge: E, index: number): boolean;
+  /** What one row of the edge list holds. */
+  edgeRow(edge: E, index: number): MenuRow;
+  /**
+   * What the two lists are called: on their tabs, in the count, on the button.
+   */
+  words: { nodes: ListWords; edges: ListWords };
   /** Re-run the canvas emphasis, after anything here moved. */
   refresh(): void;
   /** Bring one node into view and open it. */
   focus(index: number): void;
+  /** Bring one edge into view and open it. */
+  focusEdge(index: number): void;
   /**
    * Hand the list's own redraw back to the view.
    *
@@ -114,10 +164,39 @@ export interface NetworkMenuSpec<N extends SelectableNode> {
 }
 
 
-export function networkMenu<N extends SelectableNode>(spec: NetworkMenuSpec<N>): HTMLDivElement {
+export function networkMenu<N extends SelectableNode, E extends SelectableEdge<N>>(
+  spec: NetworkMenuSpec<N, E>,
+): HTMLDivElement {
   const querySetting = textSetting(`${spec.namespace}.query`);
+  const tabSetting = choice<Tab>(`${spec.namespace}.tab`, "nodes", ["nodes", "edges"]);
+  let tab = tabSetting.get();
   const panel = el("div", MENU_PANEL);
 
+  // First in the panel, because which of the two lists is open is the outermost
+  // question here: the search, the filters and the count below it all read
+  // differently depending on the answer.
+  const tabs = buttonGroup(
+    [
+      { id: "nodes", label: spec.words.nodes.tab, title: `List the ${spec.words.nodes.plural}` },
+      { id: "edges", label: spec.words.edges.tab, title: `List the ${spec.words.edges.plural}` },
+    ],
+    tab,
+    (id) => {
+      tab = id as Tab;
+      tabSetting.set(tab);
+      render();
+    },
+  );
+  // Half the width each, so the pair reads as one strip divided rather than as
+  // two buttons that happen to be adjacent.
+  for (const child of Array.from(tabs.children)) (child as HTMLElement).style.flex = "1";
+  tabs.style.gap = "0";
+  panel.appendChild(tabs);
+
+  // One box for both lists. A search here is a search for a ligand either way:
+  // on the edge list it leaves the transformations that ligand is an end of,
+  // which is the question "what was run on this one" and the reason the two
+  // lists share the box rather than each carrying its own.
   const search = el("input", INPUT) as HTMLInputElement;
   panel.appendChild(search);
 
@@ -149,8 +228,9 @@ export function networkMenu<N extends SelectableNode>(spec: NetworkMenuSpec<N>):
     nodes: spec.nodes,
     edges: spec.edges,
     selected: spec.selected,
-    words: spec.export,
+    words: spec.words,
     setting: `${spec.namespace}.exportAs`,
+    what: () => tab,
   });
   panel.appendChild(exporter.box);
 
@@ -162,52 +242,95 @@ export function networkMenu<N extends SelectableNode>(spec: NetworkMenuSpec<N>):
   };
   panel.appendChild(clear);
 
+  /**
+   * One row, whatever it holds: the mark, the name, and what selects it.
+   *
+   * Both lists are rows of the same shape - that is what "the transformations
+   * look like the ligands" means - so what differs between them is only the
+   * words and what a click selects, and both of those arrive as arguments.
+   */
+  function addRow(parts: MenuRow, keys: readonly string[], open: () => void): void {
+    const row = pickable(PICK.row);
+    // Picked is `aria-pressed`: both what the stylesheet paints from and what
+    // a screen reader is told, so the two cannot drift apart. See `PICK`.
+    // An edge row has two keys and is picked when both of its ends are, which
+    // is the same question its copy button asks.
+    row.setAttribute("aria-pressed", String(keys.every((key) => spec.selected.has(key))));
+
+    if (parts.before) row.appendChild(parts.before);
+    // The full name, because the canvas caption is truncated to fit its node
+    // and long names were called out as normal rather than exceptional.
+    const name = el("span", "flex:1;min-width:0;overflow-wrap:anywhere;", parts.name);
+    name.title = parts.title;
+    row.appendChild(name);
+
+    row.onclick = (event) => {
+      // Plain click jumps to it and opens it; modifier-click adds to the
+      // selection, which is what makes "these six and what connects them"
+      // possible.
+      if (event.shiftKey || event.metaKey || event.ctrlKey) {
+        const picked = keys.every((key) => spec.selected.has(key));
+        for (const key of keys) {
+          if (picked) spec.selected.delete(key);
+          else spec.selected.add(key);
+        }
+      } else {
+        spec.selected.clear();
+        for (const key of keys) spec.selected.add(key);
+        open();
+      }
+      render();
+      spec.refresh();
+    };
+    list.appendChild(row);
+  }
+
+  /** The node list: every ligand a filter left, in name order. */
+  function renderNodes(): number {
+    const shown = spec.nodes
+      .map((node, index) => ({ node, index }))
+      .filter(({ node, index }) => spec.shows(node, index))
+      .map(({ node, index }) => ({ node, index, parts: spec.row(node, index) }));
+    shown.sort((a, b) => byName.compare(a.parts.name, b.parts.name));
+    for (const { node, index, parts } of shown) {
+      addRow(parts, [node["gufe-key"]], () => spec.focus(index));
+    }
+    return shown.length;
+  }
+
+  /** The edge list: every transformation a filter left, in name order. */
+  function renderEdges(): number {
+    const shown = spec.edges
+      .map((edge, index) => ({ edge, index }))
+      .filter(({ edge, index }) => spec.edgeShows(edge, index))
+      .map(({ edge, index }) => ({ edge, index, parts: spec.edgeRow(edge, index) }));
+    shown.sort((a, b) => byName.compare(a.parts.name, b.parts.name));
+    for (const { edge, index, parts } of shown) {
+      // Both ends, because a transformation is a thing between two ligands:
+      // selecting it lights the line on the canvas, and the copy button - which
+      // copies the edges with both ends selected - then has this one to copy.
+      addRow(parts, [edge.from["gufe-key"], edge.to["gufe-key"]], () => spec.focusEdge(index));
+    }
+    return shown.length;
+  }
+
   function render(): void {
     // Whatever the export last said was about a selection that has now changed,
     // and a count of what was copied from the previous one is worse than
     // silence. A successful copy does not come through here, so it stays up.
     exporter.clearNote();
+    // The button names the list it copies, and the tab is what decides which
+    // list that is.
+    exporter.relabel();
+    tabs.setActive(tab);
     list.replaceChildren();
 
-    const shown = spec.nodes
-      .map((node, index) => ({ node, index }))
-      .filter(({ node, index }) => spec.shows(node, index));
-    count.textContent = `${shown.length} of ${spec.nodes.length} ${spec.noun}`;
+    const words = tab === "nodes" ? spec.words.nodes : spec.words.edges;
+    const total = tab === "nodes" ? spec.nodes.length : spec.edges.length;
+    const shown = tab === "nodes" ? renderNodes() : renderEdges();
+    count.textContent = `${shown} of ${total} ${words.plural}`;
 
-    for (const { node, index } of shown) {
-      const key = node["gufe-key"];
-      const row = pickable(PICK.row);
-      // Picked is `aria-pressed`: both what the stylesheet paints from and what
-      // a screen reader is told, so the two cannot drift apart. See `PICK`.
-      row.setAttribute("aria-pressed", String(spec.selected.has(key)));
-
-      const parts = spec.row(node, index);
-      if (parts.before) row.appendChild(parts.before);
-      // The full name, because the canvas caption is truncated to fit its node
-      // and long names were called out as normal rather than exceptional.
-      const name = el("span", "flex:1;min-width:0;overflow-wrap:anywhere;", parts.name);
-      name.title = parts.title;
-      row.appendChild(name);
-
-      row.onclick = (event) => {
-        // Plain click jumps to it and opens it; modifier-click adds to the
-        // selection, which is what makes "these six and what connects them"
-        // possible.
-        if (event.shiftKey || event.metaKey || event.ctrlKey) {
-          if (spec.selected.has(key)) spec.selected.delete(key);
-          else spec.selected.add(key);
-        } else {
-          spec.selected.clear();
-          spec.selected.add(key);
-          spec.focus(index);
-        }
-        render();
-        spec.refresh();
-      };
-      list.appendChild(row);
-    }
-
-    if (!shown.length) {
+    if (!shown) {
       list.appendChild(el("div", `font-size:${FONT.small};padding:${SPACE.lg};color:${V.textMuted2};`, "Nothing matches."));
     }
   }

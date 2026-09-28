@@ -47,11 +47,12 @@ transformation is cheap, and the network is not a plan.
 
 The search runs over the heavy atoms, for the reason :class:`Pose` gives, but
 the mapping it returns is not heavy atoms only: :func:`hydrogen_mapping` then
-pairs the hydrogens hanging off each mapped heavy pair, under the same cutoff.
-On this series that maps nine hydrogens in ten, which is what the poses show -
-a core-restrained scaffold superposes its hydrogens along with its carbons - and
-a mapping that stopped at the heavy atoms would be drawing a distinction the
-geometry does not make.
+pairs every hydrogen hanging off a mapped heavy pair with one on its partner.
+A heavy atom that is the same atom of the series carries the same hydrogens, so
+the cutoff that decides the heavy pairs has no part in that; what the geometry
+decides is only which hydrogen of a pair is which. A mapping that stopped at the
+heavy atoms would be drawing a distinction neither its own heavy atoms nor any
+real mapper draws.
 """
 
 from __future__ import annotations
@@ -211,34 +212,37 @@ def geometric_mapping(poseA: Pose, poseB: Pose, cutoff: float = CUTOFF) -> dict[
     paired = _bonded_support(paired, poseA.bonds, poseB.bonds)
     paired = _largest_connected(paired, poseA.bonds)
     heavy = {poseA.index[i]: poseB.index[j] for i, j in paired.items()}
-    return heavy | hydrogen_mapping(heavy, poseA, poseB, cutoff)
+    return heavy | hydrogen_mapping(heavy, poseA, poseB)
 
 
-def hydrogen_mapping(heavy: dict[int, int], poseA: Pose, poseB: Pose, cutoff: float = CUTOFF) -> dict[int, int]:
+def hydrogen_mapping(heavy: dict[int, int], poseA: Pose, poseB: Pose) -> dict[int, int]:
     """The hydrogens of a heavy atom pair, paired with each other.
 
     Searching over the hydrogens is what :class:`Pose` avoids; inheriting them
     is not the same thing. Once two heavy atoms are known to be the same atom of
-    the series, a hydrogen on one can only be the same hydrogen as one on the
-    other, so the candidates are enumerated within a heavy pair and nowhere
-    across it. They are then taken nearest first under the same `cutoff` the
-    heavy atoms answer to, which is the whole of the test: a hydrogen that
-    genuinely overlaps its counterpart - which on this core-restrained series is
-    nine in ten of them, scaffold and substituent alike - is the same hydrogen,
-    and a methyl that has rotated to point somewhere else is not, so its three
-    hydrogens stay unmapped while the carbon under them is mapped.
+    the series, a hydrogen on one is the same hydrogen as one on the other, so
+    the candidates are enumerated within a heavy pair and nowhere across it, and
+    every one of them is taken: `CUTOFF` is the heavy atoms' test and no part of
+    this. A carbon that is the same carbon does not have different hydrogens on
+    it, and the rotation that leaves a methyl's three pointing somewhere else is
+    a torsion the transformation is free to turn back - which is the answer both
+    LOMAP and Kartograf give, and dropping the three would be this fixture
+    inventing a distinction its own heavy atoms do not draw.
 
-    That last case is the reason this is geometry rather than counting. A mapper
-    working from topology would pair all three regardless, on the grounds that a
-    torsion is free; this fixture says what the poses say.
+    What the geometry is still used for is *which* hydrogen is which. Within a
+    pair they are matched nearest first, so wherever a rotation has not moved
+    them the pairing is the one the poses show; where it has, one consistent
+    one-to-one choice is as good as another and nearest-first keeps it
+    deterministic. A count that differs across the pair - a mapped carbon
+    carrying two hydrogens against three - leaves the remainder unmapped, which
+    is the one case a hydrogen has nothing to be the same as.
     """
     candidates: list[tuple[float, int, int]] = []
     for atomA, atomB in heavy.items():
         for hydrogenA in poseA.hydrogens[atomA]:
             for hydrogenB in poseB.hydrogens[atomB]:
                 distance = float(np.linalg.norm(poseA.hydrogen_coords[hydrogenA] - poseB.hydrogen_coords[hydrogenB]))
-                if distance <= cutoff:
-                    candidates.append((distance, hydrogenA, hydrogenB))
+                candidates.append((distance, hydrogenA, hydrogenB))
 
     # Sorted the way the heavy candidates are, so a tie between two hydrogens of
     # one methyl is broken by the molecule's own atom order.
@@ -299,9 +303,10 @@ def overlap_score(mapping: dict[int, int], poseA: Pose, poseB: Pose) -> float:
     transformation.
 
     Heavy atoms on both sides of the fraction. A hydrogen is mapped because its
-    parent is, so counting it would weight a pair by how many hydrogens its
-    shared substructure happens to carry, and a methyl whose rotation cost it
-    three hydrogens would score below an otherwise identical pair.
+    parent is, so counting it would weight a pair by how many hydrogens the
+    shared substructure happens to carry - a saturated ring scoring above an
+    aromatic one that overlaps just as well - which is a fact about the scaffold
+    and not about the overlap.
     """
     heavy = set(poseA.index)
     return sum(1 for atom in mapping if atom in heavy) / max(len(poseA), len(poseB))

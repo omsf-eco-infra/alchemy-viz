@@ -188,10 +188,12 @@ describe("<gufe-complex>", () => {
     // on top is the framing, which is the one thing a protein alone cannot be
     // asked about.
     // The share row every menu ends with is not one of these view's controls.
+    // Nor is the button that opens the menu, which carries no text at all.
+    const chrome = new Set(["Share to the web"]);
     const controls = (node: HTMLElement): string[] => {
       openMenu(node);
       return Array.from(node.querySelectorAll("button"), (b) => b.textContent ?? "").filter(
-        (label) => label && label !== "Share to the web",
+        (label) => label && !chrome.has(label),
       );
     };
 

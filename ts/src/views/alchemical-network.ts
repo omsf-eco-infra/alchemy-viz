@@ -1,26 +1,30 @@
 /**
  * `<gufe-alchemical-network>` - chemical systems joined by transformations.
  *
- * This is the ligand network one level up, and a node here is a whole chemical
- * system rather than a single molecule: what the canvas is for is composition
- * and topology - which systems exist, what they are made of, and what maps onto
- * what. So a node is a labelled box, coloured by what its system is made of.
+ * This is the ligand network one level up, and a box here is a ligand with every
+ * chemical system that carries it: a campaign runs one ligand series twice, in
+ * solvent and in complex, and a graph that drew a node per system drew that as
+ * two disconnected copies of the same ligand map. `alchemical-legs.ts` is the
+ * collapsing, and the reasoning behind it. What the canvas is for is the ligand
+ * map - which ligands exist and what maps onto what - and every line on it is
+ * every transformation between its two ligands, so nothing on the canvas
+ * belongs to one leg and nothing on it is coloured by one. Which leg is a
+ * question asked of one thing at a time, in the pane.
  *
- * Inside that box, zoomed in far enough, is the system's ligand. A campaign is
- * one ligand series run twice, in solvent and in complex, and which ligand a
- * system carries is the thing a chemist recognises a node by - the name is a
- * convention and the composition is shared by half the graph. So the box keeps
- * saying what the system is made of and gains a picture of the one component
- * that tells it apart, on the same terms as the ligand network's: built lazily,
- * only for the nodes on screen, and only past the zoom where it can be read.
- * `ZOOM_LEVELS` is where that threshold is. A system with no small molecule in
- * it - a solvent-only reference state, an apo protein - is drawn as it always
- * was, because there is nothing to put in the box.
+ * Inside that box, zoomed in far enough, is the ligand. It is the thing a chemist
+ * recognises a box by - the name is a convention - and it is drawn on the same
+ * terms as the ligand network's: built lazily, only for the boxes on screen, and
+ * only past the zoom where it can be read. `ZOOM_LEVELS` is where that threshold
+ * is. A system with no small molecule in it - a solvent-only reference state, an
+ * apo protein - is a box of its own with nothing to put in it, drawn as it
+ * always was.
  *
  * The detail pane is where a whole system is drawn, and this view draws none of
  * one itself. Every reference in the payload resolves to a complete payload
- * object, so a selected node is a `ChemicalSystemViz` and a selected edge is a
- * `TransformationViz` - which are exactly what `<gufe-chemical-system>` and
+ * object, so a selected box opens as a `ChemicalSystemViz` - its legs'
+ * components merged into one list - and a selected line as one of its
+ * `TransformationViz`, chosen by a switch above the pane; those are exactly
+ * what `<gufe-chemical-system>` and
  * `<gufe-transformation>` take. The pane mounts one `<alchemy-view>` and re-points
  * it, so selecting a system gets that view's component list and, through its
  * own nested dispatcher, the ligand depiction or the 3D protein; and selecting
@@ -33,6 +37,13 @@
  * edge loose into a payload that stands on its own, the way `mappingPayloadFor`
  * does one level further down.
  *
+ * The third thing the pane shows is on the header rather than the canvas: the
+ * protocols. A network may run several - the schema says a protocol per
+ * transformation - so the chip is a button, and what it opens is the protocol
+ * card where there is one protocol and a list of them, with the share of the
+ * network each one runs, where there are more. `protocolsOf` is what counts
+ * them; `<gufe-protocol>` is still what draws one.
+ *
  * Like the ligand network, d3 is asked for a force layout and nothing else: the
  * SVG, the selection and the fallback circular layout are plain DOM, so the
  * graph still draws when d3 cannot be fetched. Getting around the canvas -
@@ -41,7 +52,7 @@
  */
 
 import { el, truncate } from "../shared/dom.js";
-import { dropdown } from "../shared/controls.js";
+import { buttonGroup, pickable } from "../shared/controls.js";
 import { centredMessage, floatingWarning, headerStrip, statChip } from "../shared/panels.js";
 import { chromeMenu, orientMenuPanel, splitter } from "../shared/chrome.js";
 import { framejsMenuItem } from "../shared/framejs.js";
@@ -54,8 +65,8 @@ import { resolveNetwork } from "../shared/network/resolve.js";
 import { networkMenu } from "../shared/network/menu.js";
 import { DIM, levelAt as levelIn } from "../shared/network/detail.js";
 import { Depictions, detailPane, draggableNodes, visibleAt } from "../shared/network/canvas.js";
-import { resetControl } from "../shared/interact.js";
-import { flag, num, text as textSetting } from "../shared/settings.js";
+import { floatingReset } from "../shared/interact.js";
+import { flag, num } from "../shared/settings.js";
 import { createMatcher, type MatchOutcome } from "../shared/smarts.js";
 import { svg, titled } from "../shared/svg.js";
 import { depictSVG } from "../shared/sdf.js";
@@ -63,9 +74,20 @@ import { depictThemeOptions, nodeCardGround } from "../shared/depict-theme.js";
 import { chargeLabel } from "../shared/charge.js";
 import { DEPICT_STYLE } from "../shared/depict-style.js";
 import { mountDepiction } from "../shared/depict-node.js";
-import { FONT, RADIUS, SPACE, TOOLBAR, WEIGHT } from "../shared/style.js";
+import { CHIP, FONT, PANE_LIST, PICK, SECTION_LABEL, SPACE, TEXT, TOOLBAR, WEIGHT } from "../shared/style.js";
 import { T, V } from "../shared/theme.js";
 import { buildRegistry, entryLabel, lookup, lookupOfType, type RegistryIndex } from "../schema/registry.js";
+import {
+  compositionOf,
+  componentTypes,
+  groupSystems,
+  legIndex,
+  mergedSystem,
+  sharedName,
+  tabLabels,
+  type LegIndex,
+  type SystemGroup,
+} from "./alchemical-legs.js";
 import { systemPayloadFor } from "./chemical-system.js";
 import { transformationPayloadFor } from "./transformation.js";
 import type {
@@ -91,8 +113,16 @@ interface D3Link {
   target: string;
 }
 
-/** A chemical system resolved out of the registry, with its layout position. */
-interface GraphNode extends ChemicalSystemViz {
+/**
+ * A box on the canvas: a ligand and its systems, with its layout position.
+ *
+ * `SystemGroup` rather than a `ChemicalSystemViz`, because a box stands for
+ * every leg of one ligand and no single system is the box. What it keeps of a
+ * system is the key it is addressed by and the name it is drawn under - which
+ * is all `SelectableNode` asks for, so the menu and the copy-out block work on
+ * boxes without knowing any of this.
+ */
+interface GraphNode extends SystemGroup {
   x: number;
   y: number;
   /**
@@ -107,20 +137,45 @@ interface GraphNode extends ChemicalSystemViz {
 }
 
 /**
- * An edge, which *is* a `TransformationViz` - there is no separate edge type -
- * with its two state keys resolved to the nodes they name.
+ * A line on the canvas: every transformation running between the same two boxes.
+ *
+ * One per pair rather than one per transformation, because once a ligand is one
+ * box its legs run between the same two of them: two lines there are two things
+ * to click that say the same thing about which ligands are being compared, and
+ * the reader has no way of knowing which is which until one is open. Which leg
+ * is chosen in the pane instead, the same way a box's is.
+ *
+ * `legs` are those transformations, in leg order, and `labels` what to call each
+ * of them - the leg, or its own name where the leg cannot tell two apart. See
+ * `tabLabels`.
  */
-interface GraphEdge extends TransformationViz {
+interface GraphEdge {
   index: number;
   from: GraphNode;
   to: GraphNode;
+  legs: TransformationViz[];
+  labels: string[];
+  /** What the line is called: what its transformations' names share, or the first's. */
+  name: string;
 }
 
-/** What a node is drawn in: one pair per composition the network contains. */
+/** What a box is drawn in, which is the same thing for every box on the canvas. */
 interface NodeColors {
   fill: string;
   stroke: string;
 }
+
+/**
+ * The plain box, read per render because the theme can change under a live view.
+ *
+ * The canvas's own uncoloured node rather than a card's. A card sits on a panel
+ * and is bordered just enough to come away from it; a card's border on a canvas
+ * is a box held together by nothing but its text - white on white in the light
+ * theme, and a shade off the ground in the dark one. `netNodeStroke` is the shade
+ * the ligand network draws its own plain nodes in, and it is picked to carry an
+ * outline rather than to edge a card.
+ */
+const plainColors = (): NodeColors => ({ fill: T.netNodeFill, stroke: T.netNodeStroke });
 
 /**
  * The two boxes a system is drawn in.
@@ -151,15 +206,16 @@ const boxHeightOf = (sdf: string | null | undefined): number => (sdf ? NODE.depi
 /**
  * The square a ligand is drawn on inside its box, and the room it leaves.
  *
- * A plate at all because a structure drawn straight onto the box's own
- * composition colour is a structure nobody can read: whichever palette RDKit is
- * using, it was picked against a plain ground and not against a wash of blue or
- * amber. `depict-theme.ts` says which plain ground, so that the plate and the
- * ink on it move together. The plate is square and inset rather than filling the
- * box, which leaves the colour showing as a frame on all four sides: the picture
- * says which ligand, and the frame around it goes on saying which leg. Square
- * because a depiction is - a plate wider than the drawing it holds is a band
- * with a molecule in the middle of it.
+ * A plate at all because a structure drawn straight onto the box's own ground is
+ * a structure nobody can read: whichever palette RDKit is using, it was picked
+ * against a plain ground and not against whatever a box is filled with.
+ * `depict-theme.ts` says which plain ground, so that the plate and the ink on it
+ * move together. The plate is square and inset rather than filling the box,
+ * which leaves the box showing as a frame on all four sides: the picture is the
+ * ligand and the frame around it is the box holding it, which is what keeps a
+ * drawing from reading as one that has been cut out and laid on the canvas.
+ * Square because a depiction is - a plate wider than the drawing it holds is a
+ * band with a molecule in the middle of it.
  */
 const PLATE = { pad: 6, size: 122, radius: 6, inset: 4 };
 
@@ -197,7 +253,7 @@ const CHARGE_BADGE = {
 };
 const CHARGE_DASH = "6 4";
 
-/** The name and the composition line: their sizes, and where they sit. */
+/** The name and the line under it: their sizes, and where they sit. */
 const CAPTION = { nameSize: 12, subSize: 10, gap: 13, bottom: 9, nameChars: 20, subChars: 24 };
 
 /**
@@ -213,8 +269,8 @@ const CAPTION = { nameSize: 12, subSize: 10, gap: 13, bottom: 9, nameChars: 20, 
  * A floor in *screen* pixels is what makes this one decision rather than a pair
  * of thresholds guessed against two font sizes: the same number covers both
  * lines, and the smaller one goes first because it is the smaller one. Nothing
- * is lost by it - the box keeps its composition colour, which the legend names,
- * and hovering one still gives its name and its composition in full.
+ * is lost by it - the box keeps its ligand, and hovering one still gives its
+ * name, its systems and their legs in full.
  */
 const LABEL_MIN_PX = 7;
 
@@ -292,7 +348,25 @@ export const levelAt = (scale: number): NodeDetail => levelIn(ZOOM_LEVELS, scale
  * pulled-back campaign reads as boxes with lines between them rather than the
  * other way round.
  */
-const EDGE = { width: 2, selectedWidth: 3.5, min: 1, hit: 20 };
+const EDGE = { width: 2, selectedWidth: 3.5, min: 1, hit: 20, rail: 5 };
+
+/**
+ * How far apart the two rails of a double line are, in graph units at this zoom.
+ *
+ * A line holding both legs of a mapping is drawn as two, which is the one thing
+ * the canvas says about a line's legs without being opened - see `GraphEdge`.
+ * `rail` is the separation in *screen* pixels, like every other width here, and
+ * this converts it: the strokes are non-scaling, so rails held a fixed distance
+ * apart in graph units would draw a double line up close and a single thick one
+ * on a campaign framed at a third. Divided by the zoom, the pair sits the same
+ * few pixels apart at every distance, which is what the two strokes between them
+ * already do.
+ *
+ * The floor under the scale is arithmetic rather than judgement: nothing ever
+ * asks this at a zoom of zero, and a division that could produce an infinity is
+ * a coordinate that would take a line off the canvas.
+ */
+export const railShift = (scale: number): number => EDGE.rail / 2 / Math.max(scale, 0.001);
 
 /** How heavy an edge is drawn at this zoom, in screen pixels. */
 export const edgePx = (scale: number, selected: boolean): number => {
@@ -367,12 +441,12 @@ const NODE_EXTENT = { x: NODE.width / 2, y: NODE.depictedHeight / 2 };
 const FOCUS_SCALE = 1.4;
 
 /**
- * What the filters leave lit, as sets of node keys and edge indices.
+ * What the filters leave lit, as sets of box keys and edge indices.
  *
- * A system is lit when nothing is being asked for at all, or when it is
- * selected, or when it survives every filter. A transformation is lit when both
- * of its systems are - so a selection reads as "these systems and what runs
- * between them", which is also exactly what the Transformations export copies.
+ * A box is lit when nothing is being asked for at all, or when it is selected,
+ * or when it survives every filter. A line is lit when both of its boxes are -
+ * so a selection reads as "these ligands and what runs between them", which is
+ * also exactly what the Transformations export copies.
  *
  * Null means nothing is filtering, which the canvas draws as full strength
  * everywhere rather than as "everything happens to be lit".
@@ -386,26 +460,21 @@ function emphasisFor(
   nodes: readonly GraphNode[],
   edges: readonly GraphEdge[],
   haystacks: readonly string[],
-  signatures: readonly string[],
   selected: ReadonlySet<string>,
   query: string,
-  composition: string,
   matched: ReadonlySet<number> | null,
 ): { nodes: ReadonlySet<string>; edges: ReadonlySet<number> } | null {
   const text = query.trim().toLowerCase();
-  if (!selected.size && !text && composition === "" && matched === null) return null;
+  if (!selected.size && !text && matched === null) return null;
 
   // A selection on its own lights only what is in it: with no search and no
-  // composition chosen there is nothing for the two filters to narrow, and a
-  // `shown` that answered "yes, trivially" would light the whole canvas back up.
-  const narrowing = text.length > 0 || composition !== "" || matched !== null;
+  // pattern there is nothing for the filters to narrow, and a `shown` that
+  // answered "yes, trivially" would light the whole canvas back up.
+  const narrowing = text.length > 0 || matched !== null;
   const litNodes = new Set<string>();
   nodes.forEach((node, index) => {
     const shown =
-      narrowing &&
-      (!text || haystacks[index].includes(text)) &&
-      (!composition || signatures[index] === composition) &&
-      (!matched || matched.has(index));
+      narrowing && (!text || haystacks[index].includes(text)) && (!matched || matched.has(index));
     if (selected.has(node["gufe-key"]) || shown) litNodes.add(node["gufe-key"]);
   });
 
@@ -416,100 +485,18 @@ function emphasisFor(
   return { nodes: litNodes, edges: litEdges };
 }
 
-/** A node's label: its name, or a short form of its gufe key. */
+/** A box's label: its name, or a short form of the gufe key it is addressed by. */
 const nodeLabel = entryLabel;
-
-/**
- * What a chemical system is made of, as the set of its component types, sorted.
- *
- * The labels are deliberately not part of it. A campaign calls the same protein
- * "protein" in one system and something else in the next, and what tells a
- * solvent leg from a complex leg is that one has a protein in it at all - so
- * this is the set of component *types*, sorted, which is stable against both
- * the labels and the order the components were written in.
- */
-function componentTypes(system: ChemicalSystemViz, registry: RegistryIndex): string[] {
-  const types = new Set<string>();
-  for (const key of Object.values(system.components ?? {})) {
-    const component = lookup(registry, key);
-    if (!component) {
-      types.add("missing");
-      continue;
-    }
-    types.add(
-      component.type === "UnknownComponentViz"
-        ? component.gufe_type
-        : component.type.replace(/(?:Component)?Viz$/, ""),
-    );
-  }
-  return [...types].sort();
-}
-
-/** The same thing as one string, which is what two systems are compared by. */
-const compositionOf = (system: ChemicalSystemViz, registry: RegistryIndex): string =>
-  componentTypes(system, registry).join(" + ");
-
-/** What the systems are made of, and what that makes them look like. */
-interface CompositionGroups {
-  /** What each system is made of, indexed as the nodes are. */
-  signatures: string[];
-  /** The distinct compositions, in order of first appearance. */
-  compositions: string[];
-  colorOf(index: number): NodeColors;
-  /** One entry per composition when they are coloured, and empty when they are not. */
-  legend: [string, NodeColors][];
-}
-
-/**
- * Group the systems by what they are made of, and give each group a colour.
- *
- * The point is the picture a binding campaign makes: every mapping becomes two
- * transformations, a solvent leg and a complex leg, and the graph is two
- * components whose only difference is that one carries a protein. Uncoloured,
- * that reads as one graph that happens to be in two pieces.
- *
- * Nothing is coloured when there is only one composition, because there is
- * nothing to tell apart and a legend saying so is noise. Nothing is coloured
- * when there are more than the palette holds either: at that point the colours
- * have stopped being a distinction and started being decoration.
- */
-function compositionGroups(nodes: readonly GraphNode[], registry: RegistryIndex): CompositionGroups {
-  // The canvas's own uncoloured node rather than a card's. A card sits on a
-  // panel and is bordered just enough to come away from it; a box sits on the
-  // graph canvas, and a card's border on a
-  // canvas is a box held together by nothing but its text - white on white in
-  // the light theme, and a shade off the ground in the dark one. `netNodeStroke`
-  // is the shade the ligand network draws its own plain nodes in, and it is
-  // picked to carry an outline rather than to edge a card.
-  const plain: NodeColors = { fill: T.netNodeFill, stroke: T.netNodeStroke };
-  const signatures = nodes.map((node) => compositionOf(node, registry));
-  const compositions = [...new Set(signatures)];
-  // The colouring is dropped here, and the compositions are handed back
-  // regardless: "show me only the complex leg" is a question worth answering on
-  // a network with seven compositions, even where colouring all seven is not.
-  if (compositions.length < 2 || compositions.length > T.netGroupFill.length) {
-    return { signatures, compositions, colorOf: () => plain, legend: [] };
-  }
-
-  const colors = new Map<string, NodeColors>(
-    compositions.map((signature, i) => [signature, { fill: T.netGroupFill[i], stroke: T.netGroupStroke[i] }]),
-  );
-  return {
-    signatures,
-    compositions,
-    colorOf: (index) => colors.get(signatures[index]) ?? plain,
-    legend: compositions.map((signature) => [signature, colors.get(signature)!]),
-  };
-}
 
 /**
  * Everything about a system that a search should be able to find it by.
  *
  * Its own name and key, but also its components': someone looking for
- * `lig_ejm_42` is looking for the two systems that carry that ligand, and
- * neither of them is called that. A system named "lig_ejm_42_solvent" would be
- * found either way, but that naming is a convention rather than a guarantee -
- * a network whose systems are unnamed has nothing but its components to go on.
+ * `lig_ejm_42` is looking for the box that ligand is drawn in, and the system
+ * inside it may be called nothing of the sort. A system named
+ * "lig_ejm_42_solvent" would be found either way, but that naming is a
+ * convention rather than a guarantee - a network whose systems are unnamed has
+ * nothing but its components to go on.
  */
 function systemHaystack(system: ChemicalSystemViz, registry: RegistryIndex): string {
   const parts = [system.name ?? "", system["gufe-key"]];
@@ -524,13 +511,26 @@ function systemHaystack(system: ChemicalSystemViz, registry: RegistryIndex): str
   return parts.join(" ").toLowerCase();
 }
 
-/** The molecules a network's systems are built from, and who carries what. */
+/**
+ * The same, for a box: its own name and every system in it.
+ *
+ * Every system, so that searching a campaign for `lig_ejm_42_complex` still
+ * finds the box that leg was collapsed into. A reader who knows the names the
+ * payload uses must not have them taken away by a picture that stopped drawing
+ * them.
+ */
+function nodeHaystack(node: SystemGroup, registry: RegistryIndex): string {
+  const parts = [nodeLabel(node), ...node.systems.map((system) => systemHaystack(system, registry))];
+  return parts.join(" ").toLowerCase();
+}
+
+/** The molecules a network's boxes are built from, and who carries what. */
 interface LigandIndex {
   /** One structure per distinct small molecule, which is what the matcher sweeps. */
   sources: string[];
   /** The formal charge of each of those, in the same order. */
   charges: number[];
-  /** Which of those each system carries, indexed as the nodes are. */
+  /** Which of those each box carries, indexed as the nodes are. */
   perNode: number[][];
 }
 
@@ -538,10 +538,11 @@ interface LigandIndex {
  * Index the small molecules of a network once, by molecule rather than by
  * system.
  *
- * A campaign runs every ligand twice - once in solvent, once in complex - so
- * indexing per system would parse the same molecule twice for every pattern.
- * Indexing per molecule and mapping back afterwards halves the sweep, and on a
- * network with a shared cofactor it does much better than that.
+ * The legs of a ligand hold the very same `SmallMoleculeComponent`, so indexing
+ * per system would parse the same molecule twice for every pattern. Indexing per
+ * molecule and mapping back afterwards halves the sweep on a campaign, and on a
+ * network with a shared cofactor it does much better than that. It is also what
+ * makes a box's ligand one entry rather than one per leg.
  *
  * Only small molecules: a protein has no SMARTS anyone is asking about, and
  * handing a matcher a PDB the size of a receptor per keystroke would be a
@@ -552,34 +553,43 @@ function ligandIndex(nodes: readonly GraphNode[], registry: RegistryIndex): Liga
   const charges: number[] = [];
   const at = new Map<GufeKey, number>();
   const perNode = nodes.map((node) => {
-    const mine: number[] = [];
-    for (const key of Object.values(node.components ?? {})) {
-      const component = lookupOfType<SmallMoleculeComponentViz>(registry, key, "SmallMoleculeComponentViz");
-      if (!component) continue;
-      let index = at.get(key);
-      if (index === undefined) {
-        index = sources.length;
-        at.set(key, index);
-        sources.push(component.sdf ?? "");
-        charges.push(component.total_charge ?? 0);
+    const mine = new Set<number>();
+    for (const system of node.systems) {
+      for (const key of Object.values(system.components ?? {})) {
+        const component = lookupOfType<SmallMoleculeComponentViz>(registry, key, "SmallMoleculeComponentViz");
+        if (!component) continue;
+        let index = at.get(key);
+        if (index === undefined) {
+          index = sources.length;
+          at.set(key, index);
+          sources.push(component.sdf ?? "");
+          charges.push(component.total_charge ?? 0);
+        }
+        mine.add(index);
       }
-      mine.push(index);
     }
-    return mine;
+    return [...mine];
   });
   return { sources, charges, perNode };
 }
 
 /**
- * What a node draws: how it is coloured, what it says, and the ligand in it.
+ * What a box draws: what it says, and the ligand in it.
  *
- * One object per node rather than three accessors, because the three answers
- * are read together every time and two of them come from the same pass over the
- * system's components.
+ * One object per box rather than three accessors, because the answers are read
+ * together every time and most of them come from the same pass over its
+ * systems' components.
  */
 interface NodeFace {
-  colors: NodeColors;
-  /** The line under the name: what the system is made of. */
+  /**
+   * The line under the name: the legs this ligand was run in, or, on a box
+   * standing for a single system, what that system is made of.
+   *
+   * The legs, because that is the fact collapsing took off the canvas - a
+   * campaign's boxes used to say "Protein + Solvent" against "Solvent" and the
+   * reader took the leg from that. A box that is one system says nothing about
+   * legs it is not part of, and goes on saying what it is made of.
+   */
   composition: string;
   /** The same line for a box that is showing its ligand. See `subtitleFor`. */
   besides: string;
@@ -595,6 +605,8 @@ interface NodeFace {
    * is for, which is whether an edge changes the charge.
    */
   charge: number;
+  /** The whole box in a sentence, for its tooltip: its systems and their legs. */
+  title: string;
 }
 
 /**
@@ -620,26 +632,219 @@ function subtitleFor(types: readonly string[], depicted: boolean, ligands: numbe
   return (rest.length ? rest : types).join(" + ");
 }
 
+/**
+ * What one box says under its name, and what it says when it is showing its
+ * ligand.
+ *
+ * A box standing for several systems says its legs - "solvent, complex" - and
+ * says them at every zoom, because a leg is not something the picture above can
+ * account for. A box standing for one goes on saying what that system is made
+ * of, which is `subtitleFor`'s rule and the reason the two lines differ at all.
+ */
+function captionFor(
+  node: SystemGroup,
+  types: readonly string[],
+  depicted: boolean,
+  ligands: number,
+): { composition: string; besides: string } {
+  if (node.systems.length > 1) {
+    const legs = node.legs.join(", ");
+    return { composition: legs, besides: legs };
+  }
+  return { composition: types.join(" + "), besides: subtitleFor(types, depicted, ligands) };
+}
+
+/**
+ * A box in full, for the tooltip: every system it stands for, under its leg.
+ *
+ * What the box itself cannot hold. A caption is one truncated line and the
+ * systems inside a box keep their own names in the payload, so hovering one is
+ * how a reader gets from the ligand back to `lig_ejm_31_complex` - and the only
+ * place the composition of each leg is written out where the box is saying
+ * "solvent, complex" instead.
+ */
+/** A resolved transformation, before its ends are swapped for the boxes they are in. */
+type ResolvedEdge = TransformationViz & { index: number; from: ChemicalSystemViz; to: ChemicalSystemViz };
+
+/**
+ * Gather the transformations into one line per pair of boxes.
+ *
+ * Pairs in the order the payload first names them, and the transformations
+ * within a pair in leg order, so a line's tabs read the way every other line's
+ * do. Keyed on the unordered pair, because nothing says the legs of a mapping
+ * wrote their two states the same way round.
+ *
+ * By the pair and not by the mapping: two lines between one pair of boxes are
+ * two things to click that say the same thing about which ligands are being
+ * compared, whether they are the legs of one mapping or two mappings that
+ * happen to share their endpoints. Either way the choice belongs in the pane,
+ * where there is room to say what is being chosen between.
+ */
+function bundleEdges(links: readonly ResolvedEdge[], boxOf: Map<GufeKey, GraphNode>, legs: LegIndex): GraphEdge[] {
+  const held = new Map<string, { from: GraphNode; to: GraphNode; at: number[] }>();
+  const order: string[] = [];
+  links.forEach((link, at) => {
+    const from = boxOf.get(link.from["gufe-key"])!;
+    const to = boxOf.get(link.to["gufe-key"])!;
+    const key = [from["gufe-key"], to["gufe-key"]].sort().join(" ");
+    const mine = held.get(key);
+    if (mine) {
+      mine.at.push(at);
+      return;
+    }
+    held.set(key, { from, to, at: [at] });
+    order.push(key);
+  });
+
+  return order.map((key, index) => {
+    const { from, to, at } = held.get(key)!;
+    const sorted = [...at].sort((a, b) => legs.ofEdge[a] - legs.ofEdge[b] || a - b);
+    // The graph's own fields come off here, so what a pane is handed is the
+    // payload's own transformation and the schema allows all of it.
+    const mine = sorted.map((i) => {
+      const { index: _index, from: _from, to: _to, ...edge } = links[i];
+      return edge;
+    });
+    const names = mine.map((edge) => entryLabel(edge));
+    const labels = tabLabels(
+      sorted.map((i) => legs.signatures[legs.ofEdge[i]]),
+      names,
+    );
+    return { index, from, to, legs: mine, labels, name: sharedName(names) || names[0] };
+  });
+}
+
+function titleFor(node: SystemGroup, registry: RegistryIndex): string {
+  if (node.systems.length === 1) return `${nodeLabel(node)} - ${compositionOf(node.systems[0], registry)}`;
+  const lines = node.systems.map(
+    (system, at) => `${node.legs[at]}: ${entryLabel(system)} - ${compositionOf(system, registry)}`,
+  );
+  return [nodeLabel(node), ...lines].join("\n");
+}
+
+/** One protocol a network runs, and how much of the network it runs. */
+interface ProtocolEntry {
+  protocol: ProtocolViz;
+  /** What the header and the list call it. */
+  label: string;
+  /** How many of the network's transformations name it. */
+  count: number;
+}
+
+/**
+ * Which protocols a network runs, in label order, with a transformation count
+ * each.
+ *
+ * Grouped by gufe key and not by class name: nothing in the schema or in gufe
+ * says a network runs one protocol, a campaign that ran its solvent leg under
+ * different settings from its complex leg is two protocols of the same class,
+ * and settings are not in this payload - so the key is the only thing that can
+ * tell those two apart. Where a class name does repeat, the key's tail goes on
+ * the label, which is what `entryLabel` does for a component with no name.
+ *
+ * Sorted, so the same network reads the same way on every reload.
+ */
+function protocolsOf(links: readonly TransformationViz[], registry: RegistryIndex): ProtocolEntry[] {
+  const held = new Map<GufeKey, ProtocolEntry>();
+  for (const edge of links) {
+    const protocol = lookupOfType<ProtocolViz>(registry, edge.protocol, "ProtocolViz");
+    if (!protocol) continue;
+    const entry = held.get(protocol["gufe-key"]);
+    if (entry) {
+      entry.count++;
+      continue;
+    }
+    // A Protocol has no name of its own, so its class name is what identifies it.
+    held.set(protocol["gufe-key"], { protocol, label: protocol.gufe_type || protocol.name || "Protocol", count: 1 });
+  }
+
+  const entries = [...held.values()];
+  const sharing = new Map<string, number>();
+  for (const entry of entries) sharing.set(entry.label, (sharing.get(entry.label) ?? 0) + 1);
+  for (const entry of entries) {
+    if ((sharing.get(entry.label) ?? 0) > 1) entry.label = `${entry.label} ${entryLabel(entry.protocol)}`;
+  }
+  return entries.sort((a, b) => (a.label < b.label ? -1 : a.label > b.label ? 1 : 0));
+}
+
+/**
+ * The protocol chip: what the network runs, and the way in to reading it.
+ *
+ * Past two it is a count rather than a list, with the names on the tooltip. The
+ * header is one line of chips beside the network's name, and three class names -
+ * each of them as long as `RelativeHybridTopologyProtocol` - push the counts off
+ * the end of it, which loses a reader something they cannot get back by
+ * hovering.
+ *
+ * Which is why it is a button rather than a readout: a chip reading
+ * "protocols 3" names a fact a reader then has no way to open, and a tooltip is
+ * not one on a touch screen or in a screenshot. Clicking it puts the protocols
+ * in the detail pane - the card where there is one of them, a list of them where
+ * there are several - and `aria-pressed` says whether the pane is showing them,
+ * so the chip is as pickable to a screen reader as it looks to the eye.
+ */
+function protocolChip(entries: readonly ProtocolEntry[], open: () => void): HTMLButtonElement {
+  const chip = pickable(`${CHIP.plain}${CHIP.button}gap:5px;`, CHIP.className);
+  chip.appendChild(el("span", "", entries.length === 1 ? "protocol" : "protocols"));
+  const labels = entries.map((entry) => entry.label);
+  chip.appendChild(
+    el("b", `color:${TEXT.primary};`, entries.length > 2 ? String(entries.length) : labels.join(", ")),
+  );
+  chip.title = entries.map((entry) => `${entry.label} - ${countedEdges(entry.count)}`).join("\n");
+  chip.onclick = open;
+  return chip;
+}
+
+/** "14 transformations", pluralised - the share of a network a protocol runs. */
+function countedEdges(count: number): string {
+  return `${count} transformation${count === 1 ? "" : "s"}`;
+}
+
+/**
+ * The protocols in the pane: a row each, naming it and what it runs.
+ *
+ * The counts are the point of the list. Which protocol ran fourteen of a
+ * campaign's eighteen transformations and which ran the other four is the
+ * question the header chip raises and has no room to answer, and these rows
+ * answer it before anything is clicked. A row then opens that protocol's own
+ * card - `<gufe-protocol>`, the same one a transformation's header links to -
+ * because what a protocol *is* belongs to the view of a protocol.
+ */
+function protocolList(entries: readonly ProtocolEntry[], open: (entry: ProtocolEntry) => void): HTMLDivElement {
+  const host = el("div", PANE_LIST);
+  // Named, the way the graph's own SVG is: which of the pane's several shapes is
+  // on screen is the first thing anyone asks when it looks wrong, and a class is
+  // how that is visible in devtools and assertable in a test.
+  host.className = "gufe-protocols";
+  host.appendChild(el("div", `${SECTION_LABEL}padding-bottom:${SPACE.xs};`, "protocols"));
+  for (const entry of entries) {
+    const row = pickable(PICK.row);
+    row.appendChild(el("span", "flex:1;min-width:0;overflow-wrap:anywhere;", entry.label));
+    row.appendChild(el("span", `flex-shrink:0;color:${V.textMuted};`, countedEdges(entry.count)));
+    row.title = entry.protocol["gufe-key"];
+    row.onclick = () => open(entry);
+    host.appendChild(row);
+  }
+  return host;
+}
+
 interface MenuParts {
   nodes: readonly GraphNode[];
   edges: readonly GraphEdge[];
-  /** What each system can be searched by, indexed as `nodes` is. */
+  /** What each box can be searched by, indexed as `nodes` is. */
   haystacks: readonly string[];
-  /** What each system is made of, indexed as `nodes` is. */
-  signatures: readonly string[];
-  /** The colour of each system, for the swatch that ties a row to the canvas. */
-  colorOf(index: number): NodeColors;
-  /** The distinct compositions, in the order the legend lists them. */
-  compositions: readonly string[];
+  /** What each box says under its name, for a row's tooltip. */
+  captions: readonly string[];
   selected: Set<string>;
-  filter: { composition: string };
   query: { text: string };
-  /** Re-run the emphasis after the query, the composition or the selection moves. */
+  /** Re-run the emphasis after the query or the selection moves. */
   refresh(): void;
-  /** Bring one system into view and open it. */
+  /** Bring one box into view and open it. */
   focus(index: number): void;
+  /** Bring one line into view and open the transformations it holds. */
+  focusEdge(index: number): void;
   /**
-   * Which systems the current SMARTS pattern left, or null when there is none.
+   * Which boxes the current SMARTS pattern left, or null when there is none.
    *
    * A function rather than a value: the sweep is asynchronous, so what it
    * answers changes under a menu that has already been built.
@@ -652,93 +857,91 @@ interface MenuParts {
 }
 
 /**
- * The network's menu: search, the composition filter, and the system list.
+ * The network's menu: search, a SMARTS filter, and the two lists.
  *
  * The skeleton is `networkMenu`, shared with the ligand network. What is here is
  * what an *alchemical* network's menu is: it searches a precomputed haystack per
- * system rather than the system itself, it filters on composition because the
- * question people ask of a campaign is "show me only the complex leg", and every
- * row carries the colour its box is drawn in.
+ * box - name, systems, components - rather than a system itself.
+ *
+ * Its second tab lists the transformations, one row per line on the canvas, and
+ * every filter above the list reaches them through their ends: a search for
+ * `lig_ejm_31` leaves the transformations that ligand was run in, which is the
+ * question asked of a campaign more often than "which ligands are in it".
+ *
+ * There is no filter by leg, because there is nothing left for one to narrow. A
+ * ligand belongs to every leg it was run in, so a leg says nothing about which
+ * boxes to show; and the legs of a mapping are one line now, so it says nothing
+ * about which lines to show either. Which leg is a question asked of one thing
+ * at a time, in the pane.
  *
  * Its SMARTS box also does the opposite of the ligand network's. There a node is
- * a molecule and a match has a structure to colour; here a node is a system made
- * of several, so a match is something to narrow the list by. `shows` is where
- * that difference lives.
+ * a molecule and a match has a structure to colour; here a box holds a system
+ * made of several, so a match is something to narrow the list by. `shows` is
+ * where that difference lives.
  */
 function buildMenu(parts: MenuParts): HTMLDivElement {
-  const compositionSetting = textSetting("alchemical-network.composition");
+  const indexOf = new Map(parts.nodes.map((node, index) => [node["gufe-key"], index]));
+  /**
+   * Whether a box survives the filters now in force.
+   *
+   * Named rather than written into `shows`, because the transformation list
+   * answers the same question of both of a line's ends.
+   */
+  const showsBox = (index: number): boolean => {
+    const text = parts.query.text.trim().toLowerCase();
+    if (text && !parts.haystacks[index].includes(text)) return false;
+    const matched = parts.matched();
+    if (matched && !matched.has(index)) return false;
+    return true;
+  };
+  const endsOf = (edge: GraphEdge): number[] =>
+    [edge.from, edge.to].map((node) => indexOf.get(node["gufe-key"]) ?? -1).filter((index) => index >= 0);
 
-  return networkMenu<GraphNode>({
+  return networkMenu<GraphNode, GraphEdge>({
     namespace: "alchemical-network",
-    noun: "systems",
     nodes: parts.nodes,
     edges: parts.edges,
     selected: parts.selected,
     query: parts.query,
     search: {
-      placeholder: "Search systems",
-      label: "Search systems by name, component or gufe key",
+      placeholder: "Search ligands",
+      label: "Search ligands by name, component, system or gufe key",
     },
     smarts: {
       placeholder: "Filter by SMARTS",
-      label: "Show only the systems whose ligands match this SMARTS pattern",
+      label: "Show only the ligands whose structures match this SMARTS pattern",
       describe: (outcome) => {
         const unread = outcome.unreadable ? `, ${outcome.unreadable} could not be read` : "";
         const left = parts.matched()?.size ?? parts.nodes.length;
-        return `${left} of ${parts.nodes.length} systems contain it${unread}`;
+        return `${left} of ${parts.nodes.length} ligands contain it${unread}`;
       },
     },
     match: (pattern) => parts.match(pattern),
-    // Only when there is more than one, which is also the rule the legend and
-    // the node colouring follow: a network whose systems are all made of the
-    // same things has nothing here to choose between.
-    filters: (rerender) => {
-      if (parts.compositions.length <= 1) return [];
-      const row = el("div", `display:flex;align-items:center;gap:${SPACE.md};font-size:${FONT.small};color:${V.textMuted};`);
-      row.appendChild(el("span", "flex-shrink:0;", "made of"));
-      const picker = dropdown(
-        [{ id: "", label: "anything" }, ...parts.compositions.map((signature) => ({ id: signature, label: signature }))],
-        "",
-        (id) => {
-          parts.filter.composition = id;
-          rerender();
-          parts.refresh();
-        },
-        compositionSetting,
-      );
-      picker.style.cssText += "flex:1;min-width:0;";
-      parts.filter.composition = picker.value;
-      row.appendChild(picker);
-      return [row];
-    },
-    shows: (_node, index) => {
-      const text = parts.query.text.trim().toLowerCase();
-      if (text && !parts.haystacks[index].includes(text)) return false;
-      if (parts.filter.composition && parts.signatures[index] !== parts.filter.composition) return false;
-      const matched = parts.matched();
-      if (matched && !matched.has(index)) return false;
-      return true;
-    },
-    row: (node, index) => {
-      const colors = parts.colorOf(index);
-      return {
-        // The same colour the box on the canvas is drawn in, so a row and a node
-        // are recognisably the same thing without reading either label.
-        before: el(
-          "span",
-          `width:10px;height:10px;border-radius:${RADIUS.sm};flex-shrink:0;` +
-            `background:${colors.fill};border:1px solid ${colors.stroke};`,
-        ),
-        name: nodeLabel(node),
-        title: `${nodeLabel(node)}\n${parts.signatures[index]}`,
-      };
-    },
-    export: {
-      nodes: { button: "Systems", plural: "systems" },
-      edges: { button: "Transformations", plural: "transformations" },
+    shows: (_node, index) => showsBox(index),
+    row: (node, index) => ({
+      name: nodeLabel(node),
+      title: `${nodeLabel(node)}\n${parts.captions[index]}`,
+    }),
+    // Either end rather than both, because a line is listed for each of the
+    // ligands it runs to: narrowing to one ligand and being shown none of its
+    // transformations would be the opposite of what the search was for.
+    edgeShows: (edge) => endsOf(edge).some(showsBox),
+    edgeRow: (edge) => ({
+      name: edge.name,
+      title: [
+        `${nodeLabel(edge.from)} to ${nodeLabel(edge.to)}`,
+        // What the line bundles, which is the one thing a row cannot show: the
+        // legs are a pane's tabs, and the row is one line of text.
+        edge.legs.length > 1 ? `${edge.legs.length} legs: ${edge.labels.join(", ")}` : edge.labels[0],
+      ].join("\n"),
+    }),
+    words: {
+      nodes: { tab: "Ligands", plural: "ligands" },
+      edges: { tab: "Transformations", plural: "transformations" },
     },
     refresh: parts.refresh,
     focus: parts.focus,
+    focusEdge: parts.focusEdge,
     mounted: parts.mounted,
   });
 }
@@ -771,10 +974,22 @@ function seedPositions(nodes: GraphNode[], width: number, height: number): void 
  * unreachable, which the caller turns into the circular layout and a banner.
  */
 function relax(nodes: GraphNode[], edges: GraphEdge[], width: number, height: number): Promise<boolean> {
+  // One link per pair of boxes rather than one per transformation. The legs of a
+  // mapping run between the same two ligands, and handing the layout both of
+  // them would pull that pair twice as hard as a pair mapped in one leg only -
+  // a campaign laid out as though half its steps mattered more than the rest.
+  const linked = new Map<string, D3Link>();
+  for (const edge of edges) {
+    const source = edge.from["gufe-key"];
+    const target = edge.to["gufe-key"];
+    const key = [source, target].sort().join(" ");
+    if (!linked.has(key)) linked.set(key, { source, target });
+  }
+
   return relaxWith<GraphNode, D3Link>({
     nodes,
     // d3-force rewrites link endpoints in place, so it gets its own objects.
-    links: edges.map((edge) => ({ source: edge.from["gufe-key"], target: edge.to["gufe-key"] })),
+    links: [...linked.values()],
     tickMultiplier: FORCE.tickMultiplier,
     forces: (d3, links) => [
       [
@@ -799,6 +1014,8 @@ interface GraphScene {
   setEmphasis(nodeKeys: ReadonlySet<string> | null, edgeIndices: ReadonlySet<number> | null): void;
   /** Bring one system to the middle, zoomed in enough to read it. */
   focusOn(index: number): void;
+  /** Frame one line: the midpoint of its two boxes, so both ends stay on screen. */
+  focusOnEdge(index: number): void;
   reset(): void;
   cleanup(): void;
 }
@@ -817,7 +1034,12 @@ export class GufeAlchemicalNetwork extends AlchemyElement<AlchemicalNetworkViz> 
     // silently smaller network. `resolveNetwork` is that rule, shared with the
     // ligand network.
     const registry = buildRegistry(payload);
-    const { nodes, edges, unresolved, dangling } = resolveNetwork<TransformationViz, ChemicalSystemViz>({
+    const {
+      nodes: systems,
+      edges: links,
+      unresolved,
+      dangling,
+    } = resolveNetwork<TransformationViz, ChemicalSystemViz>({
       registry,
       keys: payload.nodes ?? [],
       nodeType: "ChemicalSystemViz",
@@ -825,25 +1047,57 @@ export class GufeAlchemicalNetwork extends AlchemyElement<AlchemicalNetworkViz> 
       ends: (edge) => [edge.stateA, edge.stateB],
     });
 
-    // Every transformation of a network usually names the same protocol, which
-    // is why it is a registry entry rather than a field repeated per edge. A
-    // Protocol has no name of its own, so its class name is what identifies it.
-    const protocolName = (edge: TransformationViz): string => {
-      const protocol = lookupOfType<ProtocolViz>(registry, edge.protocol, "ProtocolViz");
-      return protocol?.gufe_type || protocol?.name || "";
+    // The legs before the boxes and the lines, because they are what puts the
+    // systems of a box and the transformations of a line in order: every one of
+    // them lists its legs the same way round rather than the way the payload
+    // happened to.
+    const legs = legIndex(links, registry);
+    const legRankOf = (system: ChemicalSystemViz): number => {
+      const at = legs.signatures.indexOf(compositionOf(system, registry));
+      return at < 0 ? legs.signatures.length : at;
     };
-    const protocols = new Set(edges.map(protocolName).filter(Boolean));
+
+    // One box per ligand. The layout's fields come off the systems on the way
+    // in rather than on the way out to a detail pane: a box carries its own
+    // position now, so the systems inside it are the payload's own objects and
+    // stay that way. `alchemical-legs.ts` is the rule and the reasoning.
+    const nodes: GraphNode[] = groupSystems(
+      systems.map((system) => withoutLayout(system)),
+      registry,
+      legRankOf,
+    ).map((group) => ({ ...group, x: 0, y: 0 }));
+
+    const boxOf = new Map<GufeKey, GraphNode>();
+    for (const node of nodes) for (const system of node.systems) boxOf.set(system["gufe-key"], node);
+
+    // One line per pair of boxes - see `GraphEdge` - holding every
+    // transformation that runs between them, in leg order.
+    const edges: GraphEdge[] = bundleEdges(links, boxOf, legs);
+
+    // Every transformation names one, which is why a protocol is a registry
+    // entry rather than a field repeated per edge, and why what the header has
+    // to say is however many of them the network turned out to name.
+    const protocols = protocolsOf(links, registry);
+    // Assigned once the pane exists, which is after the header it is opened
+    // from. `redraw` below is the same arrangement for the same reason.
+    let openProtocols = (): void => {};
 
     const bar = headerStrip(payload.name || "Alchemical network");
-    bar.statsEl.appendChild(statChip("systems", String(nodes.length)));
-    bar.statsEl.appendChild(statChip("transformations", String(edges.length)));
-    if (protocols.size) bar.statsEl.appendChild(statChip("protocol", [...protocols].join(", ")));
+    // Both counts where they differ, because that is where a reader has to be
+    // told that a box is not a system: ten boxes over twenty systems is a
+    // campaign, and the chip is what says so before anything is clicked.
+    if (nodes.length !== systems.length) bar.statsEl.appendChild(statChip("ligands", String(nodes.length)));
+    bar.statsEl.appendChild(statChip("systems", String(systems.length)));
+    bar.statsEl.appendChild(statChip("transformations", String(links.length)));
+    // What the legs are called, so the words on a pane's tabs are on the header
+    // too: the canvas itself no longer says which leg anything is.
+    if (legs.signatures.length > 1) bar.statsEl.appendChild(statChip("legs", legs.names.join(", ")));
+    const protocolControl = protocols.length ? protocolChip(protocols, () => openProtocols()) : null;
+    if (protocolControl) bar.statsEl.appendChild(protocolControl);
     // Placed inside the graph pane rather than above the whole view - see
     // `left` below. The name and the counts are about the network, so they sit
     // over the network, and the detail pane keeps the full height for whatever
     // view is drawing the current selection.
-
-    const groups = compositionGroups(nodes, registry);
 
     const split = el("div", "flex:1;display:flex;flex-direction:row;min-height:0;overflow:hidden;");
     host.appendChild(split);
@@ -862,7 +1116,6 @@ export class GufeAlchemicalNetwork extends AlchemyElement<AlchemicalNetworkViz> 
      * sides see the same one after the other has changed it.
      */
     const selected = new Set<string>();
-    const filter = { composition: "" };
     const query = { text: "" };
 
     /**
@@ -881,23 +1134,14 @@ export class GufeAlchemicalNetwork extends AlchemyElement<AlchemicalNetworkViz> 
      * paint applies it again from scratch.
      */
     const applyEmphasis = (): void => {
-      const lit = emphasisFor(
-        nodes,
-        edges,
-        haystacks,
-        groups.signatures,
-        selected,
-        query.text,
-        filter.composition,
-        matched,
-      );
+      const lit = emphasisFor(nodes, edges, haystacks, selected, query.text, matched);
       scene?.setEmphasis(lit?.nodes ?? null, lit?.edges ?? null);
     };
 
     // Built once, here rather than in the menu, because the canvas filters
     // against them too and a menu nobody opened must not be what decides
     // whether a remembered search works.
-    const haystacks = nodes.map((node) => systemHaystack(node, registry));
+    const haystacks = nodes.map((node) => nodeHaystack(node, registry));
 
     /**
      * RDKit, fetched once and only if something asks.
@@ -913,25 +1157,29 @@ export class GufeAlchemicalNetwork extends AlchemyElement<AlchemicalNetworkViz> 
     const matcher = createMatcher(rdkit, ligands.sources);
 
     /**
-     * What each node draws, worked out once here rather than per paint.
+     * What each box draws, worked out once here rather than per paint.
      *
      * A redraw - a resize, a dragged divider - repaints the whole canvas, and
-     * none of this changes when it does: which ligand a system carries and what
-     * it is made of are properties of the payload.
+     * none of this changes when it does: which ligand a box carries, which legs
+     * it was run in and what its systems are made of are all properties of the
+     * payload.
      */
     const faces: NodeFace[] = nodes.map((node, index) => {
-      // The first small molecule with a structure in it. A system with two is a
-      // ligand and a cofactor, and which of them the network is about is the
-      // one the payload lists first; the subtitle goes on naming both.
+      // The first small molecule with a structure in it. A box whose systems
+      // carry two is a ligand and a cofactor, and which of them the network is
+      // about is the one the payload lists first; the caption names both.
       const drawable = ligands.perNode[index].find((source) => ligands.sources[source]);
       const sdf = drawable === undefined ? null : ligands.sources[drawable];
-      const types = componentTypes(node, registry);
+      // Over every system in the box, so that a box standing for one system
+      // says exactly what that system is made of, as it always did.
+      const types = [...new Set(node.systems.flatMap((system) => componentTypes(system, registry)))].sort();
+      const caption = captionFor(node, types, sdf !== null, ligands.perNode[index].length);
       return {
-        colors: groups.colorOf(index),
-        composition: types.join(" + "),
-        besides: subtitleFor(types, sdf !== null, ligands.perNode[index].length),
+        composition: caption.composition,
+        besides: caption.besides,
         sdf,
         charge: drawable === undefined ? 0 : ligands.charges[drawable],
+        title: titleFor(node, registry),
       };
     });
 
@@ -963,11 +1211,8 @@ export class GufeAlchemicalNetwork extends AlchemyElement<AlchemicalNetworkViz> 
           nodes,
           edges,
           haystacks,
-          signatures: groups.signatures,
-          colorOf: groups.colorOf,
-          compositions: groups.compositions,
+          captions: faces.map((face) => face.composition),
           selected,
-          filter,
           query,
           refresh: () => applyEmphasis(),
           matched: () => matched,
@@ -975,16 +1220,23 @@ export class GufeAlchemicalNetwork extends AlchemyElement<AlchemicalNetworkViz> 
           mounted: (rerender) => {
             refreshList = rerender;
           },
-          // Finding a system in the list and opening it are one action: the
+          // Finding a ligand in the list and opening it are one action: the
           // list is how you reach one you cannot see on the canvas, and
           // reaching it is not the point.
           focus: (index) => {
             scene?.focusOn(index);
             select("node", index);
           },
+          // The same action for a line: reaching it is not the point, and a
+          // transformation the reader cannot see on the canvas is exactly the
+          // one they came to the list for.
+          focusEdge: (index) => {
+            scene?.focusOnEdge(index);
+            select("edge", index);
+          },
         }),
       {
-        label: "Search, filter and select systems",
+        label: "Search, filter and select ligands",
         onToggle: () => redraw(),
         remember: flag("alchemical-network.menuOpen", false),
         extras: framejsMenuItem,
@@ -1071,12 +1323,25 @@ export class GufeAlchemicalNetwork extends AlchemyElement<AlchemicalNetworkViz> 
     const anyChargeChange = edges.some(
       (edge) => (chargeByKey.get(edge.to["gufe-key"]) ?? 0) !== (chargeByKey.get(edge.from["gufe-key"]) ?? 0),
     );
-    left.appendChild(this.#canvasBar(groups.legend, () => scene?.reset(), anyChargeChange));
+
+    floatingReset(canvas, () => scene?.reset(), "Reset pan and zoom");
+    if (anyChargeChange) left.appendChild(this.#chargeKey());
 
     const select = (kind: "node" | "edge", index: number): void => {
       selectedItem = { kind, index };
+      protocolControl?.setAttribute("aria-pressed", "false");
       detail.show(kind === "node" ? nodes[index] : edges[index], kind);
       scene?.setSelected(selectedItem);
+    };
+
+    openProtocols = (): void => {
+      // Nothing on the canvas is a protocol, so the box or the line that was
+      // open is deselected rather than left lit beside a pane that has stopped
+      // showing it.
+      selectedItem = null;
+      scene?.setSelected(null);
+      protocolControl?.setAttribute("aria-pressed", "true");
+      detail.showProtocols(protocols);
     };
 
     const draw = (): void => {
@@ -1135,43 +1400,25 @@ export class GufeAlchemicalNetwork extends AlchemyElement<AlchemicalNetworkViz> 
   }
 
   /**
-   * The strip under the canvas: how to get back, and what the colours mean.
+   * The strip under the canvas: what the dashes mean, where there are any.
    *
-   * The reset is always there and neither key is. Zoom and pan have no bottom,
-   * so a network the reader has flung off the edge needs one control that is
-   * always in the same place; a network of one composition has nothing to
-   * explain, and one whose transformations all keep the charge draws no dashes
-   * for a key to name.
+   * The reset is not here. It floats over the bottom left of the canvas, so a
+   * network the reader has flung off the edge still has one control always in
+   * the same place without every network paying a row of height for it; a
+   * network whose transformations all keep the charge then draws no strip at
+   * all.
+   *
+   * There is no key for the legs. A line is every transformation between its two
+   * ligands, so it belongs to no one leg and there is no colour on this canvas
+   * for a legend to explain - which leg is a question the pane answers, about
+   * one line at a time.
    */
-  #canvasBar(
-    entries: readonly [string, NodeColors][],
-    onReset: () => void,
-    anyChargeChange: boolean,
-  ): HTMLDivElement {
+  #chargeKey(): HTMLDivElement {
     const bar = el("div", TOOLBAR);
-    bar.appendChild(resetControl(onReset, "Reset pan and zoom"));
-    if (anyChargeChange) {
-      const charge = el("div", "display:flex;align-items:center;gap:6px;min-width:0;");
-      charge.appendChild(el("span", `width:24px;height:0;border-top:2px dashed ${V.netEdgeLine};flex-shrink:0;`));
-      charge.appendChild(el("span", `font-size:${FONT.small};color:${V.textMuted};`, "net charge change"));
-      bar.appendChild(charge);
-    }
-    if (!entries.length) return bar;
-    bar.appendChild(el("span", `font-size:${FONT.small};color:${V.textMuted};`, "systems made of"));
-    for (const [signature, colors] of entries) {
-      const item = el("div", "display:flex;align-items:center;gap:6px;min-width:0;");
-      item.appendChild(
-        el(
-          "span",
-          `width:12px;height:12px;border-radius:3px;flex-shrink:0;` +
-            `background:${colors.fill};border:2px solid ${colors.stroke};`,
-        ),
-      );
-      item.appendChild(
-        el("span", `font-size:${FONT.small};color:${V.textPrimary};overflow-wrap:anywhere;`, signature),
-      );
-      bar.appendChild(item);
-    }
+    const charge = el("div", "display:flex;align-items:center;gap:6px;min-width:0;");
+    charge.appendChild(el("span", `width:24px;height:0;border-top:2px dashed ${V.netEdgeLine};flex-shrink:0;`));
+    charge.appendChild(el("span", `font-size:${FONT.small};color:${V.textMuted};`, "net charge change"));
+    bar.appendChild(charge);
     return bar;
   }
 
@@ -1179,33 +1426,115 @@ export class GufeAlchemicalNetwork extends AlchemyElement<AlchemicalNetworkViz> 
    * The right-hand pane, and what this view puts in it.
    *
    * The pane itself is `detailPane`, shared with the ligand network. What is
-   * here is this view's own half: a node is a whole `ChemicalSystemViz` and an
-   * edge a whole `TransformationViz`, and both have to be cut loose from the
-   * network before they are handed on - the graph staples its own fields onto
-   * the payload's objects (what the layout leaves on a node, an index and two
-   * endpoints on an edge), and the schema allows none of them. A node's are
-   * `withoutLayout`'s to know: d3 writes more of them than this file does.
+   * here is this view's own half: what a box and a line stand for, and which of
+   * it to draw.
+   *
+   * ## A box is drawn as one system
+   *
+   * A box holds every leg of its ligand, and the legs of a campaign are the same
+   * components twice over - the ligand and the solvent in both, the protein in
+   * one - so choosing between them was a control over a list that was mostly
+   * itself repeated. `mergedSystem` is the merge, and the only thing it has to
+   * be careful about is a label naming two different components.
+   *
+   * ## A line is drawn as one of its transformations
+   *
+   * A line is every transformation between two ligands, and they really are
+   * different calculations: different states, different mapping, a different
+   * picture in the pane. So this is where the choice lives, as a row of legs
+   * above the pane, and it is only there on a line that has more than one.
+   *
+   * Which leg is remembered across lines rather than reset per line. Reading a
+   * campaign is going along one leg - clicking six edges to see each one in the
+   * protein - and a switch that went back to the solvent leg on every click
+   * would make that six clicks longer. A line without the remembered leg opens
+   * on its first, which is the leg the header names first.
+   *
+   * Either way what is handed on has to be cut loose from the network first: the
+   * graph staples an index and two endpoints onto a line, and the schema allows
+   * neither. A box's systems need no cleaning - a box carries its own position,
+   * so the systems inside it were never laid out.
+   *
+   * ## The protocols are drawn from the header
+   *
+   * Nothing on the canvas is a protocol, so `showProtocols` is the one way in
+   * and the header chip is what calls it. One protocol goes straight to its
+   * card; several go to `protocolList`, whose rows open the same card. Either
+   * way the leg switcher goes away, because it belongs to a line.
    */
   #detailPane(
     host: HTMLDivElement,
     registry: RegistryIndex,
-  ): { show(item: GraphNode | GraphEdge, kind: "node" | "edge"): void; message(text: string): void; cleanup(): void } {
+  ): {
+    show(item: GraphNode | GraphEdge, kind: "node" | "edge"): void;
+    showProtocols(entries: readonly ProtocolEntry[]): void;
+    message(text: string): void;
+    cleanup(): void;
+  } {
+    const switcher = el("div", `${TOOLBAR}border-top:none;border-bottom:1px solid ${V.toolbarBorder};display:none;`);
+    host.appendChild(switcher);
     const pane = detailPane(host);
+    /** The leg the reader last opened, by name, so the next line opens on it too. */
+    let wanted = "";
+
+    const hideSwitcher = (): void => {
+      switcher.style.display = "none";
+      switcher.replaceChildren();
+    };
+
     return {
       ...pane,
-      show(item, kind) {
-        let cut: ChemicalSystemViz | TransformationViz | null;
-        if (kind === "node") {
-          cut = systemPayloadFor(withoutLayout(item as GraphNode), registry);
-        } else {
-          const { index: _index, from: _from, to: _to, ...edge } = item as GraphEdge;
-          cut = transformationPayloadFor(edge, registry);
-        }
-        if (!cut) {
-          pane.message("This transformation names two chemical systems, and its registry does not hold them.");
+      showProtocols(entries) {
+        // The leg switcher belongs to a line, and a protocol is not one: it is
+        // what runs the lines rather than something that has legs.
+        hideSwitcher();
+        // One protocol is not a list. The chip already named it, and a reader
+        // who clicked it asked for that protocol rather than for a row to click
+        // to get to it.
+        if (entries.length === 1) {
+          pane.show(entries[0].protocol);
           return;
         }
-        pane.show(cut);
+        pane.content(protocolList(entries, (entry) => pane.show(entry.protocol)));
+      },
+      show(item, kind) {
+        if (kind === "node") {
+          hideSwitcher();
+          pane.show(systemPayloadFor(mergedSystem(item as GraphNode), registry));
+          return;
+        }
+
+        const edge = item as GraphEdge;
+        const openLeg = (at: number): void => {
+          wanted = edge.labels[at] ?? "";
+          const cut = transformationPayloadFor(edge.legs[at], registry);
+          if (!cut) {
+            pane.message("This transformation names two chemical systems, and its registry does not hold them.");
+            return;
+          }
+          pane.show(cut);
+        };
+        const at = Math.max(0, edge.labels.indexOf(wanted));
+
+        if (edge.legs.length > 1) {
+          switcher.replaceChildren();
+          switcher.appendChild(el("span", `font-size:${FONT.small};color:${V.textMuted};flex-shrink:0;`, "leg"));
+          switcher.appendChild(
+            buttonGroup(
+              edge.labels.map((label, index) => ({
+                id: String(index),
+                label,
+                title: entryLabel(edge.legs[index]),
+              })),
+              String(at),
+              (id) => openLeg(Number(id)),
+            ),
+          );
+          switcher.style.display = "";
+        } else {
+          hideSwitcher();
+        }
+        openLeg(at);
       },
     };
   }
@@ -1259,55 +1588,121 @@ export class GufeAlchemicalNetwork extends AlchemyElement<AlchemicalNetworkViz> 
       if (!camera.wasPan()) onSelect(kind, index);
     };
 
+    /**
+     * The zoom the strokes are drawn against, which is what makes them measure
+     * the same on screen at every distance: the widths through `edgePx` and
+     * `strokePx`, and how far apart a double line's two rails sit through
+     * `railShift`. Declared here because the first lay-out below reads it.
+     */
+    let zoomScale = 1;
+
+    /** The line each edge is drawn as, and the second rail where it has two. */
     const lines: SVGLineElement[] = [];
-    /** The invisible twin of each visible line, in the same order. */
+    const rails: (SVGLineElement | null)[] = [];
+    /** The invisible twin of each line, in the same order: what is clicked. */
     const hits: SVGLineElement[] = [];
-    // What each system's ligand carries, by key, so an edge can ask what it does
-    // to the charge. Faces are indexed as nodes are; an edge names its ends.
+    /** Which edges are drawn double, so a zoom re-lays those and not all 594. */
+    const doubled: number[] = [];
+    // What each box's ligand carries, by key, so an edge can ask what it does to
+    // the charge. Faces are indexed as nodes are; an edge names its ends.
     const chargeAt = new Map(nodes.map((node, index) => [node["gufe-key"], faces[index].charge]));
     const chargeChangeOf = (edge: GraphEdge): number =>
       (chargeAt.get(edge.to["gufe-key"]) ?? 0) - (chargeAt.get(edge.from["gufe-key"]) ?? 0);
+
     edges.forEach((edge, index) => {
       const charged = chargeChangeOf(edge);
-      const line = svg("line", {
-        x1: edge.from.x,
-        y1: edge.from.y,
-        x2: edge.to.x,
-        y2: edge.to.y,
+      const stroke = {
         stroke: T.netEdgeLine,
         "stroke-width": edgePx(1, false),
         "stroke-linecap": "round",
         "vector-effect": "non-scaling-stroke",
-        style: "cursor:pointer;",
         ...(charged ? { "stroke-dasharray": CHARGE_DASH } : {}),
-      });
-      titled(
-        line,
-        (edge.name || "transformation") + (charged ? ` - net charge change ${chargeLabel(charged)}` : ""),
-      );
+      };
+      // Every transformation on the line, under its leg. The canvas says which
+      // ligands are being compared and how many legs were run between them, and
+      // this is the rest: which legs those are, and what the payload calls them.
+      const title = [
+        edge.name || "transformation",
+        ...edge.legs.map((leg, at) => `${edge.labels[at]}: ${entryLabel(leg)}`),
+        charged && `net charge change ${chargeLabel(charged)}`,
+      ]
+        .filter(Boolean)
+        .join("\n");
+
+      const line = svg("line", { class: "gufe-edge", ...stroke, style: "cursor:pointer;" });
+      titled(line, title);
       line.addEventListener("click", () => click("edge", index));
       lineLayer.appendChild(line);
       lines.push(line);
 
-      // A wider, invisible line under the visible one, so an edge is clickable
+      // The second rail of a double line. A line standing for both legs of a
+      // mapping is drawn twice, which is the one thing about its legs the canvas
+      // can say without being opened - and it is still one edge: the rail takes
+      // no pointer events, so what is clicked, hovered and selected is the edge
+      // rather than whichever of the two strokes the pointer happened to land
+      // on. `railShift` is how far apart they sit.
+      if (edge.legs.length > 1) {
+        const rail = svg("line", { class: "gufe-edge-rail", ...stroke, "pointer-events": "none" });
+        lineLayer.appendChild(rail);
+        rails.push(rail);
+        doubled.push(index);
+      } else {
+        rails.push(null);
+      }
+
+      // A wider, invisible line under the visible ones, so an edge is clickable
       // without having to be thick. Also a screen-pixel width: a target that
       // shrank with the graph would be hardest to hit on the graphs that have
-      // the most edges to tell apart.
+      // the most edges to tell apart. It carries the tooltip too, being the
+      // thing a pointer over an edge actually meets.
       const hit = svg("line", {
-        x1: edge.from.x,
-        y1: edge.from.y,
-        x2: edge.to.x,
-        y2: edge.to.y,
+        class: "gufe-edge-hit",
         stroke: "transparent",
         "stroke-width": EDGE.hit,
         "stroke-linecap": "round",
         "vector-effect": "non-scaling-stroke",
         style: "cursor:pointer;",
       });
+      titled(hit, title);
       hit.addEventListener("click", () => click("edge", index));
       lineLayer.appendChild(hit);
       hits.push(hit);
     });
+
+    /**
+     * Put one edge's strokes where its two boxes now are.
+     *
+     * A single line and the click target run centre to centre. A double line's
+     * two rails are pushed either side of that, along its normal, by whatever
+     * `railShift` makes a few screen pixels at the zoom in force - so a drag and
+     * a zoom both come back through here.
+     */
+    const layEdge = (index: number): void => {
+      const { from, to } = edges[index];
+      const write = (line: SVGLineElement, dx: number, dy: number): void => {
+        line.setAttribute("x1", String(from.x + dx));
+        line.setAttribute("y1", String(from.y + dy));
+        line.setAttribute("x2", String(to.x + dx));
+        line.setAttribute("y2", String(to.y + dy));
+      };
+      write(hits[index], 0, 0);
+      const rail = rails[index];
+      const span = rail ? Math.hypot(to.x - from.x, to.y - from.y) : 0;
+      // No rails to separate, or an edge from a box to itself - a payload the
+      // schema allows - which has no normal to separate them along.
+      if (!rail || !span) {
+        write(lines[index], 0, 0);
+        rail?.setAttribute("display", "none");
+        return;
+      }
+      rail.removeAttribute("display");
+      const shift = railShift(zoomScale);
+      const nx = (-(to.y - from.y) / span) * shift;
+      const ny = ((to.x - from.x) / span) * shift;
+      write(lines[index], nx, ny);
+      write(rail, -nx, -ny);
+    };
+    edges.forEach((_edge, index) => layEdge(index));
 
     // Which edges each node is an end of, so a drag rewrites those and not all
     // of them: a two-hundred-system campaign has 594, and touching every line
@@ -1340,6 +1735,11 @@ export class GufeAlchemicalNetwork extends AlchemyElement<AlchemicalNetworkViz> 
     const holders: (SVGGElement | null)[] = [];
     const depictionGroups: (SVGGElement | null)[] = [];
 
+    // One colour for every box: a box is a ligand, and the palette that used to
+    // tell a solvent leg's boxes from a complex leg's has nothing left to say
+    // now that a ligand's legs are one box and their steps one line.
+    const boxColors = plainColors();
+
     nodes.forEach((node, index) => {
       const face = faces[index];
       // Built in the tall shape and shrunk by the first `show`, so everything
@@ -1362,15 +1762,15 @@ export class GufeAlchemicalNetwork extends AlchemyElement<AlchemicalNetworkViz> 
         width: NODE.width,
         height: boxHeight,
         rx: NODE.radius,
-        fill: face.colors.fill,
-        stroke: face.colors.stroke,
+        fill: boxColors.fill,
+        stroke: boxColors.stroke,
         "stroke-width": strokePx(1, false),
         // The border is a line in screen pixels, like an edge. See `BOX_STROKE`.
         "vector-effect": "non-scaling-stroke",
       });
       group.appendChild(box);
       boxes.push(box);
-      restingStroke.push(face.colors.stroke);
+      restingStroke.push(boxColors.stroke);
 
       if (face.sdf) {
         const plate = svg("rect", {
@@ -1449,7 +1849,7 @@ export class GufeAlchemicalNetwork extends AlchemyElement<AlchemicalNetworkViz> 
       group.appendChild(sub);
       subs.push(sub);
 
-      titled(group, `${nodeLabel(node)} - ${face.composition}`);
+      titled(group, face.title);
       nodeLayer.appendChild(group);
     });
 
@@ -1463,20 +1863,11 @@ export class GufeAlchemicalNetwork extends AlchemyElement<AlchemicalNetworkViz> 
     const place = (index: number): void => {
       const node = nodes[index];
       nodeGroups[index].setAttribute("transform", `translate(${node.x},${node.y})`);
-      for (const e of incident[index]) {
-        for (const line of [lines[e], hits[e]]) {
-          // Both ends, and not one or the other: an edge from a system to
-          // itself is a payload the schema allows, and it has this node at both.
-          if (edges[e].from === node) {
-            line.setAttribute("x1", String(node.x));
-            line.setAttribute("y1", String(node.y));
-          }
-          if (edges[e].to === node) {
-            line.setAttribute("x2", String(node.x));
-            line.setAttribute("y2", String(node.y));
-          }
-        }
-      }
+      // Both ends of each, rather than the one that moved: an edge from a box
+      // to itself is a payload the schema allows and has this node at both, and
+      // a double line's rails are laid out from the direction between its two
+      // boxes, which either of them turns. `layEdge` is that rule.
+      for (const e of incident[index]) layEdge(e);
     };
 
     // --- the ligands, drawn as the zoom asks for them ----------------------
@@ -1585,7 +1976,6 @@ export class GufeAlchemicalNetwork extends AlchemyElement<AlchemicalNetworkViz> 
      * can put back a weight the other has just chosen: a selection that wrote a
      * fixed width would be wrong at every zoom but one.
      */
-    let zoomScale = 1;
     let selectedBox: number | null = null;
     let selectedLine: number | null = null;
     const paintStrokes = (): void => {
@@ -1596,8 +1986,15 @@ export class GufeAlchemicalNetwork extends AlchemyElement<AlchemicalNetworkViz> 
       });
       lines.forEach((line, index) => {
         const active = selectedLine === index;
-        line.setAttribute("stroke", active ? T.netHaloColor : T.netEdgeLine);
-        line.setAttribute("stroke-width", String(edgePx(zoomScale, active)));
+        const color = active ? T.netHaloColor : T.netEdgeLine;
+        const width = String(edgePx(zoomScale, active));
+        // The rail with it: the two strokes are one edge, so a selection that
+        // lit one of them would read as an edge half selected.
+        for (const stroke of [line, rails[index]]) {
+          if (!stroke) continue;
+          stroke.setAttribute("stroke", color);
+          stroke.setAttribute("stroke-width", width);
+        }
       });
     };
 
@@ -1608,8 +2005,15 @@ export class GufeAlchemicalNetwork extends AlchemyElement<AlchemicalNetworkViz> 
       // is the first thing anyone asks when the picture looks wrong, and this
       // way it is visible in devtools and assertable in a test.
       root.setAttribute("data-detail", level.id);
+      const zoomed = zoomScale !== scale;
       zoomScale = scale;
       paintStrokes();
+      // How far apart a double line's rails sit is a distance in screen pixels,
+      // so the zoom is what turns it into coordinates - and only the zoom: a pan
+      // moves the whole scene and leaves every rail where it was relative to its
+      // own line. Only the doubled edges, because on a network with none this
+      // costs nothing at all.
+      if (zoomed) for (const index of doubled) layEdge(index);
       for (let i = 0; i < nodes.length; i++) show(i, level.structure, scale);
       if (!level.structure) return;
 
@@ -1665,13 +2069,23 @@ export class GufeAlchemicalNetwork extends AlchemyElement<AlchemicalNetworkViz> 
         });
         lines.forEach((line, i) => {
           const lit = !edgeIndices || edgeIndices.has(i);
-          line.setAttribute("opacity", lit ? "1" : String(DIM.edge));
+          // Both rails of a double line, for the reason `paintStrokes` writes
+          // both: what a filter leaves out is an edge, not a stroke.
+          for (const stroke of [line, rails[i]]) stroke?.setAttribute("opacity", lit ? "1" : String(DIM.edge));
         });
       },
 
       focusOn(index: number) {
         const node = nodes[index];
         if (node) camera.centreOn(node.x, node.y, FOCUS_SCALE);
+      },
+
+      focusOnEdge(index: number) {
+        const edge = edges[index];
+        // The midpoint rather than one end: what a reader picked out of the
+        // list is the line, and a line framed on one of its boxes is a line
+        // with the other end off the screen.
+        if (edge) camera.centreOn((edge.from.x + edge.to.x) / 2, (edge.from.y + edge.to.y) / 2, FOCUS_SCALE);
       },
 
       reset: camera.reset,

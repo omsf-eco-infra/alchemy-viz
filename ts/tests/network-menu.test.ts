@@ -29,6 +29,16 @@ const listRows = (node: HTMLElement): HTMLButtonElement[] =>
     (b) => b.parentElement?.style.overflow === "auto",
   );
 
+/** One of the two tabs over the list. */
+const tab = (node: HTMLElement, label: "Ligands" | "Mappings"): HTMLButtonElement =>
+  Array.from(node.querySelectorAll<HTMLButtonElement>("button")).find((b) => b.textContent === label)!;
+
+/** The one copy button, which names the list the tabs have chosen. */
+const copyButton = (node: HTMLElement): HTMLButtonElement =>
+  Array.from(node.querySelectorAll<HTMLButtonElement>("button")).find((b) =>
+    b.textContent?.startsWith("Copy "),
+  )!;
+
 const nodeGroups = (node: HTMLElement): SVGGElement[] =>
   Array.from(node.querySelectorAll<SVGGElement>("g.gufe-node"));
 
@@ -155,6 +165,94 @@ describe("the ligand network menu", () => {
     expect(after.length).toBe(before.length);
   });
 
+  // --- the two lists ------------------------------------------------------
+
+  /** A row's name, which on the mapping list follows the score mark. */
+  const rowNames = (node: HTMLElement): string[] =>
+    listRows(node).map((row) => row.lastElementChild?.textContent ?? "");
+
+  it("lists the ligands in name order rather than in payload order", async () => {
+    const node = mountNetwork();
+    await flush();
+    hamburger(node).click();
+    await flush();
+
+    const names = rowNames(node);
+    expect(names.length).toBeGreaterThan(1);
+    expect(names).toEqual([...names].sort((a, b) => a.localeCompare(b, undefined, { numeric: true })));
+  });
+
+  it("lists the mappings on their own tab, each with its score", async () => {
+    const node = mountNetwork();
+    await flush();
+    hamburger(node).click();
+    await flush();
+
+    tab(node, "Mappings").click();
+    await flush();
+
+    const rows = listRows(node);
+    expect(rows).toHaveLength(3);
+    expect(node.textContent).toContain("3 of 3 mappings");
+    // The score at the head of each row, in the two decimals the canvas writes
+    // on the line itself. The rows are in name order, so it is the set of
+    // scores that is the assertion rather than their order.
+    expect(new Set(rows.map((row) => row.firstElementChild?.textContent))).toEqual(
+      new Set(["0.00", "0.50", "1.00"]),
+    );
+    for (const name of rowNames(node)) expect(name).toContain(" to ");
+  });
+
+  it("takes the mappings below the threshold out of the list", async () => {
+    // The one place the score filter can say what it left: on the canvas a
+    // dimmed line is still a line, and here the row is gone.
+    const node = mountNetwork();
+    await flush();
+    hamburger(node).click();
+    await flush();
+    tab(node, "Mappings").click();
+    await flush();
+    expect(listRows(node)).toHaveLength(3);
+
+    const slider = node.querySelector<HTMLInputElement>('input[type="range"]')!;
+    slider.value = "1";
+    slider.dispatchEvent(new Event("input", { bubbles: true }));
+    await flush();
+
+    expect(listRows(node)).toHaveLength(1);
+    expect(node.textContent).toContain("1 of 3 mappings");
+  });
+
+  it("opens a mapping, and selects both of the ligands it runs between", async () => {
+    const node = mountNetwork();
+    await flush();
+    hamburger(node).click();
+    await flush();
+    tab(node, "Mappings").click();
+    await flush();
+
+    listRows(node)[2].click();
+    await flush();
+    expect(node.querySelector("gufe-atom-mapping")).toBeTruthy();
+
+    tab(node, "Ligands").click();
+    await flush();
+    const pressed = listRows(node).filter((row) => row.getAttribute("aria-pressed") === "true");
+    expect(pressed).toHaveLength(2);
+  });
+
+  it("names on the copy button the list the tabs have chosen", async () => {
+    const node = mountNetwork();
+    await flush();
+    hamburger(node).click();
+    await flush();
+    expect(copyButton(node).textContent).toBe("Copy ligands");
+
+    tab(node, "Mappings").click();
+    await flush();
+    expect(copyButton(node).textContent).toBe("Copy mappings");
+  });
+
   it("clears a selection back to everything lit", async () => {
     const node = mountNetwork();
     await flush();
@@ -196,7 +294,7 @@ describe("selection export", () => {
     });
 
     listRows(node)[0].click();
-    Array.from(node.querySelectorAll("button")).find((b) => b.textContent === "Ligands")!.click();
+    copyButton(node).click();
 
     expect(written).toHaveLength(1);
     // What a plan command takes: a list of names, nothing that reconstructs a
@@ -212,7 +310,7 @@ describe("selection export", () => {
       value: { writeText: (t: string) => (written.push(t), Promise.resolve()) },
       configurable: true,
     });
-    Array.from(node.querySelectorAll("button")).find((b) => b.textContent === "Ligands")!.click();
+    copyButton(node).click();
     expect(written).toHaveLength(0);
   });
 
@@ -220,27 +318,29 @@ describe("selection export", () => {
   //
   // Copying is invisible: the result is on a clipboard, somewhere else. A button
   // that copied nothing and a button that is broken therefore looked exactly
-  // alike, and Edges - which needs both ends of a mapping selected, and so is
+  // alike, and the mappings - which need both ends of one selected, and so are
   // empty for every single-ligand selection - looked broken to the person who
   // reported it.
 
-  const clickExport = (node: HTMLElement, label: "Ligands" | "Edges"): void => {
-    Array.from(node.querySelectorAll("button")).find((b) => b.textContent === label)!.click();
+  /** Open a tab, then copy what it holds: what the button now does is the tab's. */
+  const clickExport = (node: HTMLElement, label: "Ligands" | "Mappings"): void => {
+    tab(node, label).click();
+    copyButton(node).click();
   };
 
   it("says nothing is selected rather than doing nothing", async () => {
     const node = await open();
-    clickExport(node, "Edges");
+    clickExport(node, "Mappings");
     expect(node.textContent).toContain("Nothing selected");
   });
 
-  it("says why Edges is empty, and how to select more than one ligand", async () => {
+  it("says why the mappings list copies nothing, and how to select more than one ligand", async () => {
     // The reported case: one ligand selected, so no mapping can have both ends
     // in the selection.
     const node = await open();
     listRows(node)[0].click();
     await flush();
-    clickExport(node, "Edges");
+    clickExport(node, "Mappings");
     expect(node.textContent).toContain("No mappings between the 1 selected ligands");
     expect(node.textContent).toContain("Cmd/Ctrl-click");
   });
@@ -270,7 +370,7 @@ describe("selection export", () => {
       row.dispatchEvent(new MouseEvent("click", { bubbles: true, metaKey: true }));
       await flush();
     }
-    clickExport(node, "Edges");
+    clickExport(node, "Mappings");
 
     expect(written).toHaveLength(1);
     expect(written[0].split("\n").length).toBeGreaterThan(0);

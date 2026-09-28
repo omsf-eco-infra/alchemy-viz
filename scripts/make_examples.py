@@ -182,6 +182,41 @@ def _dummy_protocol() -> gufe.Protocol:
     return DummyProtocol(settings=DummyProtocol.default_settings())
 
 
+class SepTopProtocol(gufe.Protocol):
+    """A stand-in for the separated topologies Protocol, named for the one it stands in for.
+
+    The real one is ``openfe.protocols.openmm_septop.SepTopProtocol``, which this
+    repository does not depend on and cannot import - the same reason
+    :func:`_dummy_protocol` borrows gufe's test double everywhere else. A
+    stand-in costs this fixture nothing, because a payload carries a Protocol as
+    its class name and its key and nothing else: settings are deliberately
+    absent, so the name is the whole of what a reader gets from it either way.
+    Everything else in the SepTop fixture - the ligands, the mappings that scored
+    them, the protein, the topology - is the real campaign's own.
+
+    Subclassing gufe's ``Protocol`` rather than its ``DummyProtocol`` keeps this
+    module importable without gufe's test suite. The four methods below are the
+    whole abstract interface; neither of the two that would run anything is ever
+    reached, because a fixture is serialized and never executed.
+    """
+
+    _settings_cls = gufe.settings.Settings
+
+    @classmethod
+    def _default_settings(cls):
+        return gufe.settings.Settings.get_defaults()
+
+    @classmethod
+    def _defaults(cls):
+        return {}
+
+    def _create(self, stateA, stateB, mapping=None, extends=None):
+        raise NotImplementedError("an example's protocol is never run")
+
+    def _gather(self, protocol_dag_results):
+        raise NotImplementedError("an example's protocol is never run")
+
+
 def _solvated_transformation(
     edge: gufe.LigandAtomMapping,
     protocol: gufe.Protocol,
@@ -332,6 +367,64 @@ def _tyk2_rbfe_network() -> gufe.AlchemicalNetwork:
     )
 
 
+def _septop_alchemical_network() -> gufe.AlchemicalNetwork:
+    """The SepTop campaign the tutorial builds out of :func:`_septop_network`.
+
+    The third campaign shape, and the only one of the three that is neither a
+    hydration run nor a two-legged binding run. Separated topologies decouples
+    one ligand while coupling the other in the same simulation, so a
+    transformation is a whole thermodynamic cycle rather than one leg of one:
+    nine mappings become nine transformations over ten chemical systems, every
+    one of them a complex. :func:`_tyk2_rbfe_network` draws as two components, a
+    solvent leg and a complex leg; this one is a single connected graph of
+    complexes, which is what makes it worth drawing beside that one.
+
+    Its transformations carry no mapping. That is the protocol's own rule rather
+    than a gap in the fixture - each ligand keeps its own coordinates and no atom
+    of one is paired against an atom of the other - and it is why the network it
+    was planned from is committed beside it: the mappings exist, they scored the
+    edges, and then the campaign dropped them.
+    :func:`_absolute_network` also has mappingless edges, but as ABFE runs out of
+    a system; this is the relative case with nothing mapped.
+
+    Rebuilt here rather than read back from the campaign JSON that tutorial run
+    wrote, because the protocol in that file is OpenFE's and cannot be
+    deserialized without OpenFE. The ligands, the names, the topology and the
+    protein are that campaign's; see :class:`SepTopProtocol` for what stands in
+    for the protocol and why the payload cannot tell the difference.
+    """
+    from gufe import AlchemicalNetwork, ChemicalSystem, ProteinComponent, SolventComponent, Transformation
+
+    protocol = SepTopProtocol(settings=SepTopProtocol.default_settings())
+    solvent = SolventComponent()
+    protein = ProteinComponent.from_pdb_file(str(DATA / "tyk2_protein.pdb"), name="tyk2")
+
+    systems: dict[str, gufe.ChemicalSystem] = {}
+
+    def system(mol: gufe.SmallMoleculeComponent) -> gufe.ChemicalSystem:
+        """One shared system per ligand, so the campaign is a connected graph."""
+        return systems.setdefault(
+            str(mol.key),
+            ChemicalSystem({"ligand": mol, "protein": protein, "solvent": solvent}, name=mol.name),
+        )
+
+    # Sorted by gufe key for the same byte-stability reason as everywhere else here.
+    edges = sorted(_septop_network().edges, key=lambda e: (str(e.componentA.key), str(e.componentB.key)))
+    return AlchemicalNetwork(
+        [
+            Transformation(
+                stateA=system(edge.componentA),
+                stateB=system(edge.componentB),
+                mapping=None,
+                protocol=protocol,
+                name=f"rbfe_{edge.componentA.name}_{edge.componentB.name}",
+            )
+            for edge in edges
+        ],
+        name="TYK2 SepTop campaign",
+    )
+
+
 def _tyk2_mixed_network() -> gufe.AlchemicalNetwork:
     """The TYK2 campaign run partly relative and partly absolute.
 
@@ -343,11 +436,12 @@ def _tyk2_mixed_network() -> gufe.AlchemicalNetwork:
     something to be a difference from.
 
     It is the fixture for what a mixed network does to the view. The apo system
-    is the only node in the graph carrying no ligand, so it is the one node whose
-    box has no structure drawn in it; it is a third composition beside the two
-    legs, which is what the colouring and the composition filter have to tell
-    apart; and the two transformations that end there carry no mapping, while
-    the eight around them do.
+    is the only node in the graph carrying no ligand, so it is the one box that
+    collapses onto nothing and the one with no structure drawn in it; the two
+    transformations that end there run in the complex leg and carry no mapping,
+    while the eight around them do. Between them that is a box of one system and
+    boxes of two, and lines holding one transformation beside lines holding both
+    legs of a mapping.
     """
     from gufe import AlchemicalNetwork, ChemicalSystem, ProteinComponent, SolventComponent, Transformation
 
@@ -548,6 +642,29 @@ def _tyk2_network() -> gufe.LigandNetwork:
     from gufe import LigandNetwork
 
     return LigandNetwork.from_graphml((DATA / "tyk2_network.graphml").read_text(encoding="utf-8"))
+
+
+def _septop_network() -> gufe.LigandNetwork:
+    """The same ten TYK2 ligands, planned the way the SepTop tutorial plans them.
+
+    :func:`_tyk2_network` is this network as ``openfe plan-rbfe-network`` writes
+    it, mapped by LOMAP. This one is from the SepTop tutorial in OpenFE's
+    ExampleNotebooks, which proposes mappings with Kartograf and scores them with
+    LOMAP, over ligands charged with AM1BCC in that run. Both are minimal
+    spanning networks over the same scorer, so they pair the same ligands; two of
+    the nine mappings pair a different number of atoms, which is the mapper
+    showing through, and the partial charges differ in the last few digits, which
+    is the charge run showing through.
+
+    It is here because it is what the campaign beside it was planned from, and
+    because of the one thing the tutorial says about it: SepTop never uses an
+    atom mapping, so these mappings only ever scored the edges. Committed as
+    ``scripts/data/tyk2_septop_network.graphml`` and read rather than replanned,
+    for the reason given in :func:`_tyk2_network`.
+    """
+    from gufe import LigandNetwork
+
+    return LigandNetwork.from_graphml((DATA / "tyk2_septop_network.graphml").read_text(encoding="utf-8"))
 
 
 def _eg5_network() -> gufe.LigandNetwork:
@@ -754,6 +871,7 @@ def build() -> dict[str, GufeTokenizable]:
         "ligand_network_named.json": _named_network(network),
         "ligand_network_medium.json": _tyk2_network(),
         "ligand_network_charged.json": _eg5_network(),
+        "ligand_network_septop.json": _septop_network(),
         "ligand_network_large.json": _large_network(),
         # The same size again, and real. The large network above measures what
         # 200 nodes cost; this one is 267 ligands of a docking campaign, so it
@@ -792,6 +910,10 @@ def build() -> dict[str, GufeTokenizable]:
         # and a dashed transformation where a leg changes one.
         "alchemical_network_charged.json": _alchemical_network(_eg5_network(), protocol),
         "alchemical_network_medium.json": _tyk2_rbfe_network(),
+        # The same ten ligands as a separated topologies campaign, which is the
+        # third shape a campaign comes in: one transformation per mapping rather
+        # than two, every system a complex, and no mapping on any edge.
+        "alchemical_network_septop.json": _septop_alchemical_network(),
         "alchemical_network_large.json": _large_alchemical_network(),
         # The two shapes an absolute free energy makes, which the four above
         # cannot: a set of ASFE runs on the same three ligands as the first of

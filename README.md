@@ -27,20 +27,7 @@ everyone. The check is at import time instead, and points at conda-forge.
 
 ## Use
 
-Pass in your openfe gufe object to the `view(...)` function:
-
-```python
-from alchemy_viz import view, to_html
-
-view(network)        # a LigandNetwork, in a notebook cell
-view(ligand)         # a SmallMoleculeComponent, ProteinComponent, ChemicalSystem...
-html = to_html(obj)  # the same page as a string; writes nothing
-```
-
-`view()`takes a live gufe object or an alchemy-viz payload dict (see
-[how it fits together](#how-it-fits-together) for the whole picture).
-
-From the shell, on files `openfe plan-rbfe-network` wrote:
+From the shell, on anything `openfe plan-rbfe-network` wrote:
 
 ```bash
 alchemy-viz network_setup/network_setup.json -o campaign.html
@@ -48,37 +35,44 @@ alchemy-viz network_setup/ligand_network.graphml     # writes <input>.html besid
 alchemy-viz ligand.json -o -                         # or stdout
 ```
 
-The input may be a serialized gufe object or an alchemy-viz payload JSON; both
-produce one self-contained HTML file. `alchemy-viz --help` has the rest.
+One self-contained HTML file per object, to open in a browser or mail to someone
+who will not install anything. If the page has a menu button in its top left, one
+of its entries turns what you are looking at into a link instead, via
+[framejs](https://framejs.app).
 
-From the html (you open with your browser), if there is a menu button in the top left, one option is to share a live snapshot of the data to anyone via framejs.
+From Python, on the object itself:
 
-The [demo notebook](./examples/notebooks/alchemy-viz-demo.ipynb) runs all of the
-above. The [gallery notebook](./examples/notebooks/alchemy-viz-gallery.ipynb) is
-the screenshotted version, because GitHub strips the `<iframe>` and `<script>`
-that `view()` emits.
+```python
+from alchemy_viz import view, to_html
 
-### Embedding the bundle
-
-Importing the ES module registers every element; setting `.payload` is the whole
-API.
-
-```html
-<script type="module" src="alchemy-viz.js"></script>
-<alchemy-view id="v" style="width:100%;height:600px"></alchemy-view>
-<script type="module">
-  document.getElementById("v").payload = await (await fetch("payload.json")).json();
-</script>
+view(network)        # a LigandNetwork, drawn in a notebook cell
+view(ligand)         # a SmallMoleculeComponent, ProteinComponent, ChemicalSystem...
+html = to_html(obj)  # the same page as a string; writes nothing
 ```
 
-`alchemy_viz.bundle_source()` returns that bundle as a string.
+`view()` takes a live gufe object or an alchemy-viz payload dict.
+`openfe.SmallMoleculeComponent` **is** `gufe.SmallMoleculeComponent`, so there is
+nothing openfe-specific to learn and no conversion step.
 
-### Debugging
+## Documentation
 
-Open any generated page as `<url>?debug` and the payload is printed to the
-console, before validation and before dispatch. `to_html(obj, debug=True)` bakes
-the switch in; `window.ALCHEMY_VIZ_DEBUG = true` works for a host that mounts
-the element itself.
+[`docs/`](./docs/README.md) is the whole of it, six pages:
+
+| page | what it answers |
+|---|---|
+| [`cli.md`](./docs/cli.md) | `alchemy-viz object.json` - the three input formats, the options, the errors |
+| [`openfe.md`](./docs/openfe.md) | `view()` on your own objects, a `network_setup/` directory, planning in Python |
+| [`notebooks.md`](./docs/notebooks.md) | the two output layers, updating in place, what a view costs |
+| [`views.md`](./docs/views.md) | every type that has a view, and what each one draws |
+| [`embedding.md`](./docs/embedding.md) | mounting the bundle in a page of your own |
+| [`troubleshooting.md`](./docs/troubleshooting.md) | blank cells, missing depictions, payloads that will not draw |
+
+Two notebooks, for two different things. The
+[demo](./examples/notebooks/alchemy-viz-demo.ipynb) is ten cells on what a cell
+gets, and is the one to run. The
+[gallery](./examples/notebooks/alchemy-viz-gallery.ipynb) is every view as a
+screenshot, and is the one to open on GitHub, which strips the `<iframe>` and
+`<script>` that `view()` emits.
 
 ## Development
 
@@ -200,6 +194,9 @@ anything actually draws.
 5. Add the tag to `VIEW_TAGS` in `ts/src/alchemy-view.ts` and an import in
    `ts/src/index.ts`.
 6. `pixi run examples`, add mutation rows, then `pixi run build && pixi run test`.
+7. Add a row to the table in [`docs/views.md`](./docs/views.md) and a `NOTES`
+   entry in `scripts/make_gallery.py`, then `pixi run gallery`. Neither is
+   checked by CI, so a new view is invisible in the docs until this step.
 
 A declared type with no view renders as "no visualization for X yet", which is
 correct behaviour; a view whose type the schema does not declare fails the tests.

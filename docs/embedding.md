@@ -1,0 +1,65 @@
+# Embedding the bundle
+
+The compiled JavaScript is one ES module. Importing it registers every element;
+setting `.payload` is the whole API.
+
+```html
+<script type="module" src="alchemy-viz.js"></script>
+<alchemy-view id="v" style="width:100%;height:600px"></alchemy-view>
+<script type="module">
+  document.getElementById("v").payload = await (await fetch("payload.json")).json();
+</script>
+```
+
+`<alchemy-view>` reads the payload's `type`, picks the element for it and mounts
+that element inside itself. The nine concrete elements - `<gufe-ligand-network>`,
+`<gufe-protein>` and so on - can be used directly if you already know what you are
+drawing, and take a `.payload` the same way. [`views.md`](./views.md) is the table
+of which type reaches which element.
+
+Assigning `.payload` again redraws. There is no render call and no teardown to do.
+
+## Where to get the bundle
+
+Three places, all of them the same file.
+
+```python
+from alchemy_viz import bundle_source
+bundle_source()     # the module's text, as a string
+```
+
+The wheel ships it at `alchemy_viz/_assets/alchemy-viz.js`, so an installed
+package is a copy you can serve. Or take it from jsDelivr, off the repository
+itself, which is what the framejs frames here do - pin a tag rather than `@main`
+for anything you want to keep working:
+
+```
+https://cdn.jsdelivr.net/gh/omsf-eco-infra/alchemy-viz@main/python/alchemy_viz/_assets/alchemy-viz.js
+```
+
+`to_html(obj)` is the other direction: it inlines the bundle and the payload into
+one self-contained page, which is what the CLI writes. Use that when the answer is
+a file rather than a page of your own.
+
+## What the page has to provide
+
+Nothing. No stylesheet, no font, no import map, and no bundler step: the module is
+already built and has no imports to resolve. The elements build light DOM, so your
+page's CSS *can* reach inside a view - which is usually what you want in a page you
+control, and is the reason the notebook layer puts views in an iframe instead.
+
+RDKit and 3Dmol are loaded on demand by the views that need them, from a CDN, by
+appending a `<script>` to `document.head` and reading `window.RDKit` and
+`window.$3Dmol`. If your page already loads either at a different version, that is
+a collision to plan around - an iframe is the cheap answer.
+
+## Debugging
+
+`window.ALCHEMY_VIZ_DEBUG = true` before the module runs makes the element print
+its payload to the console, before validation and before dispatch. On a generated
+page the query string `?debug` does the same, and `to_html(obj, debug=True)` bakes
+it in.
+
+A payload that does not match the schema draws a panel naming the type and listing
+the fields rather than throwing, so a broken view is legible without opening the
+console. [`troubleshooting.md`](./troubleshooting.md) has the four cases.

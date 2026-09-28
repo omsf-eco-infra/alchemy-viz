@@ -26,7 +26,7 @@ import { framejsMenuItem } from "../shared/framejs.js";
 import { defineElement, generations, AlchemyElement, seededViewState, type ViewHandle } from "../shared/element.js";
 import { choice, flag, num, type Setting } from "../shared/settings.js";
 import { svg } from "../shared/svg.js";
-import { resetControl } from "../shared/interact.js";
+import { floatingReset } from "../shared/interact.js";
 import { extentOf, sceneCamera, type Camera } from "../shared/camera.js";
 import { withoutLayout } from "../shared/layout.js";
 import { optionalRDKit, type RDKitModule } from "../shared/engines.js";
@@ -859,6 +859,8 @@ interface MenuParts {
   refresh(): void;
   /** Bring one ligand into view and select it. */
   focus(index: number): void;
+  /** Bring one mapping into view and open it. */
+  focusEdge(index: number): void;
   selected: Set<string>;
   filter: { minScore: number };
   query: { text: string };
@@ -867,9 +869,9 @@ interface MenuParts {
 }
 
 /**
- * The network's menu: search, the ligand list, and the score filter.
+ * The network's menu: search, the two lists, and the score filter.
  *
- * The skeleton - search, SMARTS box, count, list, hint, export, clear - is
+ * The skeleton - tabs, search, SMARTS box, count, list, hint, copy, clear - is
  * `networkMenu`, which the alchemical network builds its menu from too. What is
  * here is what a *ligand* network's menu is: it searches names, SMILES and gufe
  * keys, it filters on mapping score, and its rows carry no mark because a node
@@ -877,13 +879,14 @@ interface MenuParts {
  *
  * The score filter is the one control the other view has no equivalent of. A
  * ligand network's edges carry a score and hiding the poor ones is the question
- * people ask of it; an alchemical network has legs instead.
+ * people ask of it; an alchemical network has legs instead. It reaches the
+ * mapping list too, which is the one place a threshold on edges can say what it
+ * left: on the canvas a dimmed line is still a line, and here the row is gone.
  */
 function buildMenu(parts: MenuParts): HTMLDivElement {
   const scoreSetting = num("ligand-network.minScore", 0, 0, 1);
-  return networkMenu<NetNode>({
+  return networkMenu<NetNode, NetEdge>({
     namespace: "ligand-network",
-    noun: "ligands",
     nodes: parts.nodes,
     edges: parts.edges,
     selected: parts.selected,
@@ -905,7 +908,7 @@ function buildMenu(parts: MenuParts): HTMLDivElement {
       },
     },
     match: (pattern) => parts.match(pattern),
-    filters: () => {
+    filters: (rerender) => {
       const row = el("div", `display:flex;align-items:center;gap:${SPACE.lg};font-size:${FONT.small};color:${V.textMuted};`);
       const value = el("span", `min-width:28px;color:${V.textPrimary};`, "0.00");
       const score = el("input", "flex:1;") as HTMLInputElement;
@@ -916,12 +919,14 @@ function buildMenu(parts: MenuParts): HTMLDivElement {
       score.value = String(scoreSetting.get());
       parts.filter.minScore = Number(score.value);
       score.setAttribute("aria-label", "Hide mappings scoring below this");
-      // Only the canvas emphasis answers this, not the list: the threshold is
-      // about edges, and the list holds ligands.
+      // Both the canvas emphasis and the list: the threshold is about edges,
+      // and the mapping list is edges. It reaches the ligand list only in that
+      // a redraw of either is one call.
       score.oninput = () => {
         parts.filter.minScore = Number(score.value);
         value.textContent = parts.filter.minScore.toFixed(2);
         scoreSetting.set(parts.filter.minScore);
+        rerender();
         parts.refresh();
       };
       row.appendChild(el("span", "", "score >="));
@@ -934,15 +939,49 @@ function buildMenu(parts: MenuParts): HTMLDivElement {
       name: label(node),
       title: `${label(node)}\n${node.smiles ?? ""}`,
     }),
-    export: {
+    // The threshold first, because a mapping below it is one this view is being
+    // told not to show at all; then either end against the search, because a
+    // search for one ligand is asking which mappings it has.
+    edgeShows: (edge) => {
+      if ((edge.score ?? 0) < parts.filter.minScore) return false;
+      const text = parts.query.text.trim().toLowerCase();
+      return matchesQuery(edge.from, text) || matchesQuery(edge.to, text);
+    },
+    edgeRow: (edge) => ({
+      // The score before the name, where the alchemical network puts its
+      // colour swatch: it is what the slider above the list acts on, and a
+      // threshold with no scores in sight is a control with nothing to aim at.
+      before: scoreMark(edge.score),
+      name: `${label(edge.from)} to ${label(edge.to)}`,
+      title: `${label(edge.from)} to ${label(edge.to)}\n${
+        edge.score == null ? "no score" : `score ${edge.score.toFixed(3)}`
+      }`,
+    }),
+    words: {
       // Named "mappings" rather than "edges": on this canvas an edge is a
       // mapping, and the panel says so everywhere else.
-      nodes: { button: "Ligands", plural: "ligands" },
-      edges: { button: "Edges", plural: "mappings" },
+      nodes: { tab: "Ligands", plural: "ligands" },
+      edges: { tab: "Mappings", plural: "mappings" },
     },
     refresh: parts.refresh,
     focus: parts.focus,
+    focusEdge: parts.focusEdge,
   });
+}
+
+/**
+ * A mapping's score, as the mark at the head of its row.
+ *
+ * Two decimals, the same as the number written on the line itself, so a row and
+ * the canvas cannot appear to disagree about the same mapping. Fixed-width, so
+ * the names down a list of mappings still line up.
+ */
+function scoreMark(score: number | null | undefined): HTMLSpanElement {
+  return el(
+    "span",
+    `flex-shrink:0;min-width:26px;font-variant-numeric:tabular-nums;color:${V.textMuted2};`,
+    score == null ? "--" : score.toFixed(2),
+  );
 }
 
 /**
@@ -961,6 +1000,8 @@ interface NetworkScene {
   setEmphasis(nodeKeys: ReadonlySet<string> | null, edgeIndices: ReadonlySet<number> | null): void;
   setMatches(matched: ReadonlyMap<number, number[]>): void;
   focusOn(index: number): void;
+  /** Frame one mapping: the midpoint of its two ligands, so both ends stay on screen. */
+  focusOnEdge(index: number): void;
   fit(): void;
   reset(): void;
   /** Where the canvas is now, and how to put it back there. */
@@ -1058,6 +1099,12 @@ export class GufeLigandNetwork extends AlchemyElement<LigandNetworkViz> {
             scene?.focusOn(index);
             select({ kind: "ligand", index });
           },
+          // The same for a mapping, which the pane can draw as well as a
+          // ligand: the list is how a reader reaches one of nine hundred edges.
+          focusEdge: (index) => {
+            scene?.focusOnEdge(index);
+            select({ kind: "edge", index });
+          },
           match: (pattern) => runMatch(pattern),
         }),
       {
@@ -1102,11 +1149,11 @@ export class GufeLigandNetwork extends AlchemyElement<LigandNetworkViz> {
     const layoutSetting = choice<Layout>("ligand-network.layout", "Force-directed", LAYOUTS);
     const toolbar = this.#toolbar(
       (next) => draw(next),
-      () => scene?.reset(),
       layoutSetting,
       edges.some((edge) => chargeChange(edge.from, edge.to) !== 0),
     );
     left.appendChild(toolbar.bar);
+    floatingReset(canvas, () => scene?.reset(), "Reset pan and zoom");
 
     const detail = this.#detailPane(right, registry);
 
@@ -1317,7 +1364,6 @@ export class GufeLigandNetwork extends AlchemyElement<LigandNetworkViz> {
 
   #toolbar(
     onLayout: (layout: Layout) => void,
-    onReset: () => void,
     layoutSetting: Setting<string>,
     anyChargeChange: boolean,
   ): { bar: HTMLDivElement; picker: HTMLSelectElement } {
@@ -1363,7 +1409,6 @@ export class GufeLigandNetwork extends AlchemyElement<LigandNetworkViz> {
       layoutSetting,
     );
     toolbar.appendChild(picker);
-    toolbar.appendChild(resetControl(onReset, "Reset pan and zoom"));
 
     return { bar: toolbar, picker };
   }
@@ -1724,6 +1769,14 @@ export class GufeLigandNetwork extends AlchemyElement<LigandNetworkViz> {
       focusOn(index: number) {
         const node = nodes[index];
         if (node) view.centreOn(node.x, node.y);
+      },
+
+      focusOnEdge(index: number) {
+        const edge = edges[index];
+        // The midpoint rather than one end: what a reader picked out of the
+        // list is the mapping, and a mapping framed on one of its ligands is a
+        // mapping with the other end off the screen.
+        if (edge) view.centreOn((edge.from.x + edge.to.x) / 2, (edge.from.y + edge.to.y) / 2);
       },
 
       fit: view.fit,

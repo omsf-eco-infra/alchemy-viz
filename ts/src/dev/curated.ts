@@ -28,6 +28,14 @@ export const CURATED: CuratedExample[] = [
     note: "tyk2 again, part relative and part absolute - edges with no mapping, and a system with no ligand",
   },
   {
+    file: "alchemical_network_septop.json",
+    note: "tyk2 as a separated topologies campaign - one transformation per edge instead of two legs, every system a complex, and no mapping anywhere",
+  },
+  {
+    file: "ligand_network_septop.json",
+    note: "the network that campaign was planned from - Kartograf mappings, which scored the edges and were then dropped",
+  },
+  {
     file: "ligand_network_docked.json",
     note: "jak2, docked poses - the heaviest network we draw",
   },

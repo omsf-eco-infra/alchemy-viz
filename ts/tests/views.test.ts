@@ -18,7 +18,13 @@ import { DEPICT_STYLE, markGroups, threeDmolColor } from "../src/shared/depict-s
 import { diffStatus, transformationPayloadFor } from "../src/views/transformation.js";
 import { systemPayloadFor } from "../src/views/chemical-system.js";
 import { ZOOM_LEVELS, levelAt, type DetailLevel } from "../src/views/ligand-network.js";
-import { ZOOM_LEVELS as ALCHEMICAL_ZOOM_LEVELS, edgePx, levelAt as alchemicalLevelAt, strokePx } from "../src/views/alchemical-network.js";
+import {
+  ZOOM_LEVELS as ALCHEMICAL_ZOOM_LEVELS,
+  edgePx,
+  levelAt as alchemicalLevelAt,
+  railShift,
+  strokePx,
+} from "../src/views/alchemical-network.js";
 import { ZOOM_LIMITS } from "../src/shared/camera.js";
 import { clearFakeEngines, exampleNames, flush, readExample, seedFakeEngines, type SeededEnginesResult } from "./helpers.js";
 import type {
@@ -1857,6 +1863,8 @@ describe("<gufe-alchemical-network>", () => {
   });
 
   it("draws a node per chemical system and an edge per transformation", async () => {
+    // A network with one system per ligand has nothing to collapse, so a box is
+    // a system here and the counts are the payload's own.
     const payload = readExample("alchemical_network.json") as unknown as {
       nodes: string[];
       edges: unknown[];
@@ -1868,6 +1876,67 @@ describe("<gufe-alchemical-network>", () => {
     const text = node.textContent ?? "";
     expect(text).toContain(String(payload.nodes.length));
     expect(text).toContain("transformations");
+  });
+
+  it("draws one box per ligand rather than one per leg", async () => {
+    // A campaign runs one ligand series in solvent and in complex, so a node per
+    // chemical system is two disconnected copies of the same ligand map. Nobody
+    // plans a campaign that way: it is one map with two legs run on it.
+    const payload = readExample("alchemical_network_medium.json") as unknown as {
+      nodes: string[];
+      edges: unknown[];
+    };
+    const node = mount("gufe-alchemical-network", payload);
+    await flush();
+
+    expect(payload.nodes).toHaveLength(20);
+    expect(node.querySelectorAll("rect.gufe-node-box")).toHaveLength(10);
+    // Named for the ligand, not for either of the systems it collapsed.
+    const names = [...node.querySelectorAll("text.gufe-node-label")].map((label) => label.textContent);
+    expect(names).toContain("lig_ejm_31");
+    expect(names.some((name) => name?.includes("_solvent") || name?.includes("_complex"))).toBe(false);
+    // Both counts, because a reader has to be told that a box is not a system.
+    const text = node.textContent ?? "";
+    expect(text).toContain("ligands");
+    expect(text).toContain("systems");
+    expect(text).toContain("legs");
+  });
+
+  it("says which legs a collapsed ligand was run in, at every zoom", async () => {
+    // The leg is what collapsing took off the canvas - the boxes used to say
+    // "Protein + Solvent" against "Solvent" and a reader took the leg from that
+    // - and no picture above the line can account for it, so it is said whether
+    // or not the ligand is being drawn.
+    const node = mount("gufe-alchemical-network", readExample("alchemical_network_medium.json"));
+    await flush();
+    const lines = (): (string | null)[] =>
+      [...node.querySelectorAll("text.gufe-node-composition")].map((line) => line.textContent);
+
+    expect(lines().every((line) => line === "solvent, complex")).toBe(true);
+    pulledBackToBoxes(node);
+    await flush();
+    expect(lines().every((line) => line === "solvent, complex")).toBe(true);
+  });
+
+  it("draws one line per pair of ligands, however many legs run between them", async () => {
+    // Two lines between one pair of boxes are two things to click that say the
+    // same thing about which ligands are being compared, and nothing on the
+    // canvas tells the reader which is which until one is open. So the legs of a
+    // mapping are one line, and which leg is chosen in the pane.
+    const payload = readExample("alchemical_network_medium.json") as unknown as { edges: unknown[] };
+    const node = mount("gufe-alchemical-network", payload);
+    await flush();
+
+    // One edge per pair. `gufe-edge` is the edge itself; the second rail a
+    // double line is drawn with is `gufe-edge-rail`, and is part of the same
+    // edge rather than another one - see the double-line test below.
+    expect(payload.edges).toHaveLength(18);
+    expect(node.querySelectorAll("svg.gufe-graph line.gufe-edge")).toHaveLength(9);
+    // The count on the header is still the network's own: nine lines are
+    // eighteen calculations, and the chip is what keeps that from being a
+    // surprise on the day somebody submits them.
+    expect(node.textContent).toContain("transformations");
+    expect(node.textContent).toContain("18");
   });
 
   it("draws a selected system through the chemical-system view, not a list of its own", async () => {
@@ -1886,6 +1955,138 @@ describe("<gufe-alchemical-network>", () => {
     expect(embedded!.querySelector("gufe-small-molecule")).toBeTruthy();
   });
 
+  it("draws a line holding both legs as a double line, and one leg as a single", async () => {
+    // The one thing the canvas can say about a line's legs without being opened.
+    // A campaign's nine mappings all ran in both legs, so every line is double;
+    // the mixed fixture also carries two absolute steps into the apo protein,
+    // which ran in one leg each and are drawn as one stroke.
+    const campaign = mount("gufe-alchemical-network", readExample("alchemical_network_medium.json"));
+    await flush();
+    expect(campaign.querySelectorAll("line.gufe-edge")).toHaveLength(9);
+    expect(campaign.querySelectorAll("line.gufe-edge-rail")).toHaveLength(9);
+
+    // The two rails straddle the line between the boxes rather than lying on it.
+    const rail = campaign.querySelector<SVGLineElement>("line.gufe-edge-rail")!;
+    const line = campaign.querySelector<SVGLineElement>("line.gufe-edge")!;
+    const hit = campaign.querySelector<SVGLineElement>("line.gufe-edge-hit")!;
+    const at = (element: SVGLineElement, name: string): number => Number(element.getAttribute(name));
+    for (const name of ["x1", "y1", "x2", "y2"]) {
+      expect(at(line, name)).not.toBe(at(rail, name));
+      // Either side of where the single line would have been, by the same
+      // distance: the pair reads as one edge drawn twice rather than as two.
+      expect((at(line, name) + at(rail, name)) / 2).toBeCloseTo(at(hit, name), 6);
+    }
+    // Still one edge: the rail takes no pointer events, so what is clicked,
+    // hovered and selected is the edge rather than one of its two strokes.
+    expect(rail.getAttribute("pointer-events")).toBe("none");
+
+    document.body.replaceChildren();
+    const mixed = mount("gufe-alchemical-network", readExample("alchemical_network_mixed.json"));
+    await flush();
+    const edges = mixed.querySelectorAll("line.gufe-edge").length;
+    const doubled = mixed.querySelectorAll("line.gufe-edge-rail").length;
+    expect(edges).toBe(6);
+    expect(doubled).toBe(4);
+  });
+
+  it("keeps the two rails of a double line the same distance apart on screen", async () => {
+    // The strokes are drawn in screen pixels, so the gap between them is too:
+    // rails held a fixed distance apart in graph units would be a double line up
+    // close and a single thick one on a campaign framed at a third.
+    expect(railShift(0.5)).toBeGreaterThan(railShift(1));
+    expect(railShift(0.25) / railShift(1)).toBeCloseTo(4, 6);
+
+    const node = mount("gufe-alchemical-network", readExample("alchemical_network_medium.json"));
+    await flush();
+    const line = node.querySelector<SVGLineElement>("line.gufe-edge")!;
+    const rail = node.querySelector<SVGLineElement>("line.gufe-edge-rail")!;
+    const apart = (): number =>
+      Math.hypot(
+        Number(line.getAttribute("x1")) - Number(rail.getAttribute("x1")),
+        Number(line.getAttribute("y1")) - Number(rail.getAttribute("y1")),
+      );
+    const near = apart();
+    pulledBackToBoxes(node);
+    await flush();
+    // Further apart in the graph's own units, which is what keeps them the same
+    // few pixels apart once the scene is scaled down onto the screen.
+    expect(apart()).toBeGreaterThan(near);
+  });
+
+  it("lists every component of a collapsed ligand in one pane, with no tabs", async () => {
+    // Both legs of a campaign carry the same ligand and the same solvent, and
+    // one carries the protein, so tabs over them were a control over a list that
+    // was mostly itself repeated. Merged, the reader sees the whole ligand at
+    // once and clicks nothing first.
+    const node = mount("gufe-alchemical-network", readExample("alchemical_network_medium.json"));
+    await flush();
+
+    const embedded = node.querySelector("gufe-chemical-system")!;
+    expect(embedded).toBeTruthy();
+    // The complex leg's protein, the ligand and the solvent, once each. The
+    // protein has no row of its own because `<gufe-chemical-system>` already
+    // folds a receptor and its ligand into the complex pane, which is the row
+    // this list opens on.
+    // Without the button that opens the embedded view's own menu, which is
+    // chrome rather than one of the rows this list is made of.
+    const labels = [...embedded.querySelectorAll("button")]
+      .map((b) => b.textContent ?? "")
+      .filter((label) => label.length && label !== "Menu");
+    expect(labels).toHaveLength(3);
+    expect(labels[0]).toContain("Complex");
+    expect(labels.filter((label) => label.startsWith("ligand"))).toHaveLength(1);
+    expect(labels.filter((label) => label.startsWith("solvent"))).toHaveLength(1);
+    // Named for the ligand rather than for whichever leg it was keyed by.
+    const payload = (embedded as HTMLElement & { payload?: { name?: string } }).payload;
+    expect(payload?.name).toBe("lig_ejm_31");
+  });
+
+  it("opens one leg of a line, and keeps that leg across lines", async () => {
+    // A line is every transformation between two ligands, and they really are
+    // different calculations. Reading a campaign is going along one leg - six
+    // edges, each in the protein - so the choice is remembered rather than reset
+    // on every click.
+    const node = mount("gufe-alchemical-network", readExample("alchemical_network_medium.json"));
+    await flush();
+
+    const lines = [...node.querySelectorAll<SVGLineElement>("svg.gufe-graph line.gufe-edge")];
+    lines[0].dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    await flush();
+
+    const openOn = (): string | undefined =>
+      (node.querySelector("gufe-transformation") as (HTMLElement & { payload?: { name?: string } }) | null)?.payload
+        ?.name;
+    expect(openOn()).toContain("(solvent)");
+
+    const leg = (label: string): HTMLButtonElement =>
+      [...node.querySelectorAll<HTMLButtonElement>("button")].find((b) => b.textContent === label)!;
+    expect(leg("solvent")).toBeTruthy();
+    leg("complex").click();
+    await flush();
+    const opened = openOn();
+    expect(opened).toContain("(complex)");
+
+    // Another line, same leg: the switch is about how the reader is reading the
+    // campaign, not about which line they happen to be on.
+    lines[1].dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    await flush();
+    expect(openOn()).toContain("(complex)");
+    expect(openOn()).not.toBe(opened);
+  });
+
+  it("offers no leg switch where a line holds one transformation", async () => {
+    const node = mount("gufe-alchemical-network", readExample("alchemical_network.json"));
+    await flush();
+    (node.querySelector("svg.gufe-graph line") as SVGLineElement).dispatchEvent(
+      new MouseEvent("click", { bubbles: true }),
+    );
+    await flush();
+    // Nothing collapsed, so there is nothing to choose between and no control
+    // that chooses: "solvent" here would be a button with one option.
+    const labels = [...node.querySelectorAll("button")].map((b) => b.textContent);
+    expect(labels).not.toContain("solvent");
+  });
+
   it("draws an absolute transformation, and the system it leaves with no ligand", async () => {
     // The other shape an alchemical network comes in: every edge ends at one
     // shared reference state, so the graph is a star, that state is the only
@@ -1893,10 +2094,15 @@ describe("<gufe-alchemical-network>", () => {
     const node = mount("gufe-alchemical-network", readExample("alchemical_network_absolute.json"));
     await flush();
 
-    // Two compositions - with a ligand and without one - so the boxes are
-    // coloured by what they are made of and the strip says what that means.
-    expect(node.textContent).toContain("SmallMolecule + Solvent");
-    expect(node.textContent).toContain("systems made of");
+    // Four boxes for four systems: every ligand here is its own box already,
+    // and the reference state carries no ligand to be collapsed onto one.
+    expect(node.querySelectorAll("rect.gufe-node-box")).toHaveLength(4);
+    // One leg, so there is nothing to colour and no key to explain it.
+    expect(node.textContent).not.toContain("transformations in");
+    // The box with nothing in it still says what it is made of.
+    expect([...node.querySelectorAll("text.gufe-node-composition")].map((line) => line.textContent)).toContain(
+      "Solvent",
+    );
 
     const edge = node.querySelector("line") as SVGLineElement;
     edge.dispatchEvent(new MouseEvent("click", { bubbles: true }));
@@ -2101,39 +2307,200 @@ describe("<gufe-alchemical-network>", () => {
     expect(transformationPayloadFor(orphan, buildRegistry(payload))).toBeNull();
   });
 
-  it("colours the systems by what they are made of, and says what the colours mean", async () => {
-    const payload = structuredClone(readExample("alchemical_network.json")) as {
-      registry: { type: string; components?: Record<string, string> }[];
+  it("draws every line alike, and says in the header which legs the network has", async () => {
+    // A line is every transformation between its two ligands, so it belongs to
+    // no one leg and there is nothing for a colour on it to say. What the legs
+    // are called is on the header instead, where the words match the tabs a line
+    // opens with.
+    const node = mount("gufe-alchemical-network", readExample("alchemical_network_medium.json"));
+    await flush();
+
+    const strokes = [...node.querySelectorAll<SVGLineElement>("svg.gufe-graph line.gufe-edge, svg.gufe-graph line.gufe-edge-rail")]
+      .map((line) => line.getAttribute("stroke"));
+    expect(strokes.length).toBeGreaterThan(0);
+    expect(new Set(strokes)).toEqual(new Set([T.netEdgeLine]));
+
+    const text = node.textContent ?? "";
+    expect(text).toContain("legs");
+    expect(text).toContain("solvent, complex");
+  });
+
+  /**
+   * The header's protocol chip, whatever it currently reads.
+   *
+   * Found by what it says rather than by its position: the header also carries
+   * the menu toggle and a chip per count, and which of those comes first has
+   * moved before.
+   */
+  const protocolChipOf = (node: HTMLElement): HTMLButtonElement =>
+    [...node.querySelectorAll<HTMLButtonElement>(".gufe-header button")].find((button) =>
+      (button.textContent ?? "").startsWith("protocol"),
+    )!;
+
+  /** A network running a second protocol over one of its three transformations. */
+  const twoProtocols = (): unknown => {
+    const payload = structuredClone(readExample("alchemical_network.json")) as unknown as {
+      edges: { protocol: string }[];
+      registry: { type: string; "gufe-key": string; name: string; gufe_type: string }[];
     };
-    // Two compositions where the fixture has one. This is the shape a binding
-    // campaign makes for real - a solvent leg and a complex leg, told apart by
-    // nothing but which components their systems carry.
-    const system = payload.registry.find((entry) => entry.type === "ChemicalSystemViz")!;
-    delete system.components!.solvent;
+    const second = {
+      type: "ProtocolViz",
+      "gufe-key": "SepTopProtocol-1111111111111111111111111111aaaa",
+      name: "",
+      gufe_type: "SepTopProtocol",
+    };
+    payload.registry.push(second);
+    payload.edges[0].protocol = second["gufe-key"];
+    return payload;
+  };
+
+  it("names every protocol in the header, not just the first", async () => {
+    // A network is free to run more than one: the schema says a protocol per
+    // transformation, and a campaign whose legs were run under different ones
+    // is the case the header used to read as a single protocol and say the
+    // wrong thing about.
+    const payload = readExample("alchemical_network.json") as unknown as {
+      edges: { protocol: string }[];
+      registry: { type: string; "gufe-key": string; name: string; gufe_type: string }[];
+    };
+    const second = {
+      type: "ProtocolViz",
+      "gufe-key": "SepTopProtocol-1111111111111111111111111111aaaa",
+      name: "",
+      gufe_type: "SepTopProtocol",
+    };
+    payload.registry.push(second);
+    payload.edges[0].protocol = second["gufe-key"];
 
     const node = mount("gufe-alchemical-network", payload);
     await flush();
 
-    // Fills rather than strokes: a stroke also says which node is selected, and
-    // what is being asserted here is what the node is made of.
-    const boxes = [...node.querySelectorAll("svg.gufe-graph rect.gufe-node-box")];
-    const fills = boxes.map((box) => box.getAttribute("fill"));
-    expect(new Set(fills).size).toBe(2);
-    expect(fills.every((fill) => T.netGroupFill.includes(fill!))).toBe(true);
     const text = node.textContent ?? "";
-    expect(text).toContain("systems made of");
-    expect(text).toContain("SmallMolecule + Solvent");
+    expect(text).toContain("protocols");
+    expect(text).toContain("DummyProtocol");
+    expect(text).toContain("SepTopProtocol");
   });
 
-  it("leaves a network of one composition uncoloured, with nothing to explain", async () => {
+  it("says one protocol in the singular, and keeps the whole list on the chip", async () => {
+    // Three class names beside the counts is a header the counts fall off the
+    // end of, so past two the chip is a number and the names are its tooltip.
+    const one = mount("gufe-alchemical-network", readExample("alchemical_network.json"));
+    await flush();
+    expect(one.textContent).toContain("protocol");
+    expect(one.textContent).not.toContain("protocols");
+
+    document.body.replaceChildren();
+    seedFakeEngines();
+    const payload = readExample("alchemical_network.json") as unknown as {
+      edges: { protocol: string }[];
+      registry: { type: string; "gufe-key": string; name: string; gufe_type: string }[];
+    };
+    payload.edges.forEach((edge, at) => {
+      const key = `Protocol${at}-000000000000000000000000000000${at}0`;
+      payload.registry.push({ type: "ProtocolViz", "gufe-key": key, name: "", gufe_type: `Protocol${at}` });
+      edge.protocol = key;
+    });
+    const many = mount("gufe-alchemical-network", payload);
+    await flush();
+
+    const chip = protocolChipOf(many);
+    expect(chip).toBeTruthy();
+    expect(chip.textContent).toContain("3");
+    expect(chip.title).toContain("Protocol0");
+    // A line per protocol, each saying how much of the network it runs: the
+    // names are what the count on the chip stands in for, and the share is what
+    // no header has room for.
+    expect(chip.title.split("\n")).toHaveLength(3);
+    expect(chip.title.split("\n").every((line) => line.includes("1 transformation"))).toBe(true);
+  });
+
+  it("opens the protocols in the pane, one row each, from the chip on the header", async () => {
+    // The chip used to be a readout, so a network running three protocols said
+    // "protocols 3" and left a reader nothing to click: the names were a tooltip,
+    // which is no answer on a touch screen or in a screenshot.
+    const node = mount("gufe-alchemical-network", twoProtocols());
+    await flush();
+
+    const chip = protocolChipOf(node);
+    expect(chip.getAttribute("aria-pressed")).toBe("false");
+    chip.click();
+    await flush();
+
+    expect(chip.getAttribute("aria-pressed")).toBe("true");
+    const rows = [...node.querySelectorAll<HTMLButtonElement>(".gufe-protocols button")];
+    expect(rows.map((row) => row.textContent)).toEqual([
+      "DummyProtocol2 transformations",
+      "SepTopProtocol1 transformation",
+    ]);
+    // Nothing on the canvas is a protocol, so the box the pane opened on is let
+    // go rather than left lit beside a pane that has stopped showing it.
+    const boxes = [...node.querySelectorAll<SVGRectElement>("rect.gufe-node-box")];
+    expect(boxes.some((box) => box.getAttribute("stroke") === T.cardBorderActive)).toBe(false);
+
+    // A row opens that protocol's own card, which is the standalone view of one.
+    rows[1].click();
+    await flush();
+    const pane = node.querySelector("alchemy-view") as HTMLElement & { payload: Record<string, unknown> };
+    expect(pane.querySelector("gufe-protocol")).toBeTruthy();
+    expect(pane.payload["gufe-key"]).toBe("SepTopProtocol-1111111111111111111111111111aaaa");
+    const { valid, issues } = validatePayload(pane.payload);
+    expect(valid, formatIssues(issues)).toBe(true);
+  });
+
+  it("goes straight to the card where the network runs one protocol", async () => {
+    // One protocol is not a list: the chip already named it, so a row to click
+    // to get to it would be a list of one standing in the way.
     const node = mount("gufe-alchemical-network", readExample("alchemical_network.json"));
     await flush();
 
-    // Every system here is made of the same things, so a colour per composition
-    // would be one colour and a legend saying so is noise.
-    const boxes = [...node.querySelectorAll("svg.gufe-graph rect.gufe-node-box")];
-    const fills = boxes.map((box) => box.getAttribute("fill"));
-    expect(new Set(fills)).toEqual(new Set([T.cardBg]));
+    protocolChipOf(node).click();
+    await flush();
+
+    expect(node.querySelector(".gufe-protocols")).toBeNull();
+    const pane = node.querySelector("alchemy-view") as HTMLElement & { payload: Record<string, unknown> };
+    expect(pane.querySelector("gufe-protocol")).toBeTruthy();
+    expect(pane.textContent).toContain("DummyProtocol");
+  });
+
+  it("hands the pane back to a box clicked after the protocols", async () => {
+    const node = mount("gufe-alchemical-network", twoProtocols());
+    await flush();
+
+    const chip = protocolChipOf(node);
+    chip.click();
+    await flush();
+    expect(node.querySelector(".gufe-protocols")).toBeTruthy();
+
+    node.querySelector<SVGRectElement>("rect.gufe-node-box")!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    await flush();
+
+    expect(node.querySelector(".gufe-protocols")).toBeNull();
+    expect(chip.getAttribute("aria-pressed")).toBe("false");
+    const pane = node.querySelector("alchemy-view") as HTMLElement & { payload: Record<string, unknown> };
+    expect(pane.payload["type"]).toBe("ChemicalSystemViz");
+  });
+
+  it("leaves the boxes plain, whatever their systems are made of", async () => {
+    // A box is a ligand and belongs to no one leg either, so there is nothing
+    // for a colour on it to say that its ligand and its caption do not.
+    const node = mount("gufe-alchemical-network", readExample("alchemical_network_medium.json"));
+    await flush();
+
+    const fills = [...node.querySelectorAll("svg.gufe-graph rect.gufe-node-box")].map((box) =>
+      box.getAttribute("fill"),
+    );
+    expect(fills).toHaveLength(10);
+    expect(new Set(fills).size).toBe(1);
+    expect(T.netGroupFill).not.toContain(fills[0]!);
+  });
+
+  it("explains nothing under the canvas but the dashes", async () => {
+    const node = mount("gufe-alchemical-network", readExample("alchemical_network.json"));
+    await flush();
+    // Nothing on this canvas is coloured by what it is, so the strip under it
+    // has nothing to say but the dashes, where a transformation changes the
+    // charge. The reset floats over the canvas rather than sitting here.
+    expect(node.textContent).not.toContain("transformations in");
     expect(node.textContent).not.toContain("systems made of");
   });
 
@@ -2279,9 +2646,7 @@ describe("<gufe-alchemical-network>", () => {
 
     const node = mount("gufe-alchemical-network", readExample("alchemical_network.json"));
     await flush();
-    const lines = [...node.querySelectorAll<SVGLineElement>("svg.gufe-graph line")].filter(
-      (line) => line.getAttribute("stroke") !== "transparent",
-    );
+    const lines = [...node.querySelectorAll<SVGLineElement>("svg.gufe-graph line.gufe-edge")];
     expect(lines.length).toBeGreaterThan(0);
     const widths = (): number[] => lines.map((line) => Number(line.getAttribute("stroke-width")));
     const near = widths();
