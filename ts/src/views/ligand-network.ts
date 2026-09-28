@@ -864,6 +864,16 @@ interface MenuParts {
   selected: Set<string>;
   filter: { minScore: number };
   query: { text: string };
+  /**
+   * The mapping-score threshold: where it is kept across reloads, and where the
+   * slider hands back the way to put it at zero.
+   *
+   * The view owns the setting rather than the menu because the reset over the
+   * canvas clears the threshold as well as the camera, and it has to do that
+   * before anyone has opened the menu - the slider is only built on the first
+   * open, so it registers itself once it exists.
+   */
+  score: { setting: Setting<number>; onReset(reset: () => void): void };
   /** Colour the ligands containing a substructure. Nothing is hidden by it. */
   match(smarts: string): Promise<MatchOutcome>;
 }
@@ -884,7 +894,10 @@ interface MenuParts {
  * left: on the canvas a dimmed line is still a line, and here the row is gone.
  */
 function buildMenu(parts: MenuParts): HTMLDivElement {
-  const scoreSetting = num("ligand-network.minScore", 0, 0, 1);
+  const scoreSetting = parts.score.setting;
+  // Set when the slider is built, which is before anything can press either of
+  // the two things that clear it.
+  let zeroScore = (): void => {};
   return networkMenu<NetNode, NetEdge>({
     namespace: "ligand-network",
     nodes: parts.nodes,
@@ -892,7 +905,7 @@ function buildMenu(parts: MenuParts): HTMLDivElement {
     selected: parts.selected,
     query: parts.query,
     search: {
-      placeholder: "Search ligands",
+      placeholder: "Search",
       label: "Search ligands by name, SMILES or gufe key",
     },
     // The SMARTS box sits below the search and does the opposite thing: the
@@ -908,6 +921,7 @@ function buildMenu(parts: MenuParts): HTMLDivElement {
       },
     },
     match: (pattern) => parts.match(pattern),
+    resetFilters: () => zeroScore(),
     filters: (rerender) => {
       const row = el("div", `display:flex;align-items:center;gap:${SPACE.lg};font-size:${FONT.small};color:${V.textMuted};`);
       const value = el("span", `min-width:28px;color:${V.textPrimary};`, "0.00");
@@ -916,19 +930,34 @@ function buildMenu(parts: MenuParts): HTMLDivElement {
       score.min = "0";
       score.max = "1";
       score.step = "0.01";
-      score.value = String(scoreSetting.get());
-      parts.filter.minScore = Number(score.value);
       score.setAttribute("aria-label", "Hide mappings scoring below this");
+      // One way to move the threshold, whether it was the slider, a reload or
+      // the reset that moved it, so the number beside the slider, the filter
+      // the view reads and what is remembered cannot end up saying three
+      // different things.
+      const setScore = (next: number): void => {
+        score.value = String(next);
+        value.textContent = next.toFixed(2);
+        parts.filter.minScore = next;
+        scoreSetting.set(next);
+      };
+      setScore(scoreSetting.get());
       // Both the canvas emphasis and the list: the threshold is about edges,
       // and the mapping list is edges. It reaches the ligand list only in that
       // a redraw of either is one call.
       score.oninput = () => {
-        parts.filter.minScore = Number(score.value);
-        value.textContent = parts.filter.minScore.toFixed(2);
-        scoreSetting.set(parts.filter.minScore);
+        setScore(Number(score.value));
         rerender();
         parts.refresh();
       };
+      zeroScore = () => setScore(0);
+      // The reset over the canvas is outside the menu and owes it a redraw;
+      // `resetFilters` is the menu's own and is followed by one.
+      parts.score.onReset(() => {
+        zeroScore();
+        rerender();
+        parts.refresh();
+      });
       row.appendChild(el("span", "", "score >="));
       row.appendChild(score);
       row.appendChild(value);
@@ -1045,6 +1074,16 @@ export class GufeLigandNetwork extends AlchemyElement<LigandNetworkViz> {
     const filter = { minScore: 0 };
     const query = { text: "" };
 
+    // The score threshold lives out here with the selection and the query, not
+    // in the menu, because the reset over the canvas clears it too: hiding the
+    // poor mappings is a way of looking at the network, and "put it back" has
+    // to mean the whole of what was changed rather than the camera alone.
+    const scoreSetting = num("ligand-network.minScore", 0, 0, 1);
+    // A no-op until the menu has been opened once, which is also the only time
+    // a threshold can be anything but zero: the slider is what reads the
+    // remembered value, and it is built with the rest of the menu.
+    let resetScore = (): void => {};
+
     /**
      * RDKit, fetched once and only if something asks.
      *
@@ -1092,6 +1131,12 @@ export class GufeLigandNetwork extends AlchemyElement<LigandNetworkViz> {
           selected,
           filter,
           query,
+          score: {
+            setting: scoreSetting,
+            onReset: (reset) => {
+              resetScore = reset;
+            },
+          },
           refresh: () => applyEmphasis(),
           // Jumping to a ligand and opening it are one action: the list is
           // how you find one you cannot see, and finding it is not the point.
@@ -1153,7 +1198,19 @@ export class GufeLigandNetwork extends AlchemyElement<LigandNetworkViz> {
       edges.some((edge) => chargeChange(edge.from, edge.to) !== 0),
     );
     left.appendChild(toolbar.bar);
-    floatingReset(canvas, () => scene?.reset(), "Reset pan and zoom");
+    floatingReset(
+      canvas,
+      () => {
+        // The setting as well as the slider: with the menu never opened there
+        // is no slider to move, and a remembered threshold would otherwise come
+        // back the moment someone opened it, after a reset had said it was gone.
+        scoreSetting.set(0);
+        filter.minScore = 0;
+        resetScore();
+        scene?.reset();
+      },
+      "Reset pan, zoom and the score filter",
+    );
 
     const detail = this.#detailPane(right, registry);
 

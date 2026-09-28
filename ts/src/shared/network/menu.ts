@@ -129,6 +129,16 @@ export interface NetworkMenuSpec<N extends SelectableNode, E extends SelectableE
    * Built once, with the rest of the menu.
    */
   filters?(rerender: () => void): HTMLElement[];
+  /**
+   * Put whatever `filters` built back where it started.
+   *
+   * Called by "Clear selection", which clears the filters too: the selection
+   * and the threshold together are the whole of what a reader has done to the
+   * view, and putting one back while leaving the other standing is still not
+   * the network they were handed. The list redraw and the canvas refresh are
+   * the caller's, so this only has to move the controls.
+   */
+  resetFilters?(): void;
   /** Whether a node survives every filter now in force. */
   shows(node: N, index: number): boolean;
   /** What one row of the node list holds. */
@@ -235,8 +245,10 @@ export function networkMenu<N extends SelectableNode, E extends SelectableEdge<N
   panel.appendChild(exporter.box);
 
   const clear = button("width:100%;", "Clear selection");
+  clear.title = "Clear the selection and put the filters back";
   clear.onclick = () => {
     spec.selected.clear();
+    spec.resetFilters?.();
     render();
     spec.refresh();
   };

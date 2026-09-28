@@ -29,7 +29,7 @@ export const CURATED: CuratedExample[] = [
   },
   {
     file: "alchemical_network_protocols.json",
-    note: "one campaign under three protocols - what the header chip opens in the pane",
+    note: "the same campaign under three protocols - a colour-coded chip each, and picking one colours its lines",
   },
   {
     file: "alchemical_network_septop.json",

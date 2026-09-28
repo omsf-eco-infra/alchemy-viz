@@ -17,7 +17,7 @@ disagree.
 | `LigandNetworkViz` | `LigandNetwork` | `gufe-ligand-network` | the ligand graph; click an edge for its mapping |
 | `ChemicalSystemViz` | `ChemicalSystem` | `gufe-chemical-system` | the components down the left, the selected one drawn on the right |
 | `TransformationViz` | `Transformation`, `NonTransformation` | `gufe-transformation` | the two end states, the mapping between them, and the protocol |
-| `AlchemicalNetworkViz` | `AlchemicalNetwork` | `gufe-alchemical-network` | a box per ligand and a line per pair, with the legs behind them |
+| `AlchemicalNetworkViz` | `AlchemicalNetwork` | `gufe-alchemical-network` | a box per ligand and a line per pair, with the legs behind them; where a campaign ran several protocols, a chip each on the header colours the lines that ran under it |
 | `ProtocolViz` | `Protocol` | `gufe-protocol` | the settings tree |
 
 ## Pictures

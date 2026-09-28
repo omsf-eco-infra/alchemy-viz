@@ -10,7 +10,7 @@ import "../src/index.js";
 import { buildMolBlock, parseCounts, parseSDF } from "../src/shared/sdf.js";
 import { parsePdbStats } from "../src/shared/pdb.js";
 import { formatIssues, validatePayload } from "../src/schema/validate.js";
-import { buildRegistry, lookupOfType } from "../src/schema/registry.js";
+import { buildRegistry, lookupOfType, protocolLabel } from "../src/schema/registry.js";
 import { T } from "../src/shared/theme.js";
 import { HIDE_NAME_ATTRIBUTE } from "../src/shared/panels.js";
 import { inFrameOf, mappingPayloadFor, openfeShift, pairColour, uniqueAtoms } from "../src/views/atom-mapping.js";
@@ -1732,8 +1732,11 @@ describe("<gufe-transformation>", () => {
   it("names the protocol by its gufe class, which is all a Protocol has", async () => {
     const node = mount("gufe-transformation", readExample("transformation.json"));
     await flush();
-    // The class name is all a Protocol carries, so it is what identifies it.
-    expect(node.textContent).toContain("DummyProtocol");
+    // The class name is all a Protocol carries, so it is what identifies it -
+    // less the tail every one of those class names ends in, which the label on
+    // the line has already said.
+    expect(node.textContent).toContain("Dummy");
+    expect(node.textContent).not.toContain("DummyProtocol");
   });
 
   it("diffs the two states per label", async () => {
@@ -1776,7 +1779,7 @@ describe("<gufe-transformation>", () => {
     expect(body.children[1].getAttribute("role")).toBe("separator");
     const column = body.children[0];
     expect(column.firstElementChild!.textContent).toContain(payload.name);
-    expect(column.firstElementChild!.textContent).toContain("DummyProtocol");
+    expect(column.firstElementChild!.textContent).toContain("protocolDummy");
     expect(column.firstElementChild!.textContent).toContain("mappings");
     expect(node.querySelector(".gufe-header")).toBeNull();
   });
@@ -2326,15 +2329,16 @@ describe("<gufe-alchemical-network>", () => {
   });
 
   /**
-   * The header's protocol chip, whatever it currently reads.
+   * The header's protocol readout, whatever it currently says.
    *
-   * Found by what it says rather than by its position: the header also carries
-   * the menu toggle and a chip per count, and which of those comes first has
-   * moved before.
+   * Found by what it says rather than by its position: the header carries a
+   * chip per count too, and which of those comes first has moved before. The
+   * title is what separates the chip from the span inside it, which says the
+   * same words.
    */
-  const protocolChipOf = (node: HTMLElement): HTMLButtonElement =>
-    [...node.querySelectorAll<HTMLButtonElement>(".gufe-header button")].find((button) =>
-      (button.textContent ?? "").startsWith("protocol"),
+  const protocolReadoutOf = (node: HTMLElement): HTMLElement =>
+    [...node.querySelectorAll<HTMLElement>(".gufe-header span")].find(
+      (span) => span.title !== "" && (span.textContent ?? "").startsWith("protocol"),
     )!;
 
   /** A network running a second protocol over one of its three transformations. */
@@ -2364,111 +2368,156 @@ describe("<gufe-alchemical-network>", () => {
 
     const text = node.textContent ?? "";
     expect(text).toContain("protocols");
-    expect(text).toContain("DummyProtocol");
-    expect(text).toContain("SepTopProtocol");
+    // Named without the tail every protocol class shares, which is the word
+    // beside the chips anyway.
+    expect(text).toContain("Dummy");
+    expect(text).toContain("SepTop");
   });
 
-  it("says one protocol in the singular, and keeps the whole list on the chip", async () => {
-    // Three class names beside the counts is a header the counts fall off the
-    // end of, so past two the chip is a number and the names are its tooltip.
-    const one = mount("gufe-alchemical-network", readExample("alchemical_network.json"));
-    await flush();
-    expect(one.textContent).toContain("protocol");
-    expect(one.textContent).not.toContain("protocols");
-
-    document.body.replaceChildren();
-    seedFakeEngines();
-    const payload = readExample("alchemical_network.json") as unknown as {
-      edges: { protocol: string }[];
-      registry: { type: string; "gufe-key": string; name: string; gufe_type: string }[];
-    };
-    payload.edges.forEach((edge, at) => {
-      const key = `Protocol${at}-000000000000000000000000000000${at}0`;
-      payload.registry.push({ type: "ProtocolViz", "gufe-key": key, name: "", gufe_type: `Protocol${at}` });
-      edge.protocol = key;
-    });
-    const many = mount("gufe-alchemical-network", payload);
-    await flush();
-
-    const chip = protocolChipOf(many);
-    expect(chip).toBeTruthy();
-    expect(chip.textContent).toContain("3");
-    expect(chip.title).toContain("Protocol0");
-    // A line per protocol, each saying how much of the network it runs: the
-    // names are what the count on the chip stands in for, and the share is what
-    // no header has room for.
-    expect(chip.title.split("\n")).toHaveLength(3);
-    expect(chip.title.split("\n").every((line) => line.includes("1 transformation"))).toBe(true);
-  });
-
-  it("opens the protocols in the pane, one row each, from the chip on the header", async () => {
-    // The chip used to be a readout, so a network running three protocols said
-    // "protocols 3" and left a reader nothing to click: the names were a tooltip,
-    // which is no answer on a touch screen or in a screenshot.
-    const node = mount("gufe-alchemical-network", readExample("alchemical_network_protocols.json"));
-    await flush();
-
-    const chip = protocolChipOf(node);
-    expect(chip.textContent).toContain("3");
-    expect(chip.getAttribute("aria-pressed")).toBe("false");
-    chip.click();
-    await flush();
-
-    expect(chip.getAttribute("aria-pressed")).toBe("true");
-    // In label order, with the share of the campaign each one runs - which is
-    // what the count on the chip stands in for and no header has room to say.
-    const rows = [...node.querySelectorAll<HTMLButtonElement>(".gufe-protocols button")];
-    expect(rows.map((row) => row.textContent)).toEqual([
-      "AbsoluteSolvationProtocol1 transformation",
-      "NonEquilibriumCyclingProtocol1 transformation",
-      "RelativeHybridTopologyProtocol2 transformations",
-    ]);
-    // Nothing on the canvas is a protocol, so the box the pane opened on is let
-    // go rather than left lit beside a pane that has stopped showing it.
-    const boxes = [...node.querySelectorAll<SVGRectElement>("rect.gufe-node-box")];
-    expect(boxes.some((box) => box.getAttribute("stroke") === T.cardBorderActive)).toBe(false);
-
-    // A row opens that protocol's own card, which is the standalone view of one.
-    rows[0].click();
-    await flush();
-    const pane = node.querySelector("alchemy-view") as HTMLElement & { payload: Record<string, unknown> };
-    expect(pane.querySelector("gufe-protocol")).toBeTruthy();
-    expect(pane.payload["gufe_type"]).toBe("AbsoluteSolvationProtocol");
-    const { valid, issues } = validatePayload(pane.payload);
-    expect(valid, formatIssues(issues)).toBe(true);
-  });
-
-  it("goes straight to the card where the network runs one protocol", async () => {
-    // One protocol is not a list: the chip already named it, so a row to click
-    // to get to it would be a list of one standing in the way.
+  it("says one protocol in the singular, with nothing to pick out", async () => {
+    // Every line of a one-protocol network runs it, so a chip to colour them by
+    // would colour the whole canvas and answer nothing.
     const node = mount("gufe-alchemical-network", readExample("alchemical_network.json"));
     await flush();
 
-    protocolChipOf(node).click();
-    await flush();
-
+    const readout = protocolReadoutOf(node);
+    expect(readout.textContent).toBe("protocol Dummy");
+    expect(readout.tagName).toBe("SPAN");
     expect(node.querySelector(".gufe-protocols")).toBeNull();
-    const pane = node.querySelector("alchemy-view") as HTMLElement & { payload: Record<string, unknown> };
-    expect(pane.querySelector("gufe-protocol")).toBeTruthy();
-    expect(pane.textContent).toContain("DummyProtocol");
+    expect(node.textContent).not.toContain("protocols");
   });
 
-  it("hands the pane back to a box clicked after the protocols", async () => {
+  /** The header's protocol chips, in the order they are read in. */
+  const protocolChipsOf = (node: HTMLElement): HTMLButtonElement[] => [
+    ...node.querySelectorAll<HTMLButtonElement>(".gufe-protocols button"),
+  ];
+
+  /** What every line on the canvas is drawn in, rails left out. */
+  const edgeStrokes = (node: HTMLElement): string[] =>
+    [...node.querySelectorAll<SVGLineElement>("svg.gufe-graph line.gufe-edge")].map(
+      (line) => line.getAttribute("stroke") ?? "",
+    );
+
+  /** How heavy each of those lines is drawn, in the same order. */
+  const edgeWidths = (node: HTMLElement): number[] =>
+    [...node.querySelectorAll<SVGLineElement>("svg.gufe-graph line.gufe-edge")].map((line) =>
+      Number(line.getAttribute("stroke-width")),
+    );
+
+  it("gives every protocol a chip of its own where a network runs several", async () => {
+    // Three of them, which is where the header used to give up and read
+    // "protocols 3" - a fact with nothing behind it on a touch screen or in a
+    // screenshot. The names are the whole of what this payload knows about a
+    // protocol, so they are what the chips say, in label order.
     const node = mount("gufe-alchemical-network", readExample("alchemical_network_protocols.json"));
     await flush();
 
-    const chip = protocolChipOf(node);
-    chip.click();
-    await flush();
-    expect(node.querySelector(".gufe-protocols")).toBeTruthy();
+    const chips = protocolChipsOf(node);
+    expect(chips.map((chip) => chip.textContent)).toEqual([
+      "AbsoluteSolvation",
+      "NonEquilibriumCycling",
+      "RelativeHybridTopology",
+    ]);
+    // A colour each, and no two alike: the swatch is what makes the colour on
+    // the canvas readable back to a name.
+    const swatches = chips.map((chip) => (chip.firstElementChild as HTMLElement).style.background);
+    expect(new Set(swatches).size).toBe(3);
+    // The share of the campaign each one runs stays on the tooltip, where it
+    // does not make the header line unreadable. Counted off the payload rather
+    // than written down, so the fixture can grow without this saying the wrong
+    // thing about it.
+    const payload = readExample("alchemical_network_protocols.json") as unknown as {
+      edges: { protocol: string }[];
+    };
+    const runs = (label: string): number =>
+      payload.edges.filter((edge) => edge.protocol.startsWith(`${label}Protocol-`)).length;
+    expect(chips.map((chip) => chip.title)).toEqual(
+      ["AbsoluteSolvation", "NonEquilibriumCycling", "RelativeHybridTopology"].map(
+        (label) => `${label} - ${runs(label)} transformation${runs(label) === 1 ? "" : "s"}`,
+      ),
+    );
+    expect(chips.every((chip) => chip.getAttribute("aria-pressed") === "false")).toBe(true);
+    expect(new Set(edgeStrokes(node))).toEqual(new Set([T.netEdgeLine]));
+  });
 
-    node.querySelector<SVGRectElement>("rect.gufe-node-box")!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  it("colours the lines a picked protocol runs, and only those", async () => {
+    // Which of a campaign's lines ran under which protocol is the question the
+    // names cannot answer on their own, and the one a canvas that draws every
+    // line alike takes away.
+    const node = mount("gufe-alchemical-network", readExample("alchemical_network_protocols.json"));
     await flush();
 
-    expect(node.querySelector(".gufe-protocols")).toBeNull();
-    expect(chip.getAttribute("aria-pressed")).toBe("false");
+    const chips = protocolChipsOf(node);
+    chips[2].click();
+    await flush();
+
+    expect(chips[2].getAttribute("aria-pressed")).toBe("true");
+    const relative = edgeStrokes(node);
+    // Some of the campaign's lines run it and the rest do not, and nothing else
+    // moves: this is a lens rather than a filter, so the other lines are still
+    // drawn, in the resting colour.
+    const relativeLit = relative.filter((stroke) => stroke === T.netGroupStroke[2]).length;
+    expect(relativeLit).toBeGreaterThan(0);
+    expect(relative.filter((stroke) => stroke === T.netEdgeLine)).toHaveLength(relative.length - relativeLit);
+
+    // And drawn at twice the weight. A recoloured hairline is a difference a
+    // reader has to go looking for; the lens is for finding lines at a glance.
+    const widths = edgeWidths(node);
+    const plain = widths.filter((_, at) => relative[at] === T.netEdgeLine);
+    const lit = widths.filter((_, at) => relative[at] === T.netGroupStroke[2]);
+    expect(new Set(plain).size).toBe(1);
+    expect(lit.every((width) => width === plain[0] * 2)).toBe(true);
+
+    // A different chip moves the colour rather than adding a second one: two
+    // lenses at once would put two colours on a line that runs both.
+    chips[0].click();
+    await flush();
+    expect(chips[2].getAttribute("aria-pressed")).toBe("false");
+    expect(chips[0].getAttribute("aria-pressed")).toBe("true");
+    const absolute = edgeStrokes(node);
+    const absoluteLit = absolute.filter((stroke) => stroke === T.netGroupStroke[0]).length;
+    expect(absoluteLit).toBeGreaterThan(0);
+    // A different protocol, so a different set of lines rather than the same
+    // ones repainted.
+    expect(absoluteLit).not.toBe(relativeLit);
+    expect(absolute).not.toContain(T.netGroupStroke[2]);
+
+    // The picked chip clears itself, which is the only way back to a plain canvas.
+    chips[0].click();
+    await flush();
+    expect(chips[0].getAttribute("aria-pressed")).toBe("false");
+    expect(new Set(edgeStrokes(node))).toEqual(new Set([T.netEdgeLine]));
+  });
+
+  it("leaves the pane alone when a protocol is picked", async () => {
+    // The protocols are not what is selected - the boxes and the lines are - so
+    // a reader can mark a protocol's lines and go on reading transformations
+    // with the marks still on them.
+    const node = mount("gufe-alchemical-network", readExample("alchemical_network_protocols.json"));
+    await flush();
+
     const pane = node.querySelector("alchemy-view") as HTMLElement & { payload: Record<string, unknown> };
     expect(pane.payload["type"]).toBe("ChemicalSystemViz");
+    const chips = protocolChipsOf(node);
+    chips[0].click();
+    await flush();
+
+    expect(pane.payload["type"]).toBe("ChemicalSystemViz");
+    // The box the pane opened on is still the selected one.
+    const boxes = [...node.querySelectorAll<SVGRectElement>("rect.gufe-node-box")];
+    expect(boxes.filter((box) => box.getAttribute("stroke") === T.cardBorderActive)).toHaveLength(1);
+
+    // And a line clicked afterwards keeps the lens. A line this protocol does
+    // not run, so what is being checked is the lens surviving the click rather
+    // than the selection happening to win on the one line it covers.
+    const hits = [...node.querySelectorAll<SVGLineElement>("line.gufe-edge-hit")];
+    const other = edgeStrokes(node).findIndex((stroke) => stroke === T.netEdgeLine);
+    expect(other).toBeGreaterThanOrEqual(0);
+    hits[other].dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    await flush();
+    expect(pane.payload["type"]).toBe("TransformationViz");
+    expect(chips[0].getAttribute("aria-pressed")).toBe("true");
+    expect(edgeStrokes(node)).toContain(T.netGroupStroke[0]);
   });
 
   it("leaves the boxes plain, whatever their systems are made of", async () => {
@@ -2614,6 +2663,23 @@ describe("<gufe-alchemical-network>", () => {
     expect(node.querySelectorAll("[stroke-dasharray]")).toHaveLength(0);
     expect(node.querySelectorAll(".gufe-node-charge")).toHaveLength(0);
     expect(node.textContent).not.toContain("net charge change");
+  });
+
+  it("names a protocol without the tail every protocol class shares", () => {
+    // `AbsoluteSolvationProtocol` beside `RelativeHybridTopologyProtocol` is two
+    // long labels differing only at the front, in a header row that has three of
+    // them to fit - and the word beside the chips has already said "protocol".
+    const of = (gufe_type: string, name = ""): string =>
+      protocolLabel({ type: "ProtocolViz", "gufe-key": "Protocol-0", name, gufe_type });
+    expect(of("AbsoluteSolvationProtocol")).toBe("AbsoluteSolvation");
+    expect(of("NonEquilibriumCyclingProtocol")).toBe("NonEquilibriumCycling");
+    // Only a tail, and only where something is left to say.
+    expect(of("Protocol")).toBe("Protocol");
+    expect(of("ProtocolWithSettings")).toBe("ProtocolWithSettings");
+    // A protocol the payload gives no class for falls back to its own name, and
+    // that is trimmed the same way.
+    expect(of("", "MyProtocol")).toBe("My");
+    expect(of("")).toBe("Protocol");
   });
 
   it("keeps its levels inside the range the wheel can reach", () => {

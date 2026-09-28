@@ -215,11 +215,9 @@ export function exportBlock<N extends SelectableNode>(
   const copy = button("width:100%;");
   const relabel = (): void => {
     const what = options.what();
-    const word = what === "nodes" ? words.nodes : words.edges;
-    // Naming the list rather than saying "Copy", because the button sits below
-    // a list that is one of two and a reader who has scrolled the tabs out of
-    // sight still has to be able to tell which one they are about to take.
-    copy.textContent = `Copy ${word.plural}`;
+    // Just "Copy": the tab above the list already names which of the two this
+    // takes, and the title says it again for anyone who needs it spelled out.
+    copy.textContent = "Copy";
     copy.title =
       what === "nodes"
         ? `Copy the selected ${words.nodes.plural}, one per line`

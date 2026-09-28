@@ -33,11 +33,17 @@ const listRows = (node: HTMLElement): HTMLButtonElement[] =>
 const tab = (node: HTMLElement, label: "Ligands" | "Mappings"): HTMLButtonElement =>
   Array.from(node.querySelectorAll<HTMLButtonElement>("button")).find((b) => b.textContent === label)!;
 
-/** The one copy button, which names the list the tabs have chosen. */
+/** The button under the list, which clears the selection and the threshold with it. */
+const clearButton = (node: HTMLElement): HTMLButtonElement =>
+  Array.from(node.querySelectorAll<HTMLButtonElement>("button")).find((b) => b.textContent === "Clear selection")!;
+
+/** The reset floating over the canvas, which clears the camera and the threshold. */
+const resetButton = (node: HTMLElement): HTMLButtonElement =>
+  node.querySelector<HTMLButtonElement>('button[aria-label="Reset pan, zoom and the score filter"]')!;
+
+/** The one copy button, whose title names the list the tabs have chosen. */
 const copyButton = (node: HTMLElement): HTMLButtonElement =>
-  Array.from(node.querySelectorAll<HTMLButtonElement>("button")).find((b) =>
-    b.textContent?.startsWith("Copy "),
-  )!;
+  Array.from(node.querySelectorAll<HTMLButtonElement>("button")).find((b) => b.textContent === "Copy")!;
 
 const nodeGroups = (node: HTMLElement): SVGGElement[] =>
   Array.from(node.querySelectorAll<SVGGElement>("g.gufe-node"));
@@ -223,6 +229,55 @@ describe("the ligand network menu", () => {
     expect(node.textContent).toContain("1 of 3 mappings");
   });
 
+  it("puts the threshold back to zero when the view is reset", async () => {
+    // Reset is what a reader presses to get the network they were given back,
+    // and a threshold that hid two thirds of the mappings is as much a reason
+    // the picture does not look like that any more as the camera is.
+    const node = mountNetwork();
+    await flush();
+    hamburger(node).click();
+    await flush();
+    tab(node, "Mappings").click();
+    await flush();
+
+    const slider = node.querySelector<HTMLInputElement>('input[type="range"]')!;
+    slider.value = "1";
+    slider.dispatchEvent(new Event("input", { bubbles: true }));
+    await flush();
+    expect(listRows(node)).toHaveLength(1);
+
+    resetButton(node).click();
+    await flush();
+
+    expect(slider.value).toBe("0");
+    expect(listRows(node)).toHaveLength(3);
+    expect(node.textContent).toContain("3 of 3 mappings");
+  });
+
+  it("puts the threshold back to zero when the selection is cleared", async () => {
+    // The pair of them is what a reader has done to the view: clearing one and
+    // leaving the other is a list that still is not the list they started with.
+    const node = mountNetwork();
+    await flush();
+    hamburger(node).click();
+    await flush();
+    tab(node, "Mappings").click();
+    await flush();
+
+    const slider = node.querySelector<HTMLInputElement>('input[type="range"]')!;
+    slider.value = "1";
+    slider.dispatchEvent(new Event("input", { bubbles: true }));
+    await flush();
+    expect(listRows(node)).toHaveLength(1);
+
+    clearButton(node).click();
+    await flush();
+
+    expect(slider.value).toBe("0");
+    expect(listRows(node)).toHaveLength(3);
+    expect(node.textContent).toContain("3 of 3 mappings");
+  });
+
   it("opens a mapping, and selects both of the ligands it runs between", async () => {
     const node = mountNetwork();
     await flush();
@@ -241,16 +296,17 @@ describe("the ligand network menu", () => {
     expect(pressed).toHaveLength(2);
   });
 
-  it("names on the copy button the list the tabs have chosen", async () => {
+  it("says in the copy button's title the list the tabs have chosen", async () => {
     const node = mountNetwork();
     await flush();
     hamburger(node).click();
     await flush();
-    expect(copyButton(node).textContent).toBe("Copy ligands");
+    expect(copyButton(node).title).toContain("ligands");
 
     tab(node, "Mappings").click();
     await flush();
-    expect(copyButton(node).textContent).toBe("Copy mappings");
+    expect(copyButton(node).title).toContain("mappings");
+    expect(copyButton(node).textContent).toBe("Copy");
   });
 
   it("clears a selection back to everything lit", async () => {

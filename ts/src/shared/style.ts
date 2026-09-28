@@ -370,6 +370,15 @@ export const CHIP = {
    * not invite the click a `button` chip answers.
    */
   outline: `background:${V.btnBg};border-color:${V.btnBorder};color:${V.textPrimary};`,
+  /**
+   * What a `button` chip's border goes back to.
+   *
+   * The same value `button` sets, named so that a chip which overrides its
+   * border to say something - the alchemical network's protocol chips, where the
+   * picked one takes the colour its lines are drawn in - has a resting value to
+   * put back without reaching into the palette for it.
+   */
+  restBorder: V.btnBorder,
   className: "gufe-chip",
 } as const;
 

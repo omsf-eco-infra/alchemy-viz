@@ -93,11 +93,9 @@ async function typeSmarts(node: HTMLElement, pattern: string): Promise<void> {
 const button = (node: HTMLElement, text: string): HTMLButtonElement =>
   Array.from(node.querySelectorAll<HTMLButtonElement>("button")).find((b) => b.textContent === text)!;
 
-/** The one copy button, which names the list the tabs have chosen. */
+/** The one copy button, whose title names the list the tabs have chosen. */
 const copyButton = (node: HTMLElement): HTMLButtonElement =>
-  Array.from(node.querySelectorAll<HTMLButtonElement>("button")).find((b) =>
-    b.textContent?.startsWith("Copy "),
-  )!;
+  Array.from(node.querySelectorAll<HTMLButtonElement>("button")).find((b) => b.textContent === "Copy")!;
 
 describe("the alchemical network menu", () => {
   let engines: SeededEnginesResult;
@@ -335,19 +333,20 @@ describe("the alchemical network menu", () => {
     expect(pressed).toHaveLength(2);
   });
 
-  it("names on the copy button the list the tabs have chosen", async () => {
+  it("says in the copy button's title the list the tabs have chosen", async () => {
     // One button rather than the pair that used to ask, underneath, which of
-    // the two lists was meant after the tabs had already said.
+    // the two lists was meant after the tabs had already said. The label stays
+    // "Copy" for the same reason; only the title spells the list out.
     const node = mountNetwork();
     await flush();
     hamburger(node).click();
     await flush();
-    expect(copyButton(node).textContent).toBe("Copy ligands");
+    expect(copyButton(node).title).toContain("ligands");
 
     button(node, "Transformations").click();
     await flush();
-    expect(copyButton(node).textContent).toBe("Copy transformations");
-    expect(button(node, "Copy ligands")).toBeUndefined();
+    expect(copyButton(node).title).toContain("transformations");
+    expect(copyButton(node).textContent).toBe("Copy");
   });
 
   it("clears a selection, and puts the whole canvas back", async () => {

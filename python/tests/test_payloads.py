@@ -740,12 +740,12 @@ class TestBuilders:
         _validate(payload)
 
     def test_a_network_may_name_a_protocol_per_transformation(self):
-        """Three protocols over four transformations, which one field per edge allows.
+        """Three protocols over twenty transformations, which one field per edge allows.
 
         ``alchemical_network_protocols.json`` is the fixture for the thing the
         schema has always said and no other example showed: ``protocol`` is a
-        field of a transformation, not of a network. Two of its edges name a
-        relative protocol, one names another, and the absolute anchor names a
+        field of a transformation, not of a network. Most of its edges name a
+        relative protocol, four name another, and the two absolute anchors name a
         third - so a reader of the payload can tell which part of the campaign
         was run how, and the registry holds each protocol once however many edges
         point at it.
@@ -756,13 +756,13 @@ class TestBuilders:
         registry = _registry(payload)
 
         named = [edge["protocol"] for edge in payload["edges"]]
-        assert len(named) == 4
+        assert len(named) == 20
         counts = Counter(registry[key]["gufe_type"] for key in named)
         assert counts == Counter(
             {
-                "RelativeHybridTopologyProtocol": 2,
-                "NonEquilibriumCyclingProtocol": 1,
-                "AbsoluteSolvationProtocol": 1,
+                "RelativeHybridTopologyProtocol": 14,
+                "NonEquilibriumCyclingProtocol": 4,
+                "AbsoluteSolvationProtocol": 2,
             }
         )
 
@@ -774,12 +774,12 @@ class TestBuilders:
         # A Protocol has no name of its own, so the class name is all a reader gets.
         assert all(entry["name"] == "" for entry in entries)
 
-        # The absolute edge is the one with no mapping, and it is the one under
-        # the protocol that decouples rather than mutates - which is why this
-        # campaign names more than one in the first place.
+        # The absolute edges are the ones with no mapping, and they are the ones
+        # under the protocol that decouples rather than mutates - which is why
+        # this campaign names more than one in the first place.
         absolute = [edge for edge in payload["edges"] if not edge["mappings"]]
-        assert len(absolute) == 1
-        assert registry[absolute[0]["protocol"]]["gufe_type"] == "AbsoluteSolvationProtocol"
+        assert len(absolute) == 2
+        assert {registry[edge["protocol"]]["gufe_type"] for edge in absolute} == {"AbsoluteSolvationProtocol"}
 
         _validate(payload)
 

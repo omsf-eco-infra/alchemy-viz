@@ -145,12 +145,12 @@ NOTES = {
         "system is the one box carrying no ligand, and so the one with nothing drawn in it."
     ),
     "alchemical_network_protocols": (
-        "Three ligands run under three protocols, which is the one thing a network names per "
-        "transformation and every other fixture here keeps constant: two mappings under hybrid "
-        "topology, one rerun by non-equilibrium cycling, and one ligand anchored by an absolute "
-        "transformation that neither relative protocol could run. The header says how many rather "
-        "than listing them, and the chip opens them in the pane - a row each, with the share of "
-        "the campaign it runs, and the protocol's own card behind it."
+        "The TYK2 campaign run under three protocols, which is the one thing a network names per "
+        "transformation and every other fixture here keeps constant: seven mappings under hybrid "
+        "topology in both legs, two rerun by non-equilibrium cycling, and two ligands anchored by "
+        "an absolute transformation that neither relative protocol could run. A chip per protocol "
+        "rather than a count, and picking one colours the lines it runs - which is the question "
+        "twenty lines drawn alike cannot answer."
     ),
     "chemical_system": (
         "The system's components down the left, the selected one drawn on the right in whichever "

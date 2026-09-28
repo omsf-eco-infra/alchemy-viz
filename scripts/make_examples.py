@@ -343,57 +343,90 @@ def _absolute_network(network: gufe.LigandNetwork, protocol: gufe.Protocol) -> g
     )
 
 
-def _multi_protocol_network(network: gufe.LigandNetwork) -> gufe.AlchemicalNetwork:
-    """One small campaign run under three protocols rather than one.
+def _multi_protocol_network() -> gufe.AlchemicalNetwork:
+    """The TYK2 binding campaign run under three protocols rather than one.
 
     Nothing in gufe or in the schema says a network runs a single protocol - it
     is named per transformation - and every other fixture here names one, so the
     case a reader most needs to see was the case nothing showed: a header that
-    has to say *which* protocols, and a pane that has to be able to open each of
-    them.
+    has to say *which* protocols, and a chip per protocol that has to be able to
+    open each of them and mark the lines it runs.
 
-    The plan is the ordinary one it takes to get there. Two of the three
-    mappings run relative under hybrid topology; the third would not converge
-    that way and is rerun by non-equilibrium cycling, which changes how that edge
-    is run and nothing else about the campaign; and one ligand is anchored by an
-    absolute transformation into pure water, which cannot be run under either of
-    the relative protocols at all. So the counts differ too - two edges, one, one
-    - which is what the pane's rows are for.
+    The plan is the ordinary one it takes to get there, at the size a campaign
+    actually comes in. Seven of the nine TYK2 mappings run relative under hybrid
+    topology, in both legs, exactly as they do in :func:`_tyk2_rbfe_network`; two
+    would not converge that way and are rerun by non-equilibrium cycling, which
+    changes how those edges are run and nothing else about the campaign; and two
+    ligands are anchored by an absolute transformation out of the solvent leg
+    into pure water, which neither relative protocol could run at all. So the
+    counts differ by an order of magnitude rather than by one - fourteen
+    transformations, four, two - which is what the chips' shares are for, and
+    what a lens over four lines in twenty has to stay findable against.
 
-    Deliberately the small network rather than a real one: this fixture is about
-    what the payload names, and gufe's own three ligands say it in six kilobytes
-    with no protein to carry. :func:`_alchemical_network` is the same three
-    ligands under one protocol, which is the fixture to read it against.
+    The ten ligands, the nine mappings and the kinase are the RBFE tutorial's own,
+    read the way :func:`_tyk2_network` and :func:`_tyk2_rbfe_network` read them.
+    That campaign under a single protocol is the fixture to read this one
+    against: same nodes, same lines, and the only difference is which protocol
+    each line names.
     """
-    from gufe import AlchemicalNetwork, ChemicalSystem, SolventComponent, Transformation
+    from gufe import AlchemicalNetwork, ChemicalSystem, ProteinComponent, SolventComponent, Transformation
 
     hybrid = RelativeHybridTopologyProtocol(settings=RelativeHybridTopologyProtocol.default_settings())
     cycling = NonEquilibriumCyclingProtocol(settings=NonEquilibriumCyclingProtocol.default_settings())
     decoupling = AbsoluteSolvationProtocol(settings=AbsoluteSolvationProtocol.default_settings())
 
+    solvent = SolventComponent()
+    protein = ProteinComponent.from_pdb_file(str(DATA / "tyk2_protein.pdb"), name="tyk2")
+
+    # Insertion order is iteration order, so the leg loop below is deterministic.
+    legs = {
+        "solvent": {"solvent": solvent},
+        "complex": {"solvent": solvent, "protein": protein},
+    }
+    systems: dict[tuple[str, str], gufe.ChemicalSystem] = {}
+
+    def system(mol: gufe.SmallMoleculeComponent, leg: str) -> gufe.ChemicalSystem:
+        """One shared system per (ligand, leg), so each leg is a connected graph."""
+        return systems.setdefault(
+            (str(mol.key), leg),
+            ChemicalSystem({"ligand": mol, **legs[leg]}, name=f"{mol.name}_{leg}"),
+        )
+
     # Sorted by gufe key for the same byte-stability reason as everywhere else
-    # here, and shared systems so the campaign is one connected graph.
-    edges = sorted(network.edges, key=lambda e: (str(e.componentA.key), str(e.componentB.key)))
-    systems: dict[str, gufe.ChemicalSystem] = {}
+    # here, and so that which two mappings are the stubborn ones does not depend
+    # on set iteration order.
+    edges = sorted(_tyk2_network().edges, key=lambda e: (str(e.componentA.key), str(e.componentB.key)))
+    rerun = set(edges[-2:])
     relative = [
-        _solvated_transformation(edge, cycling if at == len(edges) - 1 else hybrid, systems)
-        for at, edge in enumerate(edges)
+        Transformation(
+            stateA=system(edge.componentA, leg),
+            stateB=system(edge.componentB, leg),
+            mapping=edge,
+            protocol=cycling if edge in rerun else hybrid,
+            name=f"{edge.componentA.name} to {edge.componentB.name} ({leg})",
+        )
+        for edge in edges
+        for leg in legs
     ]
 
-    # The anchor is a ligand the relative edges already reach, so the absolute
-    # transformation hangs off the graph rather than sitting beside it. Its
-    # system comes out of the cache above for that reason, and the reference
-    # state is water with nothing in it - the same shape as in
-    # :func:`_absolute_network`.
-    anchor = sorted((_renamed(mol) for mol in network.nodes), key=lambda mol: (mol.name, str(mol.key)))[0]
-    absolute = Transformation(
-        stateA=systems[str(anchor.key)],
-        stateB=ChemicalSystem({"solvent": SolventComponent()}, name="water"),
-        mapping=None,
-        protocol=decoupling,
-        name=f"{anchor.name} decoupled from water",
-    )
-    return AlchemicalNetwork([*relative, absolute], name="hydration campaign under three protocols")
+    # The anchors are ligands the relative edges already reach, and their systems
+    # come out of the cache above for that reason: the absolute transformations
+    # hang off the solvent leg rather than sitting beside it. Both end at the one
+    # reference state - water with nothing in it, the same shape as in
+    # :func:`_absolute_network` - which is what joins them to each other too.
+    water = ChemicalSystem({"solvent": solvent}, name="water")
+    anchors = sorted({edge.componentA for edge in edges}, key=lambda mol: mol.name)[:2]
+    absolute = [
+        Transformation(
+            stateA=system(mol, "solvent"),
+            stateB=water,
+            mapping=None,
+            protocol=decoupling,
+            name=f"{mol.name} decoupled from water",
+        )
+        for mol in anchors
+    ]
+    return AlchemicalNetwork([*relative, *absolute], name="TYK2 campaign under three protocols")
 
 
 def _tyk2_rbfe_network() -> gufe.AlchemicalNetwork:
@@ -1010,10 +1043,12 @@ def build() -> dict[str, GufeTokenizable]:
         # with no ligand and a transformation with no mapping.
         "alchemical_network_absolute.json": _absolute_network(network, protocol),
         "alchemical_network_mixed.json": _tyk2_mixed_network(),
-        # The same three ligands once more, run under three protocols instead of
+        # The TYK2 campaign once more, run under three protocols instead of
         # one: the fixture for a header that has to name several, and the only
         # one where a network's protocol is a question rather than a constant.
-        "alchemical_network_protocols.json": _multi_protocol_network(network),
+        # Full size rather than the three ligands, because naming which lines
+        # ran how is a question nobody has on a canvas of four.
+        "alchemical_network_protocols.json": _multi_protocol_network(),
         # Not a gufe class at all, which is the only way to produce this type.
         "unknown_component.json": _somebodys_own_component(),
         # A chemical system on its own, in the two shapes a campaign is built

@@ -37,12 +37,12 @@
  * edge loose into a payload that stands on its own, the way `mappingPayloadFor`
  * does one level further down.
  *
- * The third thing the pane shows is on the header rather than the canvas: the
+ * What the network runs is on the header rather than in the pane: the
  * protocols. A network may run several - the schema says a protocol per
- * transformation - so the chip is a button, and what it opens is the protocol
- * card where there is one protocol and a list of them, with the share of the
- * network each one runs, where there are more. `protocolsOf` is what counts
- * them; `<gufe-protocol>` is still what draws one.
+ * transformation - so one is a readout and several are a chip each, colour
+ * coded, and picking a chip colours the lines that protocol runs. `protocolsOf`
+ * is what counts them, `edgesByProtocol` what says which lines are whose, and
+ * `<gufe-protocol>` is still what draws one on its own.
  *
  * Like the ligand network, d3 is asked for a force layout and nothing else: the
  * SVG, the selection and the fallback circular layout are plain DOM, so the
@@ -74,9 +74,16 @@ import { depictThemeOptions, nodeCardGround } from "../shared/depict-theme.js";
 import { chargeLabel } from "../shared/charge.js";
 import { DEPICT_STYLE } from "../shared/depict-style.js";
 import { mountDepiction } from "../shared/depict-node.js";
-import { CHIP, FONT, PANE_LIST, PICK, SECTION_LABEL, SPACE, TEXT, TOOLBAR, WEIGHT } from "../shared/style.js";
+import { CHIP, FONT, SPACE, TEXT, TOOLBAR, WEIGHT } from "../shared/style.js";
 import { T, V } from "../shared/theme.js";
-import { buildRegistry, entryLabel, lookup, lookupOfType, type RegistryIndex } from "../schema/registry.js";
+import {
+  buildRegistry,
+  entryLabel,
+  lookup,
+  lookupOfType,
+  protocolLabel,
+  type RegistryIndex,
+} from "../schema/registry.js";
 import {
   compositionOf,
   componentTypes,
@@ -348,7 +355,22 @@ export const levelAt = (scale: number): NodeDetail => levelIn(ZOOM_LEVELS, scale
  * pulled-back campaign reads as boxes with lines between them rather than the
  * other way round.
  */
-const EDGE = { width: 2, selectedWidth: 3.5, min: 1, hit: 20, rail: 5 };
+const EDGE = {
+  width: 2,
+  selectedWidth: 3.5,
+  min: 1,
+  hit: 20,
+  rail: 5,
+  /**
+   * What the protocol lens multiplies a line's weight by.
+   *
+   * A multiplier rather than a width of its own, so a lens line doubles whatever
+   * the zoom and the selection had already settled on: the lens has to read at
+   * every distance, and a fixed weight would be the whole canvas up close and a
+   * hairline on a campaign framed at a third.
+   */
+  lensScale: 2,
+};
 
 /**
  * How far apart the two rails of a double line are, in graph units at this zoom.
@@ -408,16 +430,30 @@ export const strokePx = (scale: number, selected: boolean): number => {
  * pair resists by sitting exactly on the collision boundary, which is a layout
  * with no structure left in it.
  *
- * `chargeStrength` was pulled in when the boxes grew. Repulsion is what sets
- * how far apart the graph settles, and leaving it where it was would have
- * inflated the layout by as much as the boxes grew - the same picture at a
- * smaller framing, which is no bigger a box on anybody's screen. Pulling it in
- * is what turns a bigger box into a bigger share of the canvas.
+ * `chargeStrength` is what decides whether the graph reads at all. Repulsion
+ * weak enough that collision is the only thing holding boxes apart leaves a
+ * layout jammed against that boundary, and a jammed layout is one where lines
+ * cross each other and run through boxes that have nothing to do with them.
+ * Untangling that by hand afterwards is the reader doing the layout's job. It
+ * is not a question of settling for longer: `relax` already runs d3's schedule
+ * to completion, and running it several times over moves nothing, so the
+ * tangles are where the forces balance rather than somewhere on the way there.
+ *
+ * `chargeDistanceMax` is what stops that repulsion being paid for in framing.
+ * Unbounded, every box pushes every other box, so the layout grows with the
+ * size of the network rather than with how crowded any part of it is, and a
+ * campaign of a couple of hundred ligands settles over a span that frames each
+ * box down to nothing. Bounded, repulsion only separates boxes near enough to
+ * be in each other's way, which is the only place it was wanted: the crowded
+ * neighbourhood spreads and the graph as a whole does not. A large network
+ * comes out framed larger this way than it did at the weaker charge.
  */
 const FORCE = {
   linkDistance: 252,
   linkStrength: 0.4,
-  chargeStrength: -950,
+  chargeStrength: -3600,
+  /** Repulsion is local. Past this, boxes are already out of each other's way. */
+  chargeDistanceMax: 1200,
   collisionRadius: 126,
   collisionIterations: 3,
   tickMultiplier: 2,
@@ -725,10 +761,18 @@ function titleFor(node: SystemGroup, registry: RegistryIndex): string {
 /** One protocol a network runs, and how much of the network it runs. */
 interface ProtocolEntry {
   protocol: ProtocolViz;
-  /** What the header and the list call it. */
+  /** What the header calls it. */
   label: string;
   /** How many of the network's transformations name it. */
   count: number;
+  /**
+   * The colour its chip carries and its lines take when it is picked.
+   *
+   * On the entry rather than worked out twice, because the swatch on the header
+   * and the strokes on the canvas saying different things is the one way this
+   * feature can be wrong.
+   */
+  color: string;
 }
 
 /**
@@ -754,8 +798,13 @@ function protocolsOf(links: readonly TransformationViz[], registry: RegistryInde
       entry.count++;
       continue;
     }
-    // A Protocol has no name of its own, so its class name is what identifies it.
-    held.set(protocol["gufe-key"], { protocol, label: protocol.gufe_type || protocol.name || "Protocol", count: 1 });
+    held.set(protocol["gufe-key"], {
+      protocol,
+      label: protocolLabel(protocol),
+      count: 1,
+      // Assigned below, once the entries are in the order they are read in.
+      color: T.netEdgeLine,
+    });
   }
 
   const entries = [...held.values()];
@@ -764,68 +813,122 @@ function protocolsOf(links: readonly TransformationViz[], registry: RegistryInde
   for (const entry of entries) {
     if ((sharing.get(entry.label) ?? 0) > 1) entry.label = `${entry.label} ${entryLabel(entry.protocol)}`;
   }
-  return entries.sort((a, b) => (a.label < b.label ? -1 : a.label > b.label ? 1 : 0));
+  entries.sort((a, b) => (a.label < b.label ? -1 : a.label > b.label ? 1 : 0));
+  // After the sort, so the colours run in the order the chips are read in. The
+  // palette is the categorical one, which is free in this view: a box is a
+  // ligand and they are all one colour now, so nothing else on the canvas is
+  // using it. Cycled past its length rather than given up on - a network of six
+  // protocols is one nobody has, and one lens at a time is lit either way.
+  entries.forEach((entry, at) => {
+    entry.color = T.netGroupStroke[at % T.netGroupStroke.length];
+  });
+  return entries;
 }
 
 /**
- * The protocol chip: what the network runs, and the way in to reading it.
+ * What the header says a network runs, where it runs one.
  *
- * Past two it is a count rather than a list, with the names on the tooltip. The
- * header is one line of chips beside the network's name, and three class names -
- * each of them as long as `RelativeHybridTopologyProtocol` - push the counts off
- * the end of it, which loses a reader something they cannot get back by
- * hovering.
- *
- * Which is why it is a button rather than a readout: a chip reading
- * "protocols 3" names a fact a reader then has no way to open, and a tooltip is
- * not one on a touch screen or in a screenshot. Clicking it puts the protocols
- * in the detail pane - the card where there is one of them, a list of them where
- * there are several - and `aria-pressed` says whether the pane is showing them,
- * so the chip is as pickable to a screen reader as it looks to the eye.
+ * A readout and not a control. What this payload knows about a protocol is its
+ * class name - settings are deliberately not in the schema - so the name is the
+ * whole of it, and a chip that opened a card saying the same name again was a
+ * click that led nowhere. With one protocol there is nothing to pick out on the
+ * canvas either: every line is running it.
  */
-function protocolChip(entries: readonly ProtocolEntry[], open: () => void): HTMLButtonElement {
-  const chip = pickable(`${CHIP.plain}${CHIP.button}gap:5px;`, CHIP.className);
-  chip.appendChild(el("span", "", entries.length === 1 ? "protocol" : "protocols"));
-  const labels = entries.map((entry) => entry.label);
-  chip.appendChild(
-    el("b", `color:${TEXT.primary};`, entries.length > 2 ? String(entries.length) : labels.join(", ")),
-  );
-  chip.title = entries.map((entry) => `${entry.label} - ${countedEdges(entry.count)}`).join("\n");
-  chip.onclick = open;
+function protocolReadout(entry: ProtocolEntry): HTMLSpanElement {
+  const chip = statChip("protocol", entry.label);
+  chip.title = `${entry.label} - ${countedEdges(entry.count)}`;
   return chip;
+}
+
+/**
+ * The protocols as a chip each, where a network runs more than one: a colour
+ * per protocol, and picking one colours the lines it runs.
+ *
+ * Listed rather than counted, because "protocols 3" names a fact a reader then
+ * has no way to open, and because the names are the whole of what the payload
+ * holds. What the colour adds is the question the names cannot answer on their
+ * own: *which* of a campaign's lines ran under this one. Nothing in gufe says a
+ * network runs a single protocol - a campaign whose solvent leg ran under
+ * different settings from its complex leg is two of them - and that split is
+ * invisible on a canvas where every line is drawn the same.
+ *
+ * One at a time, and the picked chip clears itself. This is a lens rather than a
+ * filter: it recolours, it hides nothing, and two lenses at once would put two
+ * colours on the lines that run both, which is a picture that means nothing. The
+ * pane is not touched either - the protocols are not what is selected, the boxes
+ * and the lines still are - so a reader can pick a protocol and then go on
+ * reading transformations with its lines still marked.
+ *
+ * `aria-pressed` carries which one, so the chips are as pickable to a screen
+ * reader as they look to the eye; the swatch is what makes the colour on the
+ * canvas readable back to a name.
+ */
+function protocolChips(entries: readonly ProtocolEntry[], pick: (entry: ProtocolEntry | null) => void): HTMLDivElement {
+  // Named, the way the graph's own SVG is: which shape the header is in is the
+  // first thing anyone asks when it looks wrong, and a class is how that is
+  // visible in devtools and assertable in a test.
+  const host = el("div", `display:inline-flex;align-items:center;flex-wrap:wrap;gap:${SPACE.xs};`);
+  host.className = "gufe-protocols";
+  host.appendChild(el("span", "", "protocols"));
+
+  let chosen: ProtocolEntry | null = null;
+  const chips = entries.map((entry) => {
+    const chip = pickable(`${CHIP.plain}${CHIP.button}gap:5px;`, CHIP.className);
+    chip.setAttribute("aria-pressed", "false");
+    chip.appendChild(
+      el("span", `width:8px;height:8px;border-radius:50%;background:${entry.color};flex-shrink:0;`),
+    );
+    chip.appendChild(el("b", `color:${TEXT.primary};`, entry.label));
+    chip.title = `${entry.label} - ${countedEdges(entry.count)}`;
+    return chip;
+  });
+
+  const apply = (): void => {
+    entries.forEach((entry, at) => {
+      const on = chosen === entry;
+      chips[at].setAttribute("aria-pressed", on ? "true" : "false");
+      // The border as well as the swatch, so the picked chip is tied to the
+      // colour now on the canvas by more than an eight-pixel dot.
+      chips[at].style.borderColor = on ? entry.color : CHIP.restBorder;
+    });
+    pick(chosen);
+  };
+
+  entries.forEach((entry, at) => {
+    chips[at].onclick = () => {
+      chosen = chosen === entry ? null : entry;
+      apply();
+    };
+    host.appendChild(chips[at]);
+  });
+  return host;
+}
+
+/**
+ * Which lines a protocol runs, by graph-edge index.
+ *
+ * A line is every transformation between two ligands, so it can run more than
+ * one protocol: a campaign that ran its two legs differently has both of them on
+ * every line. A line is therefore in the set of each protocol any of its legs
+ * names, and a picked protocol colours a line if that protocol is on it at all.
+ * The alternative - colouring only the lines that run nothing else - would leave
+ * exactly the lines a reader is asking about uncoloured.
+ */
+function edgesByProtocol(edges: readonly GraphEdge[]): Map<GufeKey, Set<number>> {
+  const held = new Map<GufeKey, Set<number>>();
+  edges.forEach((edge, index) => {
+    for (const leg of edge.legs) {
+      const at = held.get(leg.protocol) ?? new Set<number>();
+      at.add(index);
+      held.set(leg.protocol, at);
+    }
+  });
+  return held;
 }
 
 /** "14 transformations", pluralised - the share of a network a protocol runs. */
 function countedEdges(count: number): string {
   return `${count} transformation${count === 1 ? "" : "s"}`;
-}
-
-/**
- * The protocols in the pane: a row each, naming it and what it runs.
- *
- * The counts are the point of the list. Which protocol ran fourteen of a
- * campaign's eighteen transformations and which ran the other four is the
- * question the header chip raises and has no room to answer, and these rows
- * answer it before anything is clicked. A row then opens that protocol's own
- * card - `<gufe-protocol>`, the same one a transformation's header links to -
- * because what a protocol *is* belongs to the view of a protocol.
- */
-function protocolList(entries: readonly ProtocolEntry[], open: (entry: ProtocolEntry) => void): HTMLDivElement {
-  const host = el("div", PANE_LIST);
-  // Named, the way the graph's own SVG is: which of the pane's several shapes is
-  // on screen is the first thing anyone asks when it looks wrong, and a class is
-  // how that is visible in devtools and assertable in a test.
-  host.className = "gufe-protocols";
-  host.appendChild(el("div", `${SECTION_LABEL}padding-bottom:${SPACE.xs};`, "protocols"));
-  for (const entry of entries) {
-    const row = pickable(PICK.row);
-    row.appendChild(el("span", "flex:1;min-width:0;overflow-wrap:anywhere;", entry.label));
-    row.appendChild(el("span", `flex-shrink:0;color:${V.textMuted};`, countedEdges(entry.count)));
-    row.title = entry.protocol["gufe-key"];
-    row.onclick = () => open(entry);
-    host.appendChild(row);
-  }
-  return host;
 }
 
 interface MenuParts {
@@ -904,7 +1007,7 @@ function buildMenu(parts: MenuParts): HTMLDivElement {
     selected: parts.selected,
     query: parts.query,
     search: {
-      placeholder: "Search ligands",
+      placeholder: "Search",
       label: "Search ligands by name, component, system or gufe key",
     },
     smarts: {
@@ -1000,7 +1103,7 @@ function relax(nodes: GraphNode[], edges: GraphEdge[], width: number, height: nu
           .distance(FORCE.linkDistance)
           .strength(FORCE.linkStrength),
       ],
-      ["charge", d3.forceManyBody().strength(FORCE.chargeStrength)],
+      ["charge", d3.forceManyBody().strength(FORCE.chargeStrength).distanceMax(FORCE.chargeDistanceMax)],
       ["center", d3.forceCenter(width / 2, height / 2)],
       ["collision", d3.forceCollide(FORCE.collisionRadius).iterations(FORCE.collisionIterations)],
     ],
@@ -1012,6 +1115,11 @@ interface GraphScene {
   setSelected(selection: { kind: "node" | "edge"; index: number } | null): void;
   /** Fade what the filters left out. Null on either means "nothing is filtered". */
   setEmphasis(nodeKeys: ReadonlySet<string> | null, edgeIndices: ReadonlySet<number> | null): void;
+  /**
+   * Colour the lines one protocol runs. Null means no protocol is picked, which
+   * puts every line back to the resting stroke.
+   */
+  setProtocol(edgeIndices: ReadonlySet<number> | null, color: string): void;
   /** Bring one system to the middle, zoomed in enough to read it. */
   focusOn(index: number): void;
   /** Frame one line: the midpoint of its two boxes, so both ends stay on screen. */
@@ -1078,9 +1186,20 @@ export class GufeAlchemicalNetwork extends AlchemyElement<AlchemicalNetworkViz> 
     // entry rather than a field repeated per edge, and why what the header has
     // to say is however many of them the network turned out to name.
     const protocols = protocolsOf(links, registry);
-    // Assigned once the pane exists, which is after the header it is opened
-    // from. `redraw` below is the same arrangement for the same reason.
-    let openProtocols = (): void => {};
+    /** Which lines each protocol runs, for the header's chips to colour. */
+    const linesOfProtocol = edgesByProtocol(edges);
+    /**
+     * The protocol the header has picked out, or null when none is.
+     *
+     * Held here rather than in `protocolChips` as well: a redraw builds a graph
+     * with nothing coloured on it, so the lens has to be applied again from
+     * outside the chips that set it.
+     */
+    let lens: ProtocolEntry | null = null;
+    const applyLens = (): void => {
+      const lit = lens ? linesOfProtocol.get(lens.protocol["gufe-key"]) : undefined;
+      scene?.setProtocol(lit ?? null, lens?.color ?? T.netEdgeLine);
+    };
 
     const bar = headerStrip(payload.name || "Alchemical network");
     // Both counts where they differ, because that is where a reader has to be
@@ -1092,8 +1211,18 @@ export class GufeAlchemicalNetwork extends AlchemyElement<AlchemicalNetworkViz> 
     // What the legs are called, so the words on a pane's tabs are on the header
     // too: the canvas itself no longer says which leg anything is.
     if (legs.signatures.length > 1) bar.statsEl.appendChild(statChip("legs", legs.names.join(", ")));
-    const protocolControl = protocols.length ? protocolChip(protocols, () => openProtocols()) : null;
-    if (protocolControl) bar.statsEl.appendChild(protocolControl);
+    // One protocol is a readout: every line is running it, so there is nothing
+    // for a colour to pick out. Several are chips, one colour each, and picking
+    // one colours the lines it runs.
+    if (protocols.length === 1) bar.statsEl.appendChild(protocolReadout(protocols[0]));
+    if (protocols.length > 1) {
+      bar.statsEl.appendChild(
+        protocolChips(protocols, (entry) => {
+          lens = entry;
+          applyLens();
+        }),
+      );
+    }
     // Placed inside the graph pane rather than above the whole view - see
     // `left` below. The name and the counts are about the network, so they sit
     // over the network, and the detail pane keeps the full height for whatever
@@ -1329,19 +1458,8 @@ export class GufeAlchemicalNetwork extends AlchemyElement<AlchemicalNetworkViz> 
 
     const select = (kind: "node" | "edge", index: number): void => {
       selectedItem = { kind, index };
-      protocolControl?.setAttribute("aria-pressed", "false");
       detail.show(kind === "node" ? nodes[index] : edges[index], kind);
       scene?.setSelected(selectedItem);
-    };
-
-    openProtocols = (): void => {
-      // Nothing on the canvas is a protocol, so the box or the line that was
-      // open is deselected rather than left lit beside a pane that has stopped
-      // showing it.
-      selectedItem = null;
-      scene?.setSelected(null);
-      protocolControl?.setAttribute("aria-pressed", "true");
-      detail.showProtocols(protocols);
     };
 
     const draw = (): void => {
@@ -1361,10 +1479,11 @@ export class GufeAlchemicalNetwork extends AlchemyElement<AlchemicalNetworkViz> 
         canvas.querySelectorAll("svg").forEach((stale) => stale.remove());
         scene = this.#paint(canvas, nodes, edges, width, height, faces, rdkit, select);
 
-        // A redraw builds a graph with nothing on it, so both are applied again
-        // here rather than only when the reader changes them.
+        // A redraw builds a graph with nothing on it, so all three are applied
+        // again here rather than only when the reader changes them.
         scene.setSelected(selectedItem);
         applyEmphasis();
+        applyLens();
       };
 
       if (forceUnavailable) {
@@ -1455,19 +1574,19 @@ export class GufeAlchemicalNetwork extends AlchemyElement<AlchemicalNetworkViz> 
    * neither. A box's systems need no cleaning - a box carries its own position,
    * so the systems inside it were never laid out.
    *
-   * ## The protocols are drawn from the header
+   * ## A protocol is not in here
    *
-   * Nothing on the canvas is a protocol, so `showProtocols` is the one way in
-   * and the header chip is what calls it. One protocol goes straight to its
-   * card; several go to `protocolList`, whose rows open the same card. Either
-   * way the leg switcher goes away, because it belongs to a line.
+   * The pane shows what is on the canvas, and a protocol is not on it: it is
+   * what runs the lines rather than something drawn. So the protocols are on the
+   * header - named by `protocolReadout`, or picked out by `protocolChips`, which
+   * colours their lines and leaves whatever this pane is showing alone - and
+   * never opened in here.
    */
   #detailPane(
     host: HTMLDivElement,
     registry: RegistryIndex,
   ): {
     show(item: GraphNode | GraphEdge, kind: "node" | "edge"): void;
-    showProtocols(entries: readonly ProtocolEntry[]): void;
     message(text: string): void;
     cleanup(): void;
   } {
@@ -1484,19 +1603,6 @@ export class GufeAlchemicalNetwork extends AlchemyElement<AlchemicalNetworkViz> 
 
     return {
       ...pane,
-      showProtocols(entries) {
-        // The leg switcher belongs to a line, and a protocol is not one: it is
-        // what runs the lines rather than something that has legs.
-        hideSwitcher();
-        // One protocol is not a list. The chip already named it, and a reader
-        // who clicked it asked for that protocol rather than for a row to click
-        // to get to it.
-        if (entries.length === 1) {
-          pane.show(entries[0].protocol);
-          return;
-        }
-        pane.content(protocolList(entries, (entry) => pane.show(entry.protocol)));
-      },
       show(item, kind) {
         if (kind === "node") {
           hideSwitcher();
@@ -1978,6 +2084,14 @@ export class GufeAlchemicalNetwork extends AlchemyElement<AlchemicalNetworkViz> 
      */
     let selectedBox: number | null = null;
     let selectedLine: number | null = null;
+    /**
+     * The lines the header's picked protocol runs, and the colour it gave them.
+     *
+     * A third writer of the same strokes, which is why it comes through
+     * `paintStrokes` like the other two rather than painting the lines itself.
+     */
+    let lensLines: ReadonlySet<number> | null = null;
+    let lensColor = T.netEdgeLine;
     const paintStrokes = (): void => {
       boxes.forEach((box, index) => {
         const active = selectedBox === index;
@@ -1986,8 +2100,18 @@ export class GufeAlchemicalNetwork extends AlchemyElement<AlchemicalNetworkViz> 
       });
       lines.forEach((line, index) => {
         const active = selectedLine === index;
-        const color = active ? T.netHaloColor : T.netEdgeLine;
-        const width = String(edgePx(zoomScale, active));
+        const lit = lensLines?.has(index) ?? false;
+        // The selection wins over the lens: it is one line against however many
+        // a protocol runs, and which line the pane is showing has to stay
+        // readable whatever else is coloured.
+        const color = active ? T.netHaloColor : lit ? lensColor : T.netEdgeLine;
+        // Twice the weight where the lens has it. A two-pixel stroke recoloured
+        // is a difference a reader has to go looking for, and the whole point of
+        // the lens is that the lines it marks are findable at a glance on a
+        // campaign too big to read line by line. Doubled from whatever the line
+        // would otherwise be, so a lens line the pane is also showing stays the
+        // heaviest thing on the canvas rather than dropping to the lens weight.
+        const width = String(edgePx(zoomScale, active) * (lit ? EDGE.lensScale : 1));
         // The rail with it: the two strokes are one edge, so a selection that
         // lit one of them would read as an edge half selected.
         for (const stroke of [line, rails[index]]) {
@@ -2052,6 +2176,11 @@ export class GufeAlchemicalNetwork extends AlchemyElement<AlchemicalNetworkViz> 
       setSelected(selection) {
         selectedBox = selection?.kind === "node" ? selection.index : null;
         selectedLine = selection?.kind === "edge" ? selection.index : null;
+        paintStrokes();
+      },
+      setProtocol(edgeIndices, color) {
+        lensLines = edgeIndices;
+        lensColor = color;
         paintStrokes();
       },
       /**

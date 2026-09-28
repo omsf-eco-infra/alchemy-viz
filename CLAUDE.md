@@ -26,6 +26,7 @@ They are large enough to cost more context than they can repay. Use `head`,
 
 - `examples/ligand_network_docked.json` (2.9M),
   `alchemical_network_large.json` (1.9M), `ligand_network_large.json` (1.4M),
+  `alchemical_network_protocols.json` (513K),
   `alchemical_network_medium.json` (511K), `alchemical_network_mixed.json`
   (448K), `alchemical_network_septop.json` (445K),
   `chemical_system_ensemble.json` (433K),

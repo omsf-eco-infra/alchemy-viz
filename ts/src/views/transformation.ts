@@ -44,7 +44,15 @@ import { centredMessage, statChip, typeBadge } from "../shared/panels.js";
 import { defineElement, AlchemyElement, type ViewHandle } from "../shared/element.js";
 import { FONT, PANE_LABEL, RADIUS, SPACE, WEIGHT } from "../shared/style.js";
 import { V } from "../shared/theme.js";
-import { buildRegistry, entriesFor, entryLabel, lookup, lookupOfType, type RegistryIndex } from "../schema/registry.js";
+import {
+  buildRegistry,
+  entriesFor,
+  entryLabel,
+  lookup,
+  lookupOfType,
+  protocolLabel,
+  type RegistryIndex,
+} from "../schema/registry.js";
 import { mappingPayloadFor } from "./atom-mapping.js";
 import type {
   ChemicalSystemViz,
@@ -386,8 +394,9 @@ export class GufeTransformation extends AlchemyElement<TransformationViz> {
     // nothing to spare.
     const header = el("div", `display:flex;flex-direction:column;gap:${SPACE.md};min-width:0;`);
     header.appendChild(transformationTitle(name));
-    // A Protocol has no name of its own, so the class name is what identifies it.
-    header.appendChild(metaLine("protocol", protocol?.gufe_type || protocol?.name || NO_VALUE));
+    // Named the way a network's header names it - `protocolLabel` is why the
+    // word `protocol` is not said twice on the same line.
+    header.appendChild(metaLine("protocol", protocol ? protocolLabel(protocol) : NO_VALUE));
     header.appendChild(metaLine("mappings", String(mappings.length)));
     diff.appendChild(header);
 
