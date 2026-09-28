@@ -174,6 +174,25 @@ export interface Theme {
    */
   netGroupFill: string[];
   netGroupStroke: string[];
+  /**
+   * The protocols a network runs, one colour each.
+   *
+   * Its own palette rather than the group one, because the two answer different
+   * questions and are capped differently. A composition is a fact about the
+   * boxes, and five of them is already more than a picture can say; a protocol
+   * is a lens the reader picks one of, and a campaign that split its legs by
+   * settings can honestly run ten - a per-leg protocol across five targets is
+   * an ordinary sweep, not a pathological payload.
+   *
+   * Ten, spread around the wheel so that neighbours in the chip row are not
+   * neighbours in hue, and with the neutral last: a grey reads as "no colour",
+   * which is the wrong thing for the first protocol a network names. None of
+   * them is `netEdgeLine` - a lens drawn in the resting stroke is a lens that
+   * only shows up as a change of weight. One lens is lit at a time, so these
+   * never have to be told apart from each other on the canvas, only from the
+   * line that is not lit; the chip row is where they are read side by side.
+   */
+  netProtocolStroke: string[];
 }
 
 export const THEMES: { dark: Theme; light: Theme } = {
@@ -240,6 +259,18 @@ export const THEMES: { dark: Theme; light: Theme } = {
     netHaloColor: "#51cbee",
     netGroupFill: ["#1f3a63", "#12403c", "#3a1f37", "#4a3c22", "#243a5e"],
     netGroupStroke: ["#4182e4", "#00bdaa", "#c060b8", "#e69f00", "#8f93a6"],
+    netProtocolStroke: [
+      "#4182e4",
+      "#00bdaa",
+      "#c060b8",
+      "#e69f00",
+      "#5ec26a",
+      "#f4714e",
+      "#9d8df1",
+      "#ef6f9b",
+      "#b5c94a",
+      "#c7cbdd",
+    ],
   },
   light: {
     appBg: "#ffffff",
@@ -304,6 +335,18 @@ export const THEMES: { dark: Theme; light: Theme } = {
     netHaloColor: "#51cbee",
     netGroupFill: ["#e6effc", "#d9f5f2", "#f6e7f4", "#fdf1d8", "#eef0f4"],
     netGroupStroke: ["#4182e4", "#009e8f", "#8a2283", "#c07d00", "#666666"],
+    netProtocolStroke: [
+      "#2f6fd0",
+      "#009e8f",
+      "#8a2283",
+      "#c07d00",
+      "#2e8b3d",
+      "#d1441c",
+      "#6a4fd0",
+      "#b3306a",
+      "#6f7d1c",
+      "#4a5160",
+    ],
   },
 };
 

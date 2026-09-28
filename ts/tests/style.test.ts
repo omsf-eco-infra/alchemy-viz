@@ -158,6 +158,21 @@ describe("theme.ts", () => {
   });
 });
 
+describe("the protocol palette", () => {
+  it("carries ten distinct colours in both themes, none of them the resting stroke", () => {
+    // A campaign that ran a protocol per leg across five targets names ten, and
+    // the chip row puts all ten side by side: two chips the same colour say
+    // those protocols are one. The tenth is also a lens on the canvas, so none
+    // of them may be the colour an unlit line is already drawn in.
+    for (const [name, theme] of Object.entries(THEMES)) {
+      const palette = theme.netProtocolStroke;
+      expect(palette.length, `${name} has fewer than ten protocol colours`).toBeGreaterThanOrEqual(10);
+      expect(new Set(palette).size, `${name} repeats a protocol colour`).toBe(palette.length);
+      expect(palette, `${name} draws a lens in the resting stroke`).not.toContain(theme.netEdgeLine);
+    }
+  });
+});
+
 describe("the palette as custom properties", () => {
   afterEach(() => {
     setTheme("system");

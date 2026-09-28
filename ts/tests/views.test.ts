@@ -2460,7 +2460,7 @@ describe("<gufe-alchemical-network>", () => {
     // Some of the campaign's lines run it and the rest do not, and nothing else
     // moves: this is a lens rather than a filter, so the other lines are still
     // drawn, in the resting colour.
-    const relativeLit = relative.filter((stroke) => stroke === T.netGroupStroke[2]).length;
+    const relativeLit = relative.filter((stroke) => stroke === T.netProtocolStroke[2]).length;
     expect(relativeLit).toBeGreaterThan(0);
     expect(relative.filter((stroke) => stroke === T.netEdgeLine)).toHaveLength(relative.length - relativeLit);
 
@@ -2468,7 +2468,7 @@ describe("<gufe-alchemical-network>", () => {
     // reader has to go looking for; the lens is for finding lines at a glance.
     const widths = edgeWidths(node);
     const plain = widths.filter((_, at) => relative[at] === T.netEdgeLine);
-    const lit = widths.filter((_, at) => relative[at] === T.netGroupStroke[2]);
+    const lit = widths.filter((_, at) => relative[at] === T.netProtocolStroke[2]);
     expect(new Set(plain).size).toBe(1);
     expect(lit.every((width) => width === plain[0] * 2)).toBe(true);
 
@@ -2479,18 +2479,65 @@ describe("<gufe-alchemical-network>", () => {
     expect(chips[2].getAttribute("aria-pressed")).toBe("false");
     expect(chips[0].getAttribute("aria-pressed")).toBe("true");
     const absolute = edgeStrokes(node);
-    const absoluteLit = absolute.filter((stroke) => stroke === T.netGroupStroke[0]).length;
+    const absoluteLit = absolute.filter((stroke) => stroke === T.netProtocolStroke[0]).length;
     expect(absoluteLit).toBeGreaterThan(0);
     // A different protocol, so a different set of lines rather than the same
     // ones repainted.
     expect(absoluteLit).not.toBe(relativeLit);
-    expect(absolute).not.toContain(T.netGroupStroke[2]);
+    expect(absolute).not.toContain(T.netProtocolStroke[2]);
 
     // The picked chip clears itself, which is the only way back to a plain canvas.
     chips[0].click();
     await flush();
     expect(chips[0].getAttribute("aria-pressed")).toBe("false");
     expect(new Set(edgeStrokes(node))).toEqual(new Set([T.netEdgeLine]));
+  });
+
+  it("gives ten protocols ten colours, with none of them repeated", async () => {
+    // A campaign that ran a protocol per leg across five targets is ten, which
+    // is an ordinary sweep rather than a payload nobody has. The chip row is
+    // where the colours are read side by side, so a repeat in it is a reader
+    // told two protocols are the same one.
+    const payload = readExample("alchemical_network_protocols.json") as unknown as {
+      registry: Record<string, unknown>[];
+      edges: { protocol: string }[];
+    };
+    const keys = Array.from({ length: 10 }, (_, at) => {
+      const key = `Sweep${String(at).padStart(2, "0")}Protocol-${String(at).repeat(32)}`;
+      payload.registry.push({
+        type: "ProtocolViz",
+        "gufe-key": key,
+        name: "",
+        gufe_type: `Sweep${String(at).padStart(2, "0")}Protocol`,
+      });
+      return key;
+    });
+    // Round robin, so every one of the ten runs some of the campaign and none
+    // of them is dropped for running none of it.
+    payload.edges.forEach((edge, at) => {
+      edge.protocol = keys[at % keys.length];
+    });
+
+    const node = mount("gufe-alchemical-network", payload as unknown as Record<string, unknown>);
+    await flush();
+
+    const chips = protocolChipsOf(node);
+    expect(chips).toHaveLength(10);
+    const swatches = chips.map((chip) => (chip.firstElementChild as HTMLElement).style.background);
+    expect(new Set(swatches).size).toBe(10);
+    // And the palette is what they came from, rather than ten shades something
+    // else on the canvas is already using.
+    expect(T.netProtocolStroke.length).toBeGreaterThanOrEqual(10);
+    expect(new Set(T.netProtocolStroke).size).toBe(T.netProtocolStroke.length);
+
+    // The tenth is a lens like any other: picked, it colours its own lines and
+    // leaves the rest at the resting stroke.
+    chips[9].click();
+    await flush();
+    const strokes = edgeStrokes(node);
+    const lit = strokes.filter((stroke) => stroke === T.netProtocolStroke[9]).length;
+    expect(lit).toBeGreaterThan(0);
+    expect(strokes.filter((stroke) => stroke === T.netEdgeLine)).toHaveLength(strokes.length - lit);
   });
 
   it("leaves the pane alone when a protocol is picked", async () => {
@@ -2521,7 +2568,7 @@ describe("<gufe-alchemical-network>", () => {
     await flush();
     expect(pane.payload["type"]).toBe("TransformationViz");
     expect(chips[0].getAttribute("aria-pressed")).toBe("true");
-    expect(edgeStrokes(node)).toContain(T.netGroupStroke[0]);
+    expect(edgeStrokes(node)).toContain(T.netProtocolStroke[0]);
   });
 
   it("leaves the boxes plain, whatever their systems are made of", async () => {

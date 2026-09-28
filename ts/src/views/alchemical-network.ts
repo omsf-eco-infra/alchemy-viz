@@ -814,13 +814,13 @@ function protocolsOf(links: readonly TransformationViz[], registry: RegistryInde
     if ((sharing.get(entry.label) ?? 0) > 1) entry.label = `${entry.label} ${entryLabel(entry.protocol)}`;
   }
   entries.sort((a, b) => (a.label < b.label ? -1 : a.label > b.label ? 1 : 0));
-  // After the sort, so the colours run in the order the chips are read in. The
-  // palette is the categorical one, which is free in this view: a box is a
-  // ligand and they are all one colour now, so nothing else on the canvas is
-  // using it. Cycled past its length rather than given up on - a network of six
-  // protocols is one nobody has, and one lens at a time is lit either way.
+  // After the sort, so the colours run in the order the chips are read in. Ten
+  // of them, which is what a campaign that ran a protocol per leg across five
+  // targets needs before two chips share a colour. Cycled past that rather than
+  // given up on: one lens is lit at a time, so a repeat at eleven costs a reader
+  // nothing on the canvas, and the chip row still names which one they picked.
   entries.forEach((entry, at) => {
-    entry.color = T.netGroupStroke[at % T.netGroupStroke.length];
+    entry.color = T.netProtocolStroke[at % T.netProtocolStroke.length];
   });
   return entries;
 }

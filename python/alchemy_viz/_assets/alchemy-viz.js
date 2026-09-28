@@ -85,7 +85,19 @@ const Je = {
     netEdgeLabel: "#f2f3f7",
     netHaloColor: "#51cbee",
     netGroupFill: ["#1f3a63", "#12403c", "#3a1f37", "#4a3c22", "#243a5e"],
-    netGroupStroke: ["#4182e4", "#00bdaa", "#c060b8", "#e69f00", "#8f93a6"]
+    netGroupStroke: ["#4182e4", "#00bdaa", "#c060b8", "#e69f00", "#8f93a6"],
+    netProtocolStroke: [
+      "#4182e4",
+      "#00bdaa",
+      "#c060b8",
+      "#e69f00",
+      "#5ec26a",
+      "#f4714e",
+      "#9d8df1",
+      "#ef6f9b",
+      "#b5c94a",
+      "#c7cbdd"
+    ]
   },
   light: {
     appBg: "#ffffff",
@@ -144,7 +156,19 @@ const Je = {
     netEdgeLabel: "#333333",
     netHaloColor: "#51cbee",
     netGroupFill: ["#e6effc", "#d9f5f2", "#f6e7f4", "#fdf1d8", "#eef0f4"],
-    netGroupStroke: ["#4182e4", "#009e8f", "#8a2283", "#c07d00", "#666666"]
+    netGroupStroke: ["#4182e4", "#009e8f", "#8a2283", "#c07d00", "#666666"],
+    netProtocolStroke: [
+      "#2f6fd0",
+      "#009e8f",
+      "#8a2283",
+      "#c07d00",
+      "#2e8b3d",
+      "#d1441c",
+      "#6a4fd0",
+      "#b3306a",
+      "#6f7d1c",
+      "#4a5160"
+    ]
   }
 };
 function Cc() {
@@ -10082,7 +10106,7 @@ function Nm(e, t) {
   for (const o of r)
     (s.get(o.label) ?? 0) > 1 && (o.label = `${o.label} ${_e(o.protocol)}`);
   return r.sort((o, i) => o.label < i.label ? -1 : o.label > i.label ? 1 : 0), r.forEach((o, i) => {
-    o.color = ue.netGroupStroke[i % ue.netGroupStroke.length];
+    o.color = ue.netProtocolStroke[i % ue.netProtocolStroke.length];
   }), r;
 }
 function Tm(e) {
