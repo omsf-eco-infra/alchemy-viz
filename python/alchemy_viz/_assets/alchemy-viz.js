@@ -8624,11 +8624,21 @@ const Ot = { initial: 0.58, min: 0.25, max: 0.8 }, Te = 38, zi = 1.5, Ir = {
   linkScoreBonus: 90,
   linkStrength: 0.45,
   // Repulsion is local rather than the width of the graph. Reaching further
-  // does not move neighbours apart - collision already decides that - it only
-  // inflates the whole layout, and a graph spread over thousands of units is
-  // one that is both too small to read as a whole and too crowded to read up
-  // close.
-  chargeStrength: -900,
+  // does not move neighbours apart, it only inflates the whole layout, and a
+  // graph spread over thousands of units is one that is both too small to read
+  // as a whole and too crowded to read up close. `chargeDistanceMax` is what
+  // holds that line, and widening it past this buys nothing measurable.
+  //
+  // What does move neighbours apart is the strength inside that range, and
+  // collision alone is not enough of it: a ligand only ever pushed at the
+  // moment its circle touches another settles hard against that contact, which
+  // leaves a knot of ligands at arm's length from each other and the mappings
+  // between them crossing over and running under circles they have nothing to
+  // do with. Repulsion that is already firm before anything touches is what
+  // spreads a crowded neighbourhood out enough to follow a line through it.
+  // Past roughly this the layout stops untangling and only grows, framing every
+  // ligand smaller for no clearer a picture.
+  chargeStrength: -2400,
   chargeDistanceMin: 20,
   chargeDistanceMax: 900,
   centerStrength: 0.08,
