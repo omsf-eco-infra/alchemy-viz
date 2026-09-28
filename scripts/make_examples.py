@@ -182,22 +182,26 @@ def _dummy_protocol() -> gufe.Protocol:
     return DummyProtocol(settings=DummyProtocol.default_settings())
 
 
-class SepTopProtocol(gufe.Protocol):
-    """A stand-in for the separated topologies Protocol, named for the one it stands in for.
+class _NamedProtocol(gufe.Protocol):
+    """A Protocol that is a name, for the fixtures whose real one cannot be imported.
 
-    The real one is ``openfe.protocols.openmm_septop.SepTopProtocol``, which this
-    repository does not depend on and cannot import - the same reason
-    :func:`_dummy_protocol` borrows gufe's test double everywhere else. A
-    stand-in costs this fixture nothing, because a payload carries a Protocol as
-    its class name and its key and nothing else: settings are deliberately
-    absent, so the name is the whole of what a reader gets from it either way.
-    Everything else in the SepTop fixture - the ligands, the mappings that scored
-    them, the protein, the topology - is the real campaign's own.
+    The real protocols live in OpenFE, which this repository does not depend on
+    and cannot import - the same reason :func:`_dummy_protocol` borrows gufe's
+    test double everywhere else. A stand-in costs a fixture nothing, because a
+    payload carries a Protocol as its class name and its key and nothing else:
+    settings are deliberately absent, so the name is the whole of what a reader
+    gets from it either way. Everything else in these fixtures - the ligands, the
+    mappings, the topology, the protein - is a real campaign's own.
 
     Subclassing gufe's ``Protocol`` rather than its ``DummyProtocol`` keeps this
     module importable without gufe's test suite. The four methods below are the
     whole abstract interface; neither of the two that would run anything is ever
     reached, because a fixture is serialized and never executed.
+
+    Each subclass is a class name and a docstring, because that is all a payload
+    can tell apart. Two stand-ins with the same settings and different names are
+    two protocols to gufe and to the views, which is exactly what a campaign run
+    under more than one looks like.
     """
 
     _settings_cls = gufe.settings.Settings
@@ -215,6 +219,37 @@ class SepTopProtocol(gufe.Protocol):
 
     def _gather(self, protocol_dag_results):
         raise NotImplementedError("an example's protocol is never run")
+
+
+class SepTopProtocol(_NamedProtocol):
+    """Stands in for ``openfe.protocols.openmm_septop.SepTopProtocol``."""
+
+
+class RelativeHybridTopologyProtocol(_NamedProtocol):
+    """Stands in for ``openfe.protocols.openmm_rfe.RelativeHybridTopologyProtocol``.
+
+    The workhorse of a relative campaign, and what an OpenFE plan names on every
+    edge unless it was told otherwise.
+    """
+
+
+class NonEquilibriumCyclingProtocol(_NamedProtocol):
+    """Stands in for ``feflow.protocols.NonEquilibriumCyclingProtocol``.
+
+    The other way of running a relative edge, and the reason a campaign ends up
+    naming two: an edge that will not converge under replica exchange is rerun
+    by switching it fast and often instead, without the rest of the plan
+    changing.
+    """
+
+
+class AbsoluteSolvationProtocol(_NamedProtocol):
+    """Stands in for ``openfe.protocols.openmm_afe.AbsoluteSolvationProtocol``.
+
+    What an absolute transformation has to be run under. A protocol that mutates
+    one ligand into another cannot decouple one from its solvent, so an anchor in
+    a relative network is not a choice of protocol - it is a different one.
+    """
 
 
 def _solvated_transformation(
@@ -306,6 +341,59 @@ def _absolute_network(network: gufe.LigandNetwork, protocol: gufe.Protocol) -> g
         ],
         name="absolute hydration free energies",
     )
+
+
+def _multi_protocol_network(network: gufe.LigandNetwork) -> gufe.AlchemicalNetwork:
+    """One small campaign run under three protocols rather than one.
+
+    Nothing in gufe or in the schema says a network runs a single protocol - it
+    is named per transformation - and every other fixture here names one, so the
+    case a reader most needs to see was the case nothing showed: a header that
+    has to say *which* protocols, and a pane that has to be able to open each of
+    them.
+
+    The plan is the ordinary one it takes to get there. Two of the three
+    mappings run relative under hybrid topology; the third would not converge
+    that way and is rerun by non-equilibrium cycling, which changes how that edge
+    is run and nothing else about the campaign; and one ligand is anchored by an
+    absolute transformation into pure water, which cannot be run under either of
+    the relative protocols at all. So the counts differ too - two edges, one, one
+    - which is what the pane's rows are for.
+
+    Deliberately the small network rather than a real one: this fixture is about
+    what the payload names, and gufe's own three ligands say it in six kilobytes
+    with no protein to carry. :func:`_alchemical_network` is the same three
+    ligands under one protocol, which is the fixture to read it against.
+    """
+    from gufe import AlchemicalNetwork, ChemicalSystem, SolventComponent, Transformation
+
+    hybrid = RelativeHybridTopologyProtocol(settings=RelativeHybridTopologyProtocol.default_settings())
+    cycling = NonEquilibriumCyclingProtocol(settings=NonEquilibriumCyclingProtocol.default_settings())
+    decoupling = AbsoluteSolvationProtocol(settings=AbsoluteSolvationProtocol.default_settings())
+
+    # Sorted by gufe key for the same byte-stability reason as everywhere else
+    # here, and shared systems so the campaign is one connected graph.
+    edges = sorted(network.edges, key=lambda e: (str(e.componentA.key), str(e.componentB.key)))
+    systems: dict[str, gufe.ChemicalSystem] = {}
+    relative = [
+        _solvated_transformation(edge, cycling if at == len(edges) - 1 else hybrid, systems)
+        for at, edge in enumerate(edges)
+    ]
+
+    # The anchor is a ligand the relative edges already reach, so the absolute
+    # transformation hangs off the graph rather than sitting beside it. Its
+    # system comes out of the cache above for that reason, and the reference
+    # state is water with nothing in it - the same shape as in
+    # :func:`_absolute_network`.
+    anchor = sorted((_renamed(mol) for mol in network.nodes), key=lambda mol: (mol.name, str(mol.key)))[0]
+    absolute = Transformation(
+        stateA=systems[str(anchor.key)],
+        stateB=ChemicalSystem({"solvent": SolventComponent()}, name="water"),
+        mapping=None,
+        protocol=decoupling,
+        name=f"{anchor.name} decoupled from water",
+    )
+    return AlchemicalNetwork([*relative, absolute], name="hydration campaign under three protocols")
 
 
 def _tyk2_rbfe_network() -> gufe.AlchemicalNetwork:
@@ -922,6 +1010,10 @@ def build() -> dict[str, GufeTokenizable]:
         # with no ligand and a transformation with no mapping.
         "alchemical_network_absolute.json": _absolute_network(network, protocol),
         "alchemical_network_mixed.json": _tyk2_mixed_network(),
+        # The same three ligands once more, run under three protocols instead of
+        # one: the fixture for a header that has to name several, and the only
+        # one where a network's protocol is a question rather than a constant.
+        "alchemical_network_protocols.json": _multi_protocol_network(network),
         # Not a gufe class at all, which is the only way to produce this type.
         "unknown_component.json": _somebodys_own_component(),
         # A chemical system on its own, in the two shapes a campaign is built

@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import re
+from collections import Counter
 
 import pytest
 from alchemy_viz import payload_for
@@ -735,6 +736,50 @@ class TestBuilders:
         # One protein for the whole graph, complex systems and apo alike.
         proteins = [entry for entry in payload["registry"] if entry["type"] == "ProteinComponentViz"]
         assert len(proteins) == 1
+
+        _validate(payload)
+
+    def test_a_network_may_name_a_protocol_per_transformation(self):
+        """Three protocols over four transformations, which one field per edge allows.
+
+        ``alchemical_network_protocols.json`` is the fixture for the thing the
+        schema has always said and no other example showed: ``protocol`` is a
+        field of a transformation, not of a network. Two of its edges name a
+        relative protocol, one names another, and the absolute anchor names a
+        third - so a reader of the payload can tell which part of the campaign
+        was run how, and the registry holds each protocol once however many edges
+        point at it.
+        """
+        from .conftest import read_example
+
+        payload = read_example("alchemical_network_protocols.json")
+        registry = _registry(payload)
+
+        named = [edge["protocol"] for edge in payload["edges"]]
+        assert len(named) == 4
+        counts = Counter(registry[key]["gufe_type"] for key in named)
+        assert counts == Counter(
+            {
+                "RelativeHybridTopologyProtocol": 2,
+                "NonEquilibriumCyclingProtocol": 1,
+                "AbsoluteSolvationProtocol": 1,
+            }
+        )
+
+        # Once each in the registry, whatever the edges do: a protocol is a
+        # registry entry for the same reason a protein is.
+        entries = [entry for entry in payload["registry"] if entry["type"] == "ProtocolViz"]
+        assert len(entries) == 3
+        assert {entry["gufe-key"] for entry in entries} == set(named)
+        # A Protocol has no name of its own, so the class name is all a reader gets.
+        assert all(entry["name"] == "" for entry in entries)
+
+        # The absolute edge is the one with no mapping, and it is the one under
+        # the protocol that decouples rather than mutates - which is why this
+        # campaign names more than one in the first place.
+        absolute = [edge for edge in payload["edges"] if not edge["mappings"]]
+        assert len(absolute) == 1
+        assert registry[absolute[0]["protocol"]]["gufe_type"] == "AbsoluteSolvationProtocol"
 
         _validate(payload)
 

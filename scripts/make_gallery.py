@@ -144,6 +144,14 @@ NOTES = {
         "the ligands are anchored by an absolute transformation into the apo protein. The apo "
         "system is the one box carrying no ligand, and so the one with nothing drawn in it."
     ),
+    "alchemical_network_protocols": (
+        "Three ligands run under three protocols, which is the one thing a network names per "
+        "transformation and every other fixture here keeps constant: two mappings under hybrid "
+        "topology, one rerun by non-equilibrium cycling, and one ligand anchored by an absolute "
+        "transformation that neither relative protocol could run. The header says how many rather "
+        "than listing them, and the chip opens them in the pane - a row each, with the share of "
+        "the campaign it runs, and the protocol's own card behind it."
+    ),
     "chemical_system": (
         "The system's components down the left, the selected one drawn on the right in whichever "
         "view its own type gets - so a chemical system is a chooser over the views above rather "

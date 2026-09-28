@@ -28,6 +28,10 @@ export const CURATED: CuratedExample[] = [
     note: "tyk2 again, part relative and part absolute - edges with no mapping, and a system with no ligand",
   },
   {
+    file: "alchemical_network_protocols.json",
+    note: "one campaign under three protocols - what the header chip opens in the pane",
+  },
+  {
     file: "alchemical_network_septop.json",
     note: "tyk2 as a separated topologies campaign - one transformation per edge instead of two legs, every system a complex, and no mapping anywhere",
   },
