@@ -69,7 +69,7 @@ NOTES = {
         "contract is not inheritance on the other, so both sides say it separately."
     ),
     "solvated_pdb": "`SolvatedPDBComponentViz`, dispatched to the same element for the same reason.",
-    "ligand_network": "Radial graph of the ligands, with the selected edge's atom mapping on the right.",
+    "ligand_network": "Force-directed graph of the ligands, with the selected edge's atom mapping on the right.",
     "ligand_network_named": "The same network with the ligands named, so labels replace gufe keys.",
     "ligand_network_medium": (
         "Ten TYK2 ligands and the nine mappings OpenFE's RBFE tutorial plans between them: a real "

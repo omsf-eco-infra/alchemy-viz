@@ -13,18 +13,18 @@
  * edge opens `<gufe-atom-mapping>`, a node opens `<gufe-small-molecule>`. Which
  * is open is the `Selection` below, and it is saved with the view.
  *
- * d3 is used for one thing: the force layout. Zoom, pan, drag, the colour ramp
- * and the SVG itself are plain DOM, so a network still draws when d3 cannot be
- * fetched - it falls back to the circular layout and says why.
+ * d3 is used for one thing: the force layout, which is the only arrangement
+ * this view draws. Zoom, pan, drag, the colour ramp and the SVG itself are
+ * plain DOM, so a network still draws when d3 cannot be fetched - it keeps the
+ * ring the nodes were seeded on and says why.
  */
 
 import { el, esc, truncate } from "../shared/dom.js";
-import { dropdown } from "../shared/controls.js";
 import { centredMessage, floatingWarning, headerStrip, statChip } from "../shared/panels.js";
 import { chromeMenu, orientMenuPanel, splitter } from "../shared/chrome.js";
 import { framejsMenuItem } from "../shared/framejs.js";
 import { defineElement, generations, AlchemyElement, seededViewState, type ViewHandle } from "../shared/element.js";
-import { choice, flag, num, type Setting } from "../shared/settings.js";
+import { flag, num, type Setting } from "../shared/settings.js";
 import { svg } from "../shared/svg.js";
 import { floatingReset } from "../shared/interact.js";
 import { extentOf, sceneCamera, type Camera } from "../shared/camera.js";
@@ -47,7 +47,7 @@ import { chargeChange, chargeLabel } from "../shared/charge.js";
 import { depictThemeOptions, nodeCardCaption, nodeCardGround } from "../shared/depict-theme.js";
 import { mountDepiction } from "../shared/depict-node.js";
 import { createMatcher, type MatchOutcome } from "../shared/smarts.js";
-import { FONT, SPACE, TOOLBAR, TOOLTIP, WEIGHT } from "../shared/style.js";
+import { FONT, SPACE, TOOLTIP, WEIGHT } from "../shared/style.js";
 import { T, V } from "../shared/theme.js";
 import { buildRegistry, entryLabel, type RegistryIndex } from "../schema/registry.js";
 import { mappingPayloadFor } from "./atom-mapping.js";
@@ -93,9 +93,6 @@ interface NetEdge extends LigandAtomMappingViz {
   from: NetNode;
   to: NetNode;
 }
-
-const LAYOUTS = ["Force-directed", "Circular", "Radial"] as const;
-type Layout = (typeof LAYOUTS)[number];
 
 // --- restoring a view ------------------------------------------------------
 //
@@ -1201,13 +1198,7 @@ export class GufeLigandNetwork extends AlchemyElement<LigandNetworkViz> {
 
     const canvas = el("div", `flex:1;position:relative;overflow:hidden;min-height:0;background:${V.netCanvasBg};`);
     left.appendChild(canvas);
-    const layoutSetting = choice<Layout>("ligand-network.layout", "Force-directed", LAYOUTS);
-    const toolbar = this.#toolbar(
-      (next) => draw(next),
-      layoutSetting,
-      edges.some((edge) => chargeChange(edge.from, edge.to) !== 0),
-    );
-    left.appendChild(toolbar.bar);
+    this.#scoreLegend(canvas, edges.some((edge) => chargeChange(edge.from, edge.to) !== 0));
     floatingReset(
       canvas,
       () => {
@@ -1298,7 +1289,6 @@ export class GufeLigandNetwork extends AlchemyElement<LigandNetworkViz> {
     /** Where the canvas is, or the identity view before there is one to ask. */
     const transformNow = (): { scale: number; tx: number; ty: number } =>
       scene?.transform() ?? { scale: 1, tx: 0, ty: 0 };
-    let layout: Layout = layoutSetting.get();
     let forceUnavailable = false;
     /** Which redraw is the current one, and whether the view is still alive. */
     const eras = generations();
@@ -1334,19 +1324,14 @@ export class GufeLigandNetwork extends AlchemyElement<LigandNetworkViz> {
     /** Likewise the SMARTS colouring, which outlives any one scene. */
     const applyMatches = (): void => scene?.setMatches(matched);
 
-    const draw = (next: Layout = layout): void => {
-      // A redraw that is not a change of layout - the menu opening, the window
-      // resizing - must not throw away where the reader has panned to. Only a
-      // new layout is a new picture, and only a new picture is worth reframing.
-      // Before the first paint there is no camera to keep, so that one frames.
-      // A scene exists exactly when a paint has installed one, so it is also
-      // the answer to "is there a camera worth keeping".
-      const keepCamera = scene && next === layout ? scene.transform() : null;
-      // A new layout is a request to lay the network out again, which is exactly
-      // what the opening positions would prevent. See `opening`.
-      if (next !== layout) opening = null;
+    const draw = (): void => {
+      // A redraw - the menu opening, the window resizing - must not throw away
+      // where the reader has panned to. Before the first paint there is no
+      // camera to keep, so that one frames. A scene exists exactly when a paint
+      // has installed one, so it is also the answer to "is there a camera worth
+      // keeping".
+      const keepCamera = scene?.transform() ?? null;
       const current = eras.start();
-      layout = next;
       scene?.cleanup();
       scene = null;
       // Every one of them, not the first: a paint that has already been dropped
@@ -1355,7 +1340,7 @@ export class GufeLigandNetwork extends AlchemyElement<LigandNetworkViz> {
 
       const width = canvas.clientWidth || 800;
       const height = canvas.clientHeight || 600;
-      seedPositions(nodes, width, height, layout, edges);
+      seedPositions(nodes, width, height);
       if (opening) placeNodesAt(nodes, opening);
 
       const paint = () => {
@@ -1384,7 +1369,7 @@ export class GufeLigandNetwork extends AlchemyElement<LigandNetworkViz> {
       // A restored network is placed, not laid out: the positions it came with
       // are the answer the simulation would spend a second failing to reproduce
       // against a canvas of a different size.
-      if (layout !== "Force-directed" || forceUnavailable || opening) {
+      if (forceUnavailable || opening) {
         paint();
         return;
       }
@@ -1398,11 +1383,11 @@ export class GufeLigandNetwork extends AlchemyElement<LigandNetworkViz> {
           paint();
           return;
         }
-        // No d3, so no force layout. Say so once, and show something.
+        // No d3, so no force layout. Say so once, and show something: the ring
+        // the nodes were seeded on is a network a reader can still read.
         forceUnavailable = true;
-        toolbar.picker.value = "Circular";
-        floatingWarning(canvas, "d3 could not be loaded - showing the circular layout instead");
-        draw("Circular");
+        floatingWarning(canvas, "d3 could not be loaded - showing the ligands in a ring instead");
+        draw();
       }, paint);
     };
 
@@ -1429,19 +1414,27 @@ export class GufeLigandNetwork extends AlchemyElement<LigandNetworkViz> {
     };
   }
 
-  #toolbar(
-    onLayout: (layout: Layout) => void,
-    layoutSetting: Setting<string>,
-    anyChargeChange: boolean,
-  ): { bar: HTMLDivElement; picker: HTMLSelectElement } {
-    const toolbar = el(
+  /**
+   * The key to the edge colours, floating over the bottom right of the canvas.
+   *
+   * A row under the graph costs every network a strip of height for something
+   * most readers consult once; over the picture it costs nothing, and bottom
+   * right is the corner the reset control does not already sit in. No card
+   * behind it - a panel over the canvas reads as another thing to look at, and
+   * the key is not one. It takes no pointer events, so a drag that starts on it
+   * still reaches the network.
+   */
+  #scoreLegend(canvas: HTMLDivElement, anyChargeChange: boolean): void {
+    const legend = el(
       "div",
-      TOOLBAR,
+      `position:absolute;right:${SPACE.xl};bottom:${SPACE.xl};z-index:10;pointer-events:none;` +
+        `display:flex;align-items:center;gap:${SPACE.xxl};flex-wrap:wrap;justify-content:flex-end;` +
+        `max-width:calc(100% - ${SPACE.xl} - ${SPACE.xl});font-size:${FONT.tiny};color:${V.textMuted};`,
     );
 
-    const legend = el("div", `display:flex;align-items:center;gap:6px;font-size:${FONT.small};color:${V.textMuted};`);
-    legend.appendChild(el("span", "", "score"));
-    legend.appendChild(
+    const score = el("div", `display:flex;align-items:center;gap:${SPACE.md};`);
+    score.appendChild(el("span", "", "score"));
+    score.appendChild(
       el(
         "span",
         // The literal ramp rather than a custom property: the edges it is a key
@@ -1450,14 +1443,14 @@ export class GufeLigandNetwork extends AlchemyElement<LigandNetworkViz> {
         `width:40px;height:4px;border-radius:2px;background:linear-gradient(to right,${T.netEdgeRamp.join(",")});`,
       ),
     );
-    legend.appendChild(el("span", "", "0 -> 1"));
-    toolbar.appendChild(legend);
+    score.appendChild(el("span", "", "0 -> 1"));
+    legend.appendChild(score);
 
     // Only where there is one to explain. A network whose ligands all carry the
     // same charge is the common case, and a key for a line it does not draw is
     // a reader looking for something that is not there.
     if (anyChargeChange) {
-      const charge = el("div", `display:flex;align-items:center;gap:6px;font-size:${FONT.small};color:${V.textMuted};`);
+      const charge = el("div", `display:flex;align-items:center;gap:${SPACE.md};`);
       charge.appendChild(
         el(
           "span",
@@ -1465,19 +1458,10 @@ export class GufeLigandNetwork extends AlchemyElement<LigandNetworkViz> {
         ),
       );
       charge.appendChild(el("span", "", "net charge change"));
-      toolbar.appendChild(charge);
+      legend.appendChild(charge);
     }
 
-    toolbar.appendChild(el("label", `font-size:${FONT.body};margin-left:auto;color:${V.textMuted};`, "Layout"));
-    const picker = dropdown(
-      LAYOUTS.map((name) => ({ id: name, label: name })),
-      layoutSetting.get(),
-      (id) => onLayout(id as Layout),
-      layoutSetting,
-    );
-    toolbar.appendChild(picker);
-
-    return { bar: toolbar, picker };
+    canvas.appendChild(legend);
   }
 
   /**
@@ -1892,76 +1876,36 @@ export class GufeLigandNetwork extends AlchemyElement<LigandNetworkViz> {
   }
 }
 
-// --- layouts ---------------------------------------------------------------
+// --- seeding ---------------------------------------------------------------
 
 /**
- * Give every node a starting position.
+ * Give every node a starting position, on a ring around the canvas.
  *
- * Circular and Radial are the answer; for Force-directed it is the seed. Either
- * way it is deterministic, which is what makes the picture the same on every
- * reload - d3's own phyllotaxis seeding is fine but ours is one line and lets
- * the force layout converge from something already spread out.
+ * The force simulation is the arrangement this view draws; this is only what it
+ * starts from, and what stays on screen when d3 cannot be fetched. It is
+ * deterministic, which is what makes the picture the same on every reload -
+ * d3's own phyllotaxis seeding is fine but ours is one line and lets the force
+ * layout converge from something already spread out.
  */
-function seedPositions(nodes: NetNode[], width: number, height: number, layout: Layout, edges: NetEdge[]): void {
+function seedPositions(nodes: NetNode[], width: number, height: number): void {
   const cx = width / 2;
   const cy = height / 2;
-  const ring = (subset: NetNode[], radius: number) => {
-    subset.forEach((node, i) => {
-      const angle = (2 * Math.PI * i) / Math.max(1, subset.length) - Math.PI / 2;
-      node.x = cx + radius * Math.cos(angle);
-      node.y = cy + radius * Math.sin(angle);
-      node.fx = layout === "Force-directed" ? undefined : node.x;
-      node.fy = layout === "Force-directed" ? undefined : node.y;
-    });
-  };
-
-  if (layout === "Radial" && nodes.length) {
-    // Breadth-first rings from the best-connected ligand - the shape a hub-and-
-    // spoke network actually has, which a circle hides.
-    const neighbours = new Map<string, string[]>(nodes.map((n) => [n["gufe-key"], []]));
-    for (const edge of edges) {
-      neighbours.get(edge.from["gufe-key"])!.push(edge.to["gufe-key"]);
-      neighbours.get(edge.to["gufe-key"])!.push(edge.from["gufe-key"]);
-    }
-    const byKey = new Map(nodes.map((n) => [n["gufe-key"], n]));
-    const start = nodes.reduce((best, n) =>
-      neighbours.get(n["gufe-key"])!.length > neighbours.get(best["gufe-key"])!.length ? n : best,
-    );
-
-    const seen = new Set([start["gufe-key"]]);
-    let level = [start["gufe-key"]];
-    let depth = 0;
-    const step = Math.min(width, height) * 0.18;
-    while (level.length) {
-      ring(
-        level.map((key) => byKey.get(key)!),
-        depth === 0 ? 0 : depth * step + 40,
-      );
-      const next: string[] = [];
-      for (const id of level) {
-        for (const other of neighbours.get(id)!) {
-          if (!seen.has(other)) {
-            seen.add(other);
-            next.push(other);
-          }
-        }
-      }
-      level = next;
-      depth++;
-    }
-    // Anything unreachable from the hub still needs somewhere to be.
-    ring(nodes.filter((n) => !seen.has(n["gufe-key"])), Math.min(width, height) * 0.45);
-    return;
-  }
-
-  ring(nodes, Math.min(width, height) * 0.34);
+  const radius = Math.min(width, height) * 0.34;
+  nodes.forEach((node, i) => {
+    const angle = (2 * Math.PI * i) / Math.max(1, nodes.length) - Math.PI / 2;
+    node.x = cx + radius * Math.cos(angle);
+    node.y = cy + radius * Math.sin(angle);
+    // Nothing is pinned: a seed the simulation cannot move is not a seed.
+    node.fx = undefined;
+    node.fy = undefined;
+  });
 }
 
 /**
  * Relax the seeded positions with d3's force simulation, in place.
  *
  * Resolves `false` when d3 is unreachable, which is the offline case the
- * caller turns into the circular layout plus a banner rather than an error.
+ * caller turns into the seeded ring plus a banner rather than an error.
  */
 function relax(nodes: NetNode[], edges: NetEdge[], width: number, height: number): Promise<boolean> {
   return relaxWith<NetNode, D3Link>({

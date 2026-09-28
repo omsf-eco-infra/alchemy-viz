@@ -203,16 +203,16 @@ describe("the framejs share button", () => {
     // and the bundle draws as soon as it has a payload. Restoring afterwards
     // would restore nothing.
     const js = framejsModule(FAKE_BUNDLE, { type: "LigandNetworkViz" }, {
-      settings: { "alchemy-viz:ligand-network.layout": '"Circular"' },
+      settings: { "alchemy-viz:ligand-network.menuOpen": "true" },
       views: { "ligand-network": { scale: 0.5, tx: 10, ty: 20, selected: 3, nodes: [] } },
     });
     expect(js.indexOf("localStorage.setItem")).toBeLessThan(js.indexOf(FAKE_BUNDLE));
     expect(js.indexOf("ALCHEMY_VIZ_VIEW_STATE")).toBeLessThan(js.indexOf(FAKE_BUNDLE));
-    expect(js).toContain('"alchemy-viz:ligand-network.layout"');
+    expect(js).toContain('"alchemy-viz:ligand-network.menuOpen"');
     expect(js).toContain('"selected":3');
   });
 
-  it("carries the network's camera, layout and selection off the live view", async () => {
+  it("carries the network's camera, positions and selection off the live view", async () => {
     inlineBundle();
     const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(null));
     vi.spyOn(window, "open").mockReturnValue(null);

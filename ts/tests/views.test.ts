@@ -707,7 +707,7 @@ describe("<gufe-ligand-network>", () => {
     expect(mappingPayloadFor(orphan, buildRegistry(payload))).toBeNull();
   });
 
-  it("falls back to the circular layout when d3 cannot be loaded", async () => {
+  it("falls back to the seeded ring when d3 cannot be loaded", async () => {
     clearFakeEngines();
     seedFakeEngines({ brokenD3: true });
 
@@ -715,9 +715,13 @@ describe("<gufe-ligand-network>", () => {
     await flush();
 
     expect(node.textContent).toContain("d3 could not be loaded");
-    expect((node.querySelector("select") as HTMLSelectElement).value).toBe("Circular");
-    // The point of the fallback: there is still a graph on the page.
-    expect(node.querySelectorAll("svg circle.gufe-node-disc").length).toBeGreaterThan(0);
+    // The point of the fallback: there is still a graph on the page, and the
+    // ligands are in different places rather than piled on one point.
+    const placed = Array.from(node.querySelectorAll<SVGGElement>("g.gufe-node")).map((g) =>
+      g.getAttribute("transform"),
+    );
+    expect(placed.length).toBeGreaterThan(0);
+    expect(new Set(placed).size).toBe(placed.length);
   });
 
   it("says so, rather than crashing, when the network is empty", async () => {
