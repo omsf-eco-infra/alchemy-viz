@@ -240,6 +240,7 @@ describe("the alchemical network menu", () => {
     // The ligands tab is the one the menu opens on, so the button is already
     // the ligand one.
     copyButton(node).click();
+    await flush();
     expect(written).toHaveLength(1);
     expect(written[0].split("\n")).toHaveLength(2);
     expect(node.textContent).toContain("Copied 2 ligands.");
@@ -248,6 +249,7 @@ describe("the alchemical network menu", () => {
     // switch: what was picked out of one list is what the other one copies.
     button(node, "Transformations").click();
     copyButton(node).click();
+    await flush();
     expect(written).toHaveLength(2);
     expect(node.textContent).toMatch(/Copied \d+ transformations|No transformations between/);
   });

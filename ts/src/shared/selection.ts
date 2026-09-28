@@ -77,19 +77,52 @@ export function selectionText<N extends SelectableNode>(
     .join("\n");
 }
 
-/** Put `text` on the clipboard, falling back to a selectable box. */
-function copyOut(text: string, fallbackHost: HTMLElement): void {
-  navigator.clipboard?.writeText(text).catch(() => showText(text, fallbackHost));
-  if (!navigator.clipboard) showText(text, fallbackHost);
+/**
+ * Put `text` on the clipboard, and say whether it got there.
+ *
+ * Two attempts, neither of which leaves anything behind on the page. The
+ * async clipboard is the one to want, but it is unavailable on an insecure
+ * origin and can be refused inside an iframe that was not granted
+ * clipboard-write - which is where a notebook puts this view. The old
+ * `execCommand` path works in both of those, so it is the fallback rather
+ * than showing the text and asking the reader to copy it by hand: a box of
+ * text appearing under the button is not what "Copy" promised.
+ */
+async function copyOut(text: string): Promise<boolean> {
+  try {
+    if (navigator.clipboard) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch {
+    // Fall through to the selection-based copy below.
+  }
+  return copyBySelection(text);
 }
 
-/** When the clipboard is unavailable, show the text so it can be copied by hand. */
-function showText(text: string, host: HTMLElement): void {
-  const box = el("textarea", `width:100%;height:80px;font-size:${FONT.small};box-sizing:border-box;`) as HTMLTextAreaElement;
+/**
+ * The pre-clipboard-API copy: select text in an off-screen textarea and cut it.
+ *
+ * Off-screen rather than hidden, because a `display:none` element cannot hold
+ * a selection, and the whole point is that nothing is visible for the moment
+ * it exists.
+ */
+function copyBySelection(text: string): boolean {
+  const box = el(
+    "textarea",
+    "position:fixed;top:-1000px;left:-1000px;opacity:0;",
+  ) as HTMLTextAreaElement;
   box.value = text;
   box.readOnly = true;
-  host.appendChild(box);
+  document.body.appendChild(box);
   box.select();
+  try {
+    return document.execCommand("copy");
+  } catch {
+    return false;
+  } finally {
+    box.remove();
+  }
 }
 
 /** Offer `text` as a file, for a selection too big for a clipboard. */
@@ -218,12 +251,17 @@ export function exportBlock<N extends SelectableNode>(
       note(`Saved ${lines} ${word.plural} to a file.`);
       return;
     }
-    copyOut(content, box);
-    note(
-      what === "edges"
-        ? `Copied ${lines} ${words.edges.plural}.`
-        : `Copied ${options.selected.size} ${words.nodes.plural}.`,
-    );
+    void copyOut(content).then((copied) => {
+      if (!copied) {
+        note("Could not reach the clipboard. Shift-click to save as a file instead.");
+        return;
+      }
+      note(
+        what === "edges"
+          ? `Copied ${lines} ${words.edges.plural}.`
+          : `Copied ${options.selected.size} ${words.nodes.plural}.`,
+      );
+    });
   };
   box.appendChild(copy);
   box.appendChild(exportNote);

@@ -354,6 +354,7 @@ describe("selection export", () => {
     listRows(node)[0].click();
     await flush();
     clickExport(node, "Ligands");
+    await flush();
     expect(node.textContent).toContain("Copied 1 ligands");
   });
 
@@ -371,12 +372,28 @@ describe("selection export", () => {
       await flush();
     }
     clickExport(node, "Mappings");
+    await flush();
 
     expect(written).toHaveLength(1);
     expect(written[0].split("\n").length).toBeGreaterThan(0);
     // An edge of a ligand network is a mapping, which is what the header calls
     // them and now what the export says too.
     expect(node.textContent).toMatch(/Copied \d+ mappings/);
+  });
+
+  it("leaves no box of text behind when the clipboard is out of reach", async () => {
+    // The button says Copy, so a failure is a line of text saying so, not a
+    // textarea of names appearing under the panel for the reader to copy by
+    // hand. jsdom has no execCommand either, so this is both paths failing.
+    const node = await open();
+    Object.defineProperty(navigator, "clipboard", { value: undefined, configurable: true });
+    listRows(node)[0].click();
+    await flush();
+    clickExport(node, "Ligands");
+    await flush();
+    expect(node.querySelector("textarea")).toBeNull();
+    expect(document.querySelector("textarea")).toBeNull();
+    expect(node.textContent).toContain("Could not reach the clipboard");
   });
 
   it("tells a reader how to select several, without being asked", async () => {

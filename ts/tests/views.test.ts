@@ -2359,20 +2359,7 @@ describe("<gufe-alchemical-network>", () => {
     // transformation, and a campaign whose legs were run under different ones
     // is the case the header used to read as a single protocol and say the
     // wrong thing about.
-    const payload = readExample("alchemical_network.json") as unknown as {
-      edges: { protocol: string }[];
-      registry: { type: string; "gufe-key": string; name: string; gufe_type: string }[];
-    };
-    const second = {
-      type: "ProtocolViz",
-      "gufe-key": "SepTopProtocol-1111111111111111111111111111aaaa",
-      name: "",
-      gufe_type: "SepTopProtocol",
-    };
-    payload.registry.push(second);
-    payload.edges[0].protocol = second["gufe-key"];
-
-    const node = mount("gufe-alchemical-network", payload);
+    const node = mount("gufe-alchemical-network", twoProtocols());
     await flush();
 
     const text = node.textContent ?? "";
@@ -2418,19 +2405,23 @@ describe("<gufe-alchemical-network>", () => {
     // The chip used to be a readout, so a network running three protocols said
     // "protocols 3" and left a reader nothing to click: the names were a tooltip,
     // which is no answer on a touch screen or in a screenshot.
-    const node = mount("gufe-alchemical-network", twoProtocols());
+    const node = mount("gufe-alchemical-network", readExample("alchemical_network_protocols.json"));
     await flush();
 
     const chip = protocolChipOf(node);
+    expect(chip.textContent).toContain("3");
     expect(chip.getAttribute("aria-pressed")).toBe("false");
     chip.click();
     await flush();
 
     expect(chip.getAttribute("aria-pressed")).toBe("true");
+    // In label order, with the share of the campaign each one runs - which is
+    // what the count on the chip stands in for and no header has room to say.
     const rows = [...node.querySelectorAll<HTMLButtonElement>(".gufe-protocols button")];
     expect(rows.map((row) => row.textContent)).toEqual([
-      "DummyProtocol2 transformations",
-      "SepTopProtocol1 transformation",
+      "AbsoluteSolvationProtocol1 transformation",
+      "NonEquilibriumCyclingProtocol1 transformation",
+      "RelativeHybridTopologyProtocol2 transformations",
     ]);
     // Nothing on the canvas is a protocol, so the box the pane opened on is let
     // go rather than left lit beside a pane that has stopped showing it.
@@ -2438,11 +2429,11 @@ describe("<gufe-alchemical-network>", () => {
     expect(boxes.some((box) => box.getAttribute("stroke") === T.cardBorderActive)).toBe(false);
 
     // A row opens that protocol's own card, which is the standalone view of one.
-    rows[1].click();
+    rows[0].click();
     await flush();
     const pane = node.querySelector("alchemy-view") as HTMLElement & { payload: Record<string, unknown> };
     expect(pane.querySelector("gufe-protocol")).toBeTruthy();
-    expect(pane.payload["gufe-key"]).toBe("SepTopProtocol-1111111111111111111111111111aaaa");
+    expect(pane.payload["gufe_type"]).toBe("AbsoluteSolvationProtocol");
     const { valid, issues } = validatePayload(pane.payload);
     expect(valid, formatIssues(issues)).toBe(true);
   });
@@ -2463,7 +2454,7 @@ describe("<gufe-alchemical-network>", () => {
   });
 
   it("hands the pane back to a box clicked after the protocols", async () => {
-    const node = mount("gufe-alchemical-network", twoProtocols());
+    const node = mount("gufe-alchemical-network", readExample("alchemical_network_protocols.json"));
     await flush();
 
     const chip = protocolChipOf(node);

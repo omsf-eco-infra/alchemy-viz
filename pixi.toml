@@ -43,6 +43,14 @@ cmd = "pre-commit install"
 description = "Run every pre-commit hook over the whole tree, not just the staged files."
 cmd = "pre-commit run --all-files"
 
+[tasks.clean]
+description = "Tidy the working tree the way the commit hooks will: strip notebook outputs, apply ruff, fix whitespace and missing final newlines."
+# The fixing counterpart to `hooks-run`. pre-commit exits non-zero whenever a
+# hook rewrote a file, which here is the ordinary outcome rather than an error,
+# so the second pass is what reports honestly: it fails only if something is
+# left that no hook can fix by itself.
+cmd = "pre-commit run --all-files || pre-commit run --all-files"
+
 [tasks.npm-install]
 description = "Install the Node toolchain (vite, typescript, vitest, ajv)."
 cmd = "npm ci --no-audit --no-fund || npm install --no-audit --no-fund"
