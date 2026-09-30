@@ -5,7 +5,7 @@ Two schemas live here.
 | file | says | written by |
 |---|---|---|
 | `alchemy-viz.schema.json` | what a gufe object **is** | a Python payload builder |
-| `depict-style.schema.json` | how a ligand pair is **drawn** in 2D | a person, in the editor linked below |
+| `mol2d-style.schema.json` | how a ligand pair is **drawn** in 2D | a person, in the editor linked below |
 
 ## alchemy-viz.schema.json
 
@@ -133,7 +133,7 @@ valid payload from `examples/`, applies one JSON-Pointer operation, and states
 whether the result must be rejected or accepted. Change the schema, add the row
 that proves it.
 
-## depict-style.schema.json
+## mol2d-style.schema.json
 
 How `<gufe-atom-mapping>` draws a ligand pair in 2D: marking style, ring shape,
 hydrogen treatment, letter and bond sizes, every colour.
@@ -150,7 +150,7 @@ exports the document:
 
 ```
 open the editor  ->  move the controls  ->  Copy or Download
-                 ->  drop the file over ts/src/shared/depict-style.json
+                 ->  drop the file over ts/src/shared/mol2d-style.json
                  ->  pixi run build
 ```
 
@@ -158,12 +158,12 @@ Paste the committed document back in and press Apply to see what a given build
 draws.
 
 ```
-schema/depict-style.schema.json   <- the contract, hand-written
+schema/mol2d-style.schema.json   <- the contract, hand-written
         v
-ts/src/shared/depict-style.json   <- ONE exported document. The file you replace.
+ts/src/shared/mol2d-style.json   <- ONE exported document. The file you replace.
         |  import ... with { type: "json" }
         v
-ts/src/shared/depict-style.ts     <- the types, the defaults, and the pipeline
+ts/src/shared/mol2d-style.ts     <- the types, the defaults, and the pipeline
 ```
 
 The JSON is imported by the TypeScript, so it compiles into the bundle: nothing

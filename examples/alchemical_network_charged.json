@@ -1,21 +1,12 @@
 {
   "type": "AlchemicalNetworkViz",
-  "gufe-key": "AlchemicalNetwork-8b2e2211f8d1fbb7ac7b7687fa65c059",
+  "gufe-key": "AlchemicalNetwork-89fe7f1b8be58ac61b094e27d243739e",
   "name": "solvated ligand transformations",
   "registry": [
     {
       "type": "ChemicalSystemViz",
-      "gufe-key": "ChemicalSystem-3833891b3646d81efe02988cf3eeddaa",
-      "name": "lig_CHEMBL1084935 in water",
-      "components": {
-        "ligand": "SmallMoleculeComponent-96e73ade8f2f86a84e6d38da3a864752",
-        "solvent": "SolventComponent-26b4034ad9dbd9f908dfc298ea8d449f"
-      }
-    },
-    {
-      "type": "ChemicalSystemViz",
-      "gufe-key": "ChemicalSystem-6f84af90e55e42d6ac7fe51784191ea5",
-      "name": "lig_CHEMBL1086409 in water",
+      "gufe-key": "ChemicalSystem-0578a5d5fe320e4ce71cb3dfe6ebf1d2",
+      "name": "lig_CHEMBL1086409",
       "components": {
         "ligand": "SmallMoleculeComponent-6bc0df87cc471107a736221f48fd7632",
         "solvent": "SolventComponent-26b4034ad9dbd9f908dfc298ea8d449f"
@@ -23,35 +14,8 @@
     },
     {
       "type": "ChemicalSystemViz",
-      "gufe-key": "ChemicalSystem-7ec89af7c3209ad101776af52741b15e",
-      "name": "lig_CHEMBL1084115 in water",
-      "components": {
-        "ligand": "SmallMoleculeComponent-8897bd12da390791eb336503f637bd1f",
-        "solvent": "SolventComponent-26b4034ad9dbd9f908dfc298ea8d449f"
-      }
-    },
-    {
-      "type": "ChemicalSystemViz",
-      "gufe-key": "ChemicalSystem-80c9ef06e4ed6089affca6564aab63fb",
-      "name": "lig_CHEMBL1086410 in water",
-      "components": {
-        "ligand": "SmallMoleculeComponent-a9dde068a082697b8843ff7842b09bb5",
-        "solvent": "SolventComponent-26b4034ad9dbd9f908dfc298ea8d449f"
-      }
-    },
-    {
-      "type": "ChemicalSystemViz",
-      "gufe-key": "ChemicalSystem-8e3b2f6ba6a188a9d0faf7b19d30fd66",
-      "name": "lig_CHEMBL1089056 in water",
-      "components": {
-        "ligand": "SmallMoleculeComponent-315946379cacd5b9733645eca8b03395",
-        "solvent": "SolventComponent-26b4034ad9dbd9f908dfc298ea8d449f"
-      }
-    },
-    {
-      "type": "ChemicalSystemViz",
-      "gufe-key": "ChemicalSystem-96c1e6ebe0fc3283d6d57b5963204f26",
-      "name": "lig_CHEMBL1084143 in water",
+      "gufe-key": "ChemicalSystem-6202931af48eaa1ee4c74dff3dd17bf1",
+      "name": "lig_CHEMBL1084143",
       "components": {
         "ligand": "SmallMoleculeComponent-fb1cf4e18fc32564b59edcfd03e65d7c",
         "solvent": "SolventComponent-26b4034ad9dbd9f908dfc298ea8d449f"
@@ -59,26 +23,26 @@
     },
     {
       "type": "ChemicalSystemViz",
-      "gufe-key": "ChemicalSystem-b523fe1b349d425b62aa1ac3952800b2",
-      "name": "lig_CHEMBL1078691 in water",
+      "gufe-key": "ChemicalSystem-7feda5958438208b8671a123badfc159",
+      "name": "lig_CHEMBL1084115",
       "components": {
-        "ligand": "SmallMoleculeComponent-144f801d109d5ad12b585d73e7453a0f",
+        "ligand": "SmallMoleculeComponent-8897bd12da390791eb336503f637bd1f",
         "solvent": "SolventComponent-26b4034ad9dbd9f908dfc298ea8d449f"
       }
     },
     {
       "type": "ChemicalSystemViz",
-      "gufe-key": "ChemicalSystem-c6cb2e4c6d8a67863d3b966c20172e69",
-      "name": "lig_CHEMBL1077227 in water",
+      "gufe-key": "ChemicalSystem-9dfcb5e8615ef4f267448a5b559b65dc",
+      "name": "lig_CHEMBL1089056",
       "components": {
-        "ligand": "SmallMoleculeComponent-33935fcedaef6168b467606c858eb85d",
+        "ligand": "SmallMoleculeComponent-315946379cacd5b9733645eca8b03395",
         "solvent": "SolventComponent-26b4034ad9dbd9f908dfc298ea8d449f"
       }
     },
     {
       "type": "ChemicalSystemViz",
-      "gufe-key": "ChemicalSystem-f17012baa640dded3629a30a87010f40",
-      "name": "lig_CHEMBL1088740 in water",
+      "gufe-key": "ChemicalSystem-a0d3aad5f0b507babcdf998f59674ae8",
+      "name": "lig_CHEMBL1088740",
       "components": {
         "ligand": "SmallMoleculeComponent-43794f5c53d871ccf01e39051836b031",
         "solvent": "SolventComponent-26b4034ad9dbd9f908dfc298ea8d449f"
@@ -86,10 +50,46 @@
     },
     {
       "type": "ChemicalSystemViz",
-      "gufe-key": "ChemicalSystem-fe8afb9b57ac112ebcf1faee1d315d30",
-      "name": "lig_CHEMBL1082248 in water",
+      "gufe-key": "ChemicalSystem-ed4432da9c394242cf9982071ce9d897",
+      "name": "lig_CHEMBL1077227",
+      "components": {
+        "ligand": "SmallMoleculeComponent-33935fcedaef6168b467606c858eb85d",
+        "solvent": "SolventComponent-26b4034ad9dbd9f908dfc298ea8d449f"
+      }
+    },
+    {
+      "type": "ChemicalSystemViz",
+      "gufe-key": "ChemicalSystem-ee164d6d574b91b958db21b60f53a6ba",
+      "name": "lig_CHEMBL1082248",
       "components": {
         "ligand": "SmallMoleculeComponent-b11a268e4c6e524c3d0fd24d52efbdd6",
+        "solvent": "SolventComponent-26b4034ad9dbd9f908dfc298ea8d449f"
+      }
+    },
+    {
+      "type": "ChemicalSystemViz",
+      "gufe-key": "ChemicalSystem-f1a4300308572a9e6fe07030a9a85c26",
+      "name": "lig_CHEMBL1078691",
+      "components": {
+        "ligand": "SmallMoleculeComponent-144f801d109d5ad12b585d73e7453a0f",
+        "solvent": "SolventComponent-26b4034ad9dbd9f908dfc298ea8d449f"
+      }
+    },
+    {
+      "type": "ChemicalSystemViz",
+      "gufe-key": "ChemicalSystem-f8f907d98d7dc2094fbae62d5309f165",
+      "name": "lig_CHEMBL1086410",
+      "components": {
+        "ligand": "SmallMoleculeComponent-a9dde068a082697b8843ff7842b09bb5",
+        "solvent": "SolventComponent-26b4034ad9dbd9f908dfc298ea8d449f"
+      }
+    },
+    {
+      "type": "ChemicalSystemViz",
+      "gufe-key": "ChemicalSystem-fc4b3b39cfd518c2d81ed48aa7e78496",
+      "name": "lig_CHEMBL1084935",
+      "components": {
+        "ligand": "SmallMoleculeComponent-96e73ade8f2f86a84e6d38da3a864752",
         "solvent": "SolventComponent-26b4034ad9dbd9f908dfc298ea8d449f"
       }
     },
@@ -191,204 +191,25 @@
     }
   ],
   "nodes": [
-    "ChemicalSystem-3833891b3646d81efe02988cf3eeddaa",
-    "ChemicalSystem-6f84af90e55e42d6ac7fe51784191ea5",
-    "ChemicalSystem-7ec89af7c3209ad101776af52741b15e",
-    "ChemicalSystem-80c9ef06e4ed6089affca6564aab63fb",
-    "ChemicalSystem-8e3b2f6ba6a188a9d0faf7b19d30fd66",
-    "ChemicalSystem-96c1e6ebe0fc3283d6d57b5963204f26",
-    "ChemicalSystem-b523fe1b349d425b62aa1ac3952800b2",
-    "ChemicalSystem-c6cb2e4c6d8a67863d3b966c20172e69",
-    "ChemicalSystem-f17012baa640dded3629a30a87010f40",
-    "ChemicalSystem-fe8afb9b57ac112ebcf1faee1d315d30"
+    "ChemicalSystem-0578a5d5fe320e4ce71cb3dfe6ebf1d2",
+    "ChemicalSystem-6202931af48eaa1ee4c74dff3dd17bf1",
+    "ChemicalSystem-7feda5958438208b8671a123badfc159",
+    "ChemicalSystem-9dfcb5e8615ef4f267448a5b559b65dc",
+    "ChemicalSystem-a0d3aad5f0b507babcdf998f59674ae8",
+    "ChemicalSystem-ed4432da9c394242cf9982071ce9d897",
+    "ChemicalSystem-ee164d6d574b91b958db21b60f53a6ba",
+    "ChemicalSystem-f1a4300308572a9e6fe07030a9a85c26",
+    "ChemicalSystem-f8f907d98d7dc2094fbae62d5309f165",
+    "ChemicalSystem-fc4b3b39cfd518c2d81ed48aa7e78496"
   ],
   "edges": [
     {
       "type": "TransformationViz",
-      "gufe-key": "Transformation-0974cfd0612a8cff399b532ef10fb9ad",
-      "name": "lig_CHEMBL1089056 to lig_CHEMBL1088740",
-      "protocol": "DummyProtocol-e74b8a34526e7a7a5541d63e9ef511d5",
-      "stateA": "ChemicalSystem-8e3b2f6ba6a188a9d0faf7b19d30fd66",
-      "stateB": "ChemicalSystem-f17012baa640dded3629a30a87010f40",
-      "mappings": [
-        {
-          "type": "LigandAtomMappingViz",
-          "gufe-key": "LigandAtomMapping-eeab6ec9035c0824865d347e9766a200",
-          "name": "lig_CHEMBL1089056 -> lig_CHEMBL1088740",
-          "componentA": "SmallMoleculeComponent-315946379cacd5b9733645eca8b03395",
-          "componentB": "SmallMoleculeComponent-43794f5c53d871ccf01e39051836b031",
-          "componentA_to_componentB": [
-            {
-              "index_A": 0,
-              "index_B": 0
-            },
-            {
-              "index_A": 1,
-              "index_B": 1
-            },
-            {
-              "index_A": 2,
-              "index_B": 2
-            },
-            {
-              "index_A": 3,
-              "index_B": 3
-            },
-            {
-              "index_A": 4,
-              "index_B": 4
-            },
-            {
-              "index_A": 5,
-              "index_B": 5
-            },
-            {
-              "index_A": 6,
-              "index_B": 6
-            },
-            {
-              "index_A": 7,
-              "index_B": 7
-            },
-            {
-              "index_A": 8,
-              "index_B": 8
-            },
-            {
-              "index_A": 9,
-              "index_B": 9
-            },
-            {
-              "index_A": 10,
-              "index_B": 10
-            },
-            {
-              "index_A": 11,
-              "index_B": 11
-            },
-            {
-              "index_A": 12,
-              "index_B": 12
-            },
-            {
-              "index_A": 13,
-              "index_B": 13
-            },
-            {
-              "index_A": 14,
-              "index_B": 14
-            },
-            {
-              "index_A": 15,
-              "index_B": 15
-            },
-            {
-              "index_A": 16,
-              "index_B": 16
-            },
-            {
-              "index_A": 17,
-              "index_B": 17
-            },
-            {
-              "index_A": 30,
-              "index_B": 21
-            },
-            {
-              "index_A": 31,
-              "index_B": 22
-            },
-            {
-              "index_A": 32,
-              "index_B": 23
-            },
-            {
-              "index_A": 33,
-              "index_B": 24
-            },
-            {
-              "index_A": 34,
-              "index_B": 25
-            },
-            {
-              "index_A": 35,
-              "index_B": 26
-            },
-            {
-              "index_A": 36,
-              "index_B": 27
-            },
-            {
-              "index_A": 37,
-              "index_B": 28
-            },
-            {
-              "index_A": 38,
-              "index_B": 29
-            },
-            {
-              "index_A": 39,
-              "index_B": 30
-            },
-            {
-              "index_A": 40,
-              "index_B": 31
-            },
-            {
-              "index_A": 41,
-              "index_B": 32
-            },
-            {
-              "index_A": 42,
-              "index_B": 33
-            },
-            {
-              "index_A": 43,
-              "index_B": 34
-            },
-            {
-              "index_A": 44,
-              "index_B": 35
-            },
-            {
-              "index_A": 45,
-              "index_B": 36
-            },
-            {
-              "index_A": 46,
-              "index_B": 37
-            },
-            {
-              "index_A": 47,
-              "index_B": 38
-            },
-            {
-              "index_A": 48,
-              "index_B": 39
-            },
-            {
-              "index_A": 49,
-              "index_B": 40
-            },
-            {
-              "index_A": 50,
-              "index_B": 41
-            }
-          ],
-          "score": 0.7408182206817179,
-          "annotations": {
-            "score": 0.7408182206817179
-          }
-        }
-      ]
-    },
-    {
-      "type": "TransformationViz",
-      "gufe-key": "Transformation-0cea792ba78a4f5346e35dce3c6bdf22",
+      "gufe-key": "Transformation-06a653c9d33acc9cc5f5c7134d68a066",
       "name": "lig_CHEMBL1084143 to lig_CHEMBL1086410",
       "protocol": "DummyProtocol-e74b8a34526e7a7a5541d63e9ef511d5",
-      "stateA": "ChemicalSystem-96c1e6ebe0fc3283d6d57b5963204f26",
-      "stateB": "ChemicalSystem-80c9ef06e4ed6089affca6564aab63fb",
+      "stateA": "ChemicalSystem-6202931af48eaa1ee4c74dff3dd17bf1",
+      "stateB": "ChemicalSystem-f8f907d98d7dc2094fbae62d5309f165",
       "mappings": [
         {
           "type": "LigandAtomMappingViz",
@@ -611,11 +432,843 @@
     },
     {
       "type": "TransformationViz",
-      "gufe-key": "Transformation-383c1d33ec346008cf7ef93df04035fe",
+      "gufe-key": "Transformation-30a574ceb940049d3bee9e6d51f89f3f",
+      "name": "lig_CHEMBL1089056 to lig_CHEMBL1084115",
+      "protocol": "DummyProtocol-e74b8a34526e7a7a5541d63e9ef511d5",
+      "stateA": "ChemicalSystem-9dfcb5e8615ef4f267448a5b559b65dc",
+      "stateB": "ChemicalSystem-7feda5958438208b8671a123badfc159",
+      "mappings": [
+        {
+          "type": "LigandAtomMappingViz",
+          "gufe-key": "LigandAtomMapping-065f5ac4be320be3b39aafdb29a97c09",
+          "name": "lig_CHEMBL1089056 -> lig_CHEMBL1084115",
+          "componentA": "SmallMoleculeComponent-315946379cacd5b9733645eca8b03395",
+          "componentB": "SmallMoleculeComponent-8897bd12da390791eb336503f637bd1f",
+          "componentA_to_componentB": [
+            {
+              "index_A": 7,
+              "index_B": 5
+            },
+            {
+              "index_A": 8,
+              "index_B": 6
+            },
+            {
+              "index_A": 9,
+              "index_B": 7
+            },
+            {
+              "index_A": 10,
+              "index_B": 8
+            },
+            {
+              "index_A": 11,
+              "index_B": 9
+            },
+            {
+              "index_A": 12,
+              "index_B": 10
+            },
+            {
+              "index_A": 13,
+              "index_B": 11
+            },
+            {
+              "index_A": 14,
+              "index_B": 12
+            },
+            {
+              "index_A": 15,
+              "index_B": 13
+            },
+            {
+              "index_A": 16,
+              "index_B": 14
+            },
+            {
+              "index_A": 17,
+              "index_B": 15
+            },
+            {
+              "index_A": 18,
+              "index_B": 16
+            },
+            {
+              "index_A": 19,
+              "index_B": 17
+            },
+            {
+              "index_A": 20,
+              "index_B": 18
+            },
+            {
+              "index_A": 21,
+              "index_B": 19
+            },
+            {
+              "index_A": 22,
+              "index_B": 20
+            },
+            {
+              "index_A": 23,
+              "index_B": 21
+            },
+            {
+              "index_A": 24,
+              "index_B": 22
+            },
+            {
+              "index_A": 25,
+              "index_B": 23
+            },
+            {
+              "index_A": 26,
+              "index_B": 24
+            },
+            {
+              "index_A": 27,
+              "index_B": 25
+            },
+            {
+              "index_A": 28,
+              "index_B": 26
+            },
+            {
+              "index_A": 29,
+              "index_B": 27
+            },
+            {
+              "index_A": 30,
+              "index_B": 28
+            },
+            {
+              "index_A": 31,
+              "index_B": 29
+            },
+            {
+              "index_A": 32,
+              "index_B": 30
+            },
+            {
+              "index_A": 33,
+              "index_B": 31
+            },
+            {
+              "index_A": 34,
+              "index_B": 32
+            },
+            {
+              "index_A": 35,
+              "index_B": 33
+            },
+            {
+              "index_A": 36,
+              "index_B": 34
+            },
+            {
+              "index_A": 37,
+              "index_B": 35
+            },
+            {
+              "index_A": 38,
+              "index_B": 36
+            },
+            {
+              "index_A": 39,
+              "index_B": 37
+            },
+            {
+              "index_A": 40,
+              "index_B": 38
+            },
+            {
+              "index_A": 41,
+              "index_B": 39
+            },
+            {
+              "index_A": 42,
+              "index_B": 40
+            },
+            {
+              "index_A": 43,
+              "index_B": 41
+            },
+            {
+              "index_A": 44,
+              "index_B": 42
+            },
+            {
+              "index_A": 45,
+              "index_B": 43
+            },
+            {
+              "index_A": 46,
+              "index_B": 44
+            }
+          ],
+          "score": 0.03328710836980796,
+          "annotations": {
+            "score": 0.03328710836980796
+          }
+        }
+      ]
+    },
+    {
+      "type": "TransformationViz",
+      "gufe-key": "Transformation-3b6bd0940a57af9d4477c6f70bf20960",
+      "name": "lig_CHEMBL1086410 to lig_CHEMBL1077227",
+      "protocol": "DummyProtocol-e74b8a34526e7a7a5541d63e9ef511d5",
+      "stateA": "ChemicalSystem-f8f907d98d7dc2094fbae62d5309f165",
+      "stateB": "ChemicalSystem-ed4432da9c394242cf9982071ce9d897",
+      "mappings": [
+        {
+          "type": "LigandAtomMappingViz",
+          "gufe-key": "LigandAtomMapping-354cee4fb68f13ed8a9c9b4a49814512",
+          "name": "lig_CHEMBL1086410 -> lig_CHEMBL1077227",
+          "componentA": "SmallMoleculeComponent-a9dde068a082697b8843ff7842b09bb5",
+          "componentB": "SmallMoleculeComponent-33935fcedaef6168b467606c858eb85d",
+          "componentA_to_componentB": [
+            {
+              "index_A": 7,
+              "index_B": 7
+            },
+            {
+              "index_A": 8,
+              "index_B": 8
+            },
+            {
+              "index_A": 9,
+              "index_B": 9
+            },
+            {
+              "index_A": 10,
+              "index_B": 10
+            },
+            {
+              "index_A": 11,
+              "index_B": 11
+            },
+            {
+              "index_A": 12,
+              "index_B": 12
+            },
+            {
+              "index_A": 13,
+              "index_B": 13
+            },
+            {
+              "index_A": 14,
+              "index_B": 14
+            },
+            {
+              "index_A": 15,
+              "index_B": 15
+            },
+            {
+              "index_A": 16,
+              "index_B": 16
+            },
+            {
+              "index_A": 17,
+              "index_B": 17
+            },
+            {
+              "index_A": 18,
+              "index_B": 18
+            },
+            {
+              "index_A": 19,
+              "index_B": 19
+            },
+            {
+              "index_A": 20,
+              "index_B": 20
+            },
+            {
+              "index_A": 21,
+              "index_B": 21
+            },
+            {
+              "index_A": 22,
+              "index_B": 22
+            },
+            {
+              "index_A": 23,
+              "index_B": 23
+            },
+            {
+              "index_A": 24,
+              "index_B": 24
+            },
+            {
+              "index_A": 25,
+              "index_B": 25
+            },
+            {
+              "index_A": 26,
+              "index_B": 26
+            },
+            {
+              "index_A": 27,
+              "index_B": 27
+            },
+            {
+              "index_A": 28,
+              "index_B": 28
+            },
+            {
+              "index_A": 29,
+              "index_B": 29
+            },
+            {
+              "index_A": 30,
+              "index_B": 30
+            },
+            {
+              "index_A": 31,
+              "index_B": 31
+            },
+            {
+              "index_A": 32,
+              "index_B": 32
+            },
+            {
+              "index_A": 33,
+              "index_B": 33
+            },
+            {
+              "index_A": 34,
+              "index_B": 34
+            },
+            {
+              "index_A": 35,
+              "index_B": 35
+            },
+            {
+              "index_A": 36,
+              "index_B": 36
+            },
+            {
+              "index_A": 37,
+              "index_B": 37
+            },
+            {
+              "index_A": 38,
+              "index_B": 38
+            },
+            {
+              "index_A": 39,
+              "index_B": 39
+            },
+            {
+              "index_A": 40,
+              "index_B": 40
+            },
+            {
+              "index_A": 41,
+              "index_B": 41
+            },
+            {
+              "index_A": 42,
+              "index_B": 56
+            },
+            {
+              "index_A": 47,
+              "index_B": 47
+            },
+            {
+              "index_A": 48,
+              "index_B": 48
+            },
+            {
+              "index_A": 49,
+              "index_B": 49
+            },
+            {
+              "index_A": 50,
+              "index_B": 50
+            },
+            {
+              "index_A": 51,
+              "index_B": 51
+            },
+            {
+              "index_A": 52,
+              "index_B": 52
+            },
+            {
+              "index_A": 53,
+              "index_B": 53
+            },
+            {
+              "index_A": 54,
+              "index_B": 54
+            },
+            {
+              "index_A": 59,
+              "index_B": 42
+            }
+          ],
+          "score": 0.02725317930340126,
+          "annotations": {
+            "score": 0.02725317930340126
+          }
+        }
+      ]
+    },
+    {
+      "type": "TransformationViz",
+      "gufe-key": "Transformation-57884f3745707613d177e057aea77a39",
+      "name": "lig_CHEMBL1078691 to lig_CHEMBL1089056",
+      "protocol": "DummyProtocol-e74b8a34526e7a7a5541d63e9ef511d5",
+      "stateA": "ChemicalSystem-f1a4300308572a9e6fe07030a9a85c26",
+      "stateB": "ChemicalSystem-9dfcb5e8615ef4f267448a5b559b65dc",
+      "mappings": [
+        {
+          "type": "LigandAtomMappingViz",
+          "gufe-key": "LigandAtomMapping-cb2350c3c696f405f5568df5b22b85d8",
+          "name": "lig_CHEMBL1078691 -> lig_CHEMBL1089056",
+          "componentA": "SmallMoleculeComponent-144f801d109d5ad12b585d73e7453a0f",
+          "componentB": "SmallMoleculeComponent-315946379cacd5b9733645eca8b03395",
+          "componentA_to_componentB": [
+            {
+              "index_A": 2,
+              "index_B": 1
+            },
+            {
+              "index_A": 3,
+              "index_B": 49
+            },
+            {
+              "index_A": 4,
+              "index_B": 50
+            },
+            {
+              "index_A": 5,
+              "index_B": 47
+            },
+            {
+              "index_A": 6,
+              "index_B": 48
+            },
+            {
+              "index_A": 7,
+              "index_B": 6
+            },
+            {
+              "index_A": 8,
+              "index_B": 7
+            },
+            {
+              "index_A": 9,
+              "index_B": 8
+            },
+            {
+              "index_A": 10,
+              "index_B": 9
+            },
+            {
+              "index_A": 11,
+              "index_B": 10
+            },
+            {
+              "index_A": 12,
+              "index_B": 11
+            },
+            {
+              "index_A": 13,
+              "index_B": 12
+            },
+            {
+              "index_A": 14,
+              "index_B": 13
+            },
+            {
+              "index_A": 15,
+              "index_B": 14
+            },
+            {
+              "index_A": 16,
+              "index_B": 15
+            },
+            {
+              "index_A": 17,
+              "index_B": 16
+            },
+            {
+              "index_A": 18,
+              "index_B": 17
+            },
+            {
+              "index_A": 19,
+              "index_B": 18
+            },
+            {
+              "index_A": 20,
+              "index_B": 19
+            },
+            {
+              "index_A": 21,
+              "index_B": 20
+            },
+            {
+              "index_A": 22,
+              "index_B": 21
+            },
+            {
+              "index_A": 23,
+              "index_B": 22
+            },
+            {
+              "index_A": 24,
+              "index_B": 23
+            },
+            {
+              "index_A": 25,
+              "index_B": 24
+            },
+            {
+              "index_A": 26,
+              "index_B": 25
+            },
+            {
+              "index_A": 27,
+              "index_B": 26
+            },
+            {
+              "index_A": 28,
+              "index_B": 27
+            },
+            {
+              "index_A": 29,
+              "index_B": 28
+            },
+            {
+              "index_A": 30,
+              "index_B": 29
+            },
+            {
+              "index_A": 31,
+              "index_B": 30
+            },
+            {
+              "index_A": 32,
+              "index_B": 31
+            },
+            {
+              "index_A": 33,
+              "index_B": 32
+            },
+            {
+              "index_A": 34,
+              "index_B": 33
+            },
+            {
+              "index_A": 35,
+              "index_B": 34
+            },
+            {
+              "index_A": 36,
+              "index_B": 35
+            },
+            {
+              "index_A": 37,
+              "index_B": 36
+            },
+            {
+              "index_A": 38,
+              "index_B": 37
+            },
+            {
+              "index_A": 39,
+              "index_B": 38
+            },
+            {
+              "index_A": 40,
+              "index_B": 39
+            },
+            {
+              "index_A": 41,
+              "index_B": 40
+            },
+            {
+              "index_A": 42,
+              "index_B": 41
+            },
+            {
+              "index_A": 43,
+              "index_B": 42
+            },
+            {
+              "index_A": 44,
+              "index_B": 43
+            },
+            {
+              "index_A": 45,
+              "index_B": 44
+            },
+            {
+              "index_A": 46,
+              "index_B": 45
+            },
+            {
+              "index_A": 47,
+              "index_B": 46
+            },
+            {
+              "index_A": 48,
+              "index_B": 4
+            },
+            {
+              "index_A": 49,
+              "index_B": 5
+            },
+            {
+              "index_A": 50,
+              "index_B": 2
+            },
+            {
+              "index_A": 51,
+              "index_B": 3
+            }
+          ],
+          "score": 0.9048374180359595,
+          "annotations": {
+            "score": 0.9048374180359595
+          }
+        }
+      ]
+    },
+    {
+      "type": "TransformationViz",
+      "gufe-key": "Transformation-a01ae0514e2a20e588626bef332e7734",
+      "name": "lig_CHEMBL1089056 to lig_CHEMBL1086410",
+      "protocol": "DummyProtocol-e74b8a34526e7a7a5541d63e9ef511d5",
+      "stateA": "ChemicalSystem-9dfcb5e8615ef4f267448a5b559b65dc",
+      "stateB": "ChemicalSystem-f8f907d98d7dc2094fbae62d5309f165",
+      "mappings": [
+        {
+          "type": "LigandAtomMappingViz",
+          "gufe-key": "LigandAtomMapping-caba8bb624d1add50c75c5ed259fd88b",
+          "name": "lig_CHEMBL1089056 -> lig_CHEMBL1086410",
+          "componentA": "SmallMoleculeComponent-315946379cacd5b9733645eca8b03395",
+          "componentB": "SmallMoleculeComponent-a9dde068a082697b8843ff7842b09bb5",
+          "componentA_to_componentB": [
+            {
+              "index_A": 0,
+              "index_B": 0
+            },
+            {
+              "index_A": 1,
+              "index_B": 1
+            },
+            {
+              "index_A": 2,
+              "index_B": 57
+            },
+            {
+              "index_A": 3,
+              "index_B": 58
+            },
+            {
+              "index_A": 4,
+              "index_B": 55
+            },
+            {
+              "index_A": 5,
+              "index_B": 56
+            },
+            {
+              "index_A": 6,
+              "index_B": 6
+            },
+            {
+              "index_A": 7,
+              "index_B": 7
+            },
+            {
+              "index_A": 8,
+              "index_B": 8
+            },
+            {
+              "index_A": 9,
+              "index_B": 9
+            },
+            {
+              "index_A": 10,
+              "index_B": 10
+            },
+            {
+              "index_A": 11,
+              "index_B": 11
+            },
+            {
+              "index_A": 12,
+              "index_B": 12
+            },
+            {
+              "index_A": 13,
+              "index_B": 13
+            },
+            {
+              "index_A": 14,
+              "index_B": 14
+            },
+            {
+              "index_A": 15,
+              "index_B": 15
+            },
+            {
+              "index_A": 16,
+              "index_B": 16
+            },
+            {
+              "index_A": 17,
+              "index_B": 17
+            },
+            {
+              "index_A": 18,
+              "index_B": 18
+            },
+            {
+              "index_A": 19,
+              "index_B": 19
+            },
+            {
+              "index_A": 20,
+              "index_B": 20
+            },
+            {
+              "index_A": 21,
+              "index_B": 21
+            },
+            {
+              "index_A": 22,
+              "index_B": 22
+            },
+            {
+              "index_A": 23,
+              "index_B": 23
+            },
+            {
+              "index_A": 24,
+              "index_B": 24
+            },
+            {
+              "index_A": 25,
+              "index_B": 25
+            },
+            {
+              "index_A": 26,
+              "index_B": 26
+            },
+            {
+              "index_A": 27,
+              "index_B": 27
+            },
+            {
+              "index_A": 28,
+              "index_B": 28
+            },
+            {
+              "index_A": 29,
+              "index_B": 29
+            },
+            {
+              "index_A": 30,
+              "index_B": 30
+            },
+            {
+              "index_A": 31,
+              "index_B": 31
+            },
+            {
+              "index_A": 32,
+              "index_B": 32
+            },
+            {
+              "index_A": 33,
+              "index_B": 33
+            },
+            {
+              "index_A": 34,
+              "index_B": 34
+            },
+            {
+              "index_A": 35,
+              "index_B": 35
+            },
+            {
+              "index_A": 36,
+              "index_B": 36
+            },
+            {
+              "index_A": 37,
+              "index_B": 37
+            },
+            {
+              "index_A": 39,
+              "index_B": 47
+            },
+            {
+              "index_A": 40,
+              "index_B": 48
+            },
+            {
+              "index_A": 41,
+              "index_B": 49
+            },
+            {
+              "index_A": 42,
+              "index_B": 50
+            },
+            {
+              "index_A": 43,
+              "index_B": 51
+            },
+            {
+              "index_A": 44,
+              "index_B": 52
+            },
+            {
+              "index_A": 45,
+              "index_B": 53
+            },
+            {
+              "index_A": 46,
+              "index_B": 54
+            },
+            {
+              "index_A": 47,
+              "index_B": 4
+            },
+            {
+              "index_A": 48,
+              "index_B": 5
+            },
+            {
+              "index_A": 49,
+              "index_B": 2
+            },
+            {
+              "index_A": 50,
+              "index_B": 3
+            }
+          ],
+          "score": 0.0740818220681718,
+          "annotations": {
+            "score": 0.0740818220681718
+          }
+        }
+      ]
+    },
+    {
+      "type": "TransformationViz",
+      "gufe-key": "Transformation-a49ed92d418baa335a06e9506df1b17e",
       "name": "lig_CHEMBL1084935 to lig_CHEMBL1086410",
       "protocol": "DummyProtocol-e74b8a34526e7a7a5541d63e9ef511d5",
-      "stateA": "ChemicalSystem-3833891b3646d81efe02988cf3eeddaa",
-      "stateB": "ChemicalSystem-80c9ef06e4ed6089affca6564aab63fb",
+      "stateA": "ChemicalSystem-fc4b3b39cfd518c2d81ed48aa7e78496",
+      "stateB": "ChemicalSystem-f8f907d98d7dc2094fbae62d5309f165",
       "mappings": [
         {
           "type": "LigandAtomMappingViz",
@@ -866,417 +1519,190 @@
     },
     {
       "type": "TransformationViz",
-      "gufe-key": "Transformation-3e1a4964122cd154ec9f4e38bcb6f30f",
-      "name": "lig_CHEMBL1089056 to lig_CHEMBL1084115",
+      "gufe-key": "Transformation-af4b50f892640703227abb12564a7489",
+      "name": "lig_CHEMBL1089056 to lig_CHEMBL1088740",
       "protocol": "DummyProtocol-e74b8a34526e7a7a5541d63e9ef511d5",
-      "stateA": "ChemicalSystem-8e3b2f6ba6a188a9d0faf7b19d30fd66",
-      "stateB": "ChemicalSystem-7ec89af7c3209ad101776af52741b15e",
+      "stateA": "ChemicalSystem-9dfcb5e8615ef4f267448a5b559b65dc",
+      "stateB": "ChemicalSystem-a0d3aad5f0b507babcdf998f59674ae8",
       "mappings": [
         {
           "type": "LigandAtomMappingViz",
-          "gufe-key": "LigandAtomMapping-065f5ac4be320be3b39aafdb29a97c09",
-          "name": "lig_CHEMBL1089056 -> lig_CHEMBL1084115",
+          "gufe-key": "LigandAtomMapping-eeab6ec9035c0824865d347e9766a200",
+          "name": "lig_CHEMBL1089056 -> lig_CHEMBL1088740",
           "componentA": "SmallMoleculeComponent-315946379cacd5b9733645eca8b03395",
-          "componentB": "SmallMoleculeComponent-8897bd12da390791eb336503f637bd1f",
+          "componentB": "SmallMoleculeComponent-43794f5c53d871ccf01e39051836b031",
           "componentA_to_componentB": [
             {
-              "index_A": 7,
-              "index_B": 5
+              "index_A": 0,
+              "index_B": 0
             },
             {
-              "index_A": 8,
-              "index_B": 6
-            },
-            {
-              "index_A": 9,
-              "index_B": 7
-            },
-            {
-              "index_A": 10,
-              "index_B": 8
-            },
-            {
-              "index_A": 11,
-              "index_B": 9
-            },
-            {
-              "index_A": 12,
-              "index_B": 10
-            },
-            {
-              "index_A": 13,
-              "index_B": 11
-            },
-            {
-              "index_A": 14,
-              "index_B": 12
-            },
-            {
-              "index_A": 15,
-              "index_B": 13
-            },
-            {
-              "index_A": 16,
-              "index_B": 14
-            },
-            {
-              "index_A": 17,
-              "index_B": 15
-            },
-            {
-              "index_A": 18,
-              "index_B": 16
-            },
-            {
-              "index_A": 19,
-              "index_B": 17
-            },
-            {
-              "index_A": 20,
-              "index_B": 18
-            },
-            {
-              "index_A": 21,
-              "index_B": 19
-            },
-            {
-              "index_A": 22,
-              "index_B": 20
-            },
-            {
-              "index_A": 23,
-              "index_B": 21
-            },
-            {
-              "index_A": 24,
-              "index_B": 22
-            },
-            {
-              "index_A": 25,
-              "index_B": 23
-            },
-            {
-              "index_A": 26,
-              "index_B": 24
-            },
-            {
-              "index_A": 27,
-              "index_B": 25
-            },
-            {
-              "index_A": 28,
-              "index_B": 26
-            },
-            {
-              "index_A": 29,
-              "index_B": 27
-            },
-            {
-              "index_A": 30,
-              "index_B": 28
-            },
-            {
-              "index_A": 31,
-              "index_B": 29
-            },
-            {
-              "index_A": 32,
-              "index_B": 30
-            },
-            {
-              "index_A": 33,
-              "index_B": 31
-            },
-            {
-              "index_A": 34,
-              "index_B": 32
-            },
-            {
-              "index_A": 35,
-              "index_B": 33
-            },
-            {
-              "index_A": 36,
-              "index_B": 34
-            },
-            {
-              "index_A": 37,
-              "index_B": 35
-            },
-            {
-              "index_A": 38,
-              "index_B": 36
-            },
-            {
-              "index_A": 39,
-              "index_B": 37
-            },
-            {
-              "index_A": 40,
-              "index_B": 38
-            },
-            {
-              "index_A": 41,
-              "index_B": 39
-            },
-            {
-              "index_A": 42,
-              "index_B": 40
-            },
-            {
-              "index_A": 43,
-              "index_B": 41
-            },
-            {
-              "index_A": 44,
-              "index_B": 42
-            },
-            {
-              "index_A": 45,
-              "index_B": 43
-            },
-            {
-              "index_A": 46,
-              "index_B": 44
-            }
-          ],
-          "score": 0.03328710836980796,
-          "annotations": {
-            "score": 0.03328710836980796
-          }
-        }
-      ]
-    },
-    {
-      "type": "TransformationViz",
-      "gufe-key": "Transformation-5528a2ff54e9de72486220644d6ceec8",
-      "name": "lig_CHEMBL1078691 to lig_CHEMBL1089056",
-      "protocol": "DummyProtocol-e74b8a34526e7a7a5541d63e9ef511d5",
-      "stateA": "ChemicalSystem-b523fe1b349d425b62aa1ac3952800b2",
-      "stateB": "ChemicalSystem-8e3b2f6ba6a188a9d0faf7b19d30fd66",
-      "mappings": [
-        {
-          "type": "LigandAtomMappingViz",
-          "gufe-key": "LigandAtomMapping-cb2350c3c696f405f5568df5b22b85d8",
-          "name": "lig_CHEMBL1078691 -> lig_CHEMBL1089056",
-          "componentA": "SmallMoleculeComponent-144f801d109d5ad12b585d73e7453a0f",
-          "componentB": "SmallMoleculeComponent-315946379cacd5b9733645eca8b03395",
-          "componentA_to_componentB": [
-            {
-              "index_A": 2,
+              "index_A": 1,
               "index_B": 1
             },
             {
-              "index_A": 3,
-              "index_B": 49
-            },
-            {
-              "index_A": 4,
-              "index_B": 50
-            },
-            {
-              "index_A": 5,
-              "index_B": 47
-            },
-            {
-              "index_A": 6,
-              "index_B": 48
-            },
-            {
-              "index_A": 7,
-              "index_B": 6
-            },
-            {
-              "index_A": 8,
-              "index_B": 7
-            },
-            {
-              "index_A": 9,
-              "index_B": 8
-            },
-            {
-              "index_A": 10,
-              "index_B": 9
-            },
-            {
-              "index_A": 11,
-              "index_B": 10
-            },
-            {
-              "index_A": 12,
-              "index_B": 11
-            },
-            {
-              "index_A": 13,
-              "index_B": 12
-            },
-            {
-              "index_A": 14,
-              "index_B": 13
-            },
-            {
-              "index_A": 15,
-              "index_B": 14
-            },
-            {
-              "index_A": 16,
-              "index_B": 15
-            },
-            {
-              "index_A": 17,
-              "index_B": 16
-            },
-            {
-              "index_A": 18,
-              "index_B": 17
-            },
-            {
-              "index_A": 19,
-              "index_B": 18
-            },
-            {
-              "index_A": 20,
-              "index_B": 19
-            },
-            {
-              "index_A": 21,
-              "index_B": 20
-            },
-            {
-              "index_A": 22,
-              "index_B": 21
-            },
-            {
-              "index_A": 23,
-              "index_B": 22
-            },
-            {
-              "index_A": 24,
-              "index_B": 23
-            },
-            {
-              "index_A": 25,
-              "index_B": 24
-            },
-            {
-              "index_A": 26,
-              "index_B": 25
-            },
-            {
-              "index_A": 27,
-              "index_B": 26
-            },
-            {
-              "index_A": 28,
-              "index_B": 27
-            },
-            {
-              "index_A": 29,
-              "index_B": 28
-            },
-            {
-              "index_A": 30,
-              "index_B": 29
-            },
-            {
-              "index_A": 31,
-              "index_B": 30
-            },
-            {
-              "index_A": 32,
-              "index_B": 31
-            },
-            {
-              "index_A": 33,
-              "index_B": 32
-            },
-            {
-              "index_A": 34,
-              "index_B": 33
-            },
-            {
-              "index_A": 35,
-              "index_B": 34
-            },
-            {
-              "index_A": 36,
-              "index_B": 35
-            },
-            {
-              "index_A": 37,
-              "index_B": 36
-            },
-            {
-              "index_A": 38,
-              "index_B": 37
-            },
-            {
-              "index_A": 39,
-              "index_B": 38
-            },
-            {
-              "index_A": 40,
-              "index_B": 39
-            },
-            {
-              "index_A": 41,
-              "index_B": 40
-            },
-            {
-              "index_A": 42,
-              "index_B": 41
-            },
-            {
-              "index_A": 43,
-              "index_B": 42
-            },
-            {
-              "index_A": 44,
-              "index_B": 43
-            },
-            {
-              "index_A": 45,
-              "index_B": 44
-            },
-            {
-              "index_A": 46,
-              "index_B": 45
-            },
-            {
-              "index_A": 47,
-              "index_B": 46
-            },
-            {
-              "index_A": 48,
-              "index_B": 4
-            },
-            {
-              "index_A": 49,
-              "index_B": 5
-            },
-            {
-              "index_A": 50,
+              "index_A": 2,
               "index_B": 2
             },
             {
-              "index_A": 51,
+              "index_A": 3,
               "index_B": 3
+            },
+            {
+              "index_A": 4,
+              "index_B": 4
+            },
+            {
+              "index_A": 5,
+              "index_B": 5
+            },
+            {
+              "index_A": 6,
+              "index_B": 6
+            },
+            {
+              "index_A": 7,
+              "index_B": 7
+            },
+            {
+              "index_A": 8,
+              "index_B": 8
+            },
+            {
+              "index_A": 9,
+              "index_B": 9
+            },
+            {
+              "index_A": 10,
+              "index_B": 10
+            },
+            {
+              "index_A": 11,
+              "index_B": 11
+            },
+            {
+              "index_A": 12,
+              "index_B": 12
+            },
+            {
+              "index_A": 13,
+              "index_B": 13
+            },
+            {
+              "index_A": 14,
+              "index_B": 14
+            },
+            {
+              "index_A": 15,
+              "index_B": 15
+            },
+            {
+              "index_A": 16,
+              "index_B": 16
+            },
+            {
+              "index_A": 17,
+              "index_B": 17
+            },
+            {
+              "index_A": 30,
+              "index_B": 21
+            },
+            {
+              "index_A": 31,
+              "index_B": 22
+            },
+            {
+              "index_A": 32,
+              "index_B": 23
+            },
+            {
+              "index_A": 33,
+              "index_B": 24
+            },
+            {
+              "index_A": 34,
+              "index_B": 25
+            },
+            {
+              "index_A": 35,
+              "index_B": 26
+            },
+            {
+              "index_A": 36,
+              "index_B": 27
+            },
+            {
+              "index_A": 37,
+              "index_B": 28
+            },
+            {
+              "index_A": 38,
+              "index_B": 29
+            },
+            {
+              "index_A": 39,
+              "index_B": 30
+            },
+            {
+              "index_A": 40,
+              "index_B": 31
+            },
+            {
+              "index_A": 41,
+              "index_B": 32
+            },
+            {
+              "index_A": 42,
+              "index_B": 33
+            },
+            {
+              "index_A": 43,
+              "index_B": 34
+            },
+            {
+              "index_A": 44,
+              "index_B": 35
+            },
+            {
+              "index_A": 45,
+              "index_B": 36
+            },
+            {
+              "index_A": 46,
+              "index_B": 37
+            },
+            {
+              "index_A": 47,
+              "index_B": 38
+            },
+            {
+              "index_A": 48,
+              "index_B": 39
+            },
+            {
+              "index_A": 49,
+              "index_B": 40
+            },
+            {
+              "index_A": 50,
+              "index_B": 41
             }
           ],
-          "score": 0.9048374180359595,
+          "score": 0.7408182206817179,
           "annotations": {
-            "score": 0.9048374180359595
+            "score": 0.7408182206817179
           }
         }
       ]
     },
     {
       "type": "TransformationViz",
-      "gufe-key": "Transformation-c258b0f08b4899bfc987d86d283fb815",
+      "gufe-key": "Transformation-b5ae1b835bb14c3a8e17485229a2a256",
       "name": "lig_CHEMBL1086410 to lig_CHEMBL1086409",
       "protocol": "DummyProtocol-e74b8a34526e7a7a5541d63e9ef511d5",
-      "stateA": "ChemicalSystem-80c9ef06e4ed6089affca6564aab63fb",
-      "stateB": "ChemicalSystem-6f84af90e55e42d6ac7fe51784191ea5",
+      "stateA": "ChemicalSystem-f8f907d98d7dc2094fbae62d5309f165",
+      "stateB": "ChemicalSystem-0578a5d5fe320e4ce71cb3dfe6ebf1d2",
       "mappings": [
         {
           "type": "LigandAtomMappingViz",
@@ -1483,11 +1909,11 @@
     },
     {
       "type": "TransformationViz",
-      "gufe-key": "Transformation-d6b5acd0c4f3eb4ca0e6fa52cd01fecd",
+      "gufe-key": "Transformation-f902b6ddbb87987eacd182ec56e19910",
       "name": "lig_CHEMBL1086410 to lig_CHEMBL1082248",
       "protocol": "DummyProtocol-e74b8a34526e7a7a5541d63e9ef511d5",
-      "stateA": "ChemicalSystem-80c9ef06e4ed6089affca6564aab63fb",
-      "stateB": "ChemicalSystem-fe8afb9b57ac112ebcf1faee1d315d30",
+      "stateA": "ChemicalSystem-f8f907d98d7dc2094fbae62d5309f165",
+      "stateB": "ChemicalSystem-ee164d6d574b91b958db21b60f53a6ba",
       "mappings": [
         {
           "type": "LigandAtomMappingViz",
@@ -1684,432 +2110,6 @@
           "score": 0.5488116360940264,
           "annotations": {
             "score": 0.5488116360940264
-          }
-        }
-      ]
-    },
-    {
-      "type": "TransformationViz",
-      "gufe-key": "Transformation-dbc0ba7ff60479e2ae898869ca6a0558",
-      "name": "lig_CHEMBL1089056 to lig_CHEMBL1086410",
-      "protocol": "DummyProtocol-e74b8a34526e7a7a5541d63e9ef511d5",
-      "stateA": "ChemicalSystem-8e3b2f6ba6a188a9d0faf7b19d30fd66",
-      "stateB": "ChemicalSystem-80c9ef06e4ed6089affca6564aab63fb",
-      "mappings": [
-        {
-          "type": "LigandAtomMappingViz",
-          "gufe-key": "LigandAtomMapping-caba8bb624d1add50c75c5ed259fd88b",
-          "name": "lig_CHEMBL1089056 -> lig_CHEMBL1086410",
-          "componentA": "SmallMoleculeComponent-315946379cacd5b9733645eca8b03395",
-          "componentB": "SmallMoleculeComponent-a9dde068a082697b8843ff7842b09bb5",
-          "componentA_to_componentB": [
-            {
-              "index_A": 0,
-              "index_B": 0
-            },
-            {
-              "index_A": 1,
-              "index_B": 1
-            },
-            {
-              "index_A": 2,
-              "index_B": 57
-            },
-            {
-              "index_A": 3,
-              "index_B": 58
-            },
-            {
-              "index_A": 4,
-              "index_B": 55
-            },
-            {
-              "index_A": 5,
-              "index_B": 56
-            },
-            {
-              "index_A": 6,
-              "index_B": 6
-            },
-            {
-              "index_A": 7,
-              "index_B": 7
-            },
-            {
-              "index_A": 8,
-              "index_B": 8
-            },
-            {
-              "index_A": 9,
-              "index_B": 9
-            },
-            {
-              "index_A": 10,
-              "index_B": 10
-            },
-            {
-              "index_A": 11,
-              "index_B": 11
-            },
-            {
-              "index_A": 12,
-              "index_B": 12
-            },
-            {
-              "index_A": 13,
-              "index_B": 13
-            },
-            {
-              "index_A": 14,
-              "index_B": 14
-            },
-            {
-              "index_A": 15,
-              "index_B": 15
-            },
-            {
-              "index_A": 16,
-              "index_B": 16
-            },
-            {
-              "index_A": 17,
-              "index_B": 17
-            },
-            {
-              "index_A": 18,
-              "index_B": 18
-            },
-            {
-              "index_A": 19,
-              "index_B": 19
-            },
-            {
-              "index_A": 20,
-              "index_B": 20
-            },
-            {
-              "index_A": 21,
-              "index_B": 21
-            },
-            {
-              "index_A": 22,
-              "index_B": 22
-            },
-            {
-              "index_A": 23,
-              "index_B": 23
-            },
-            {
-              "index_A": 24,
-              "index_B": 24
-            },
-            {
-              "index_A": 25,
-              "index_B": 25
-            },
-            {
-              "index_A": 26,
-              "index_B": 26
-            },
-            {
-              "index_A": 27,
-              "index_B": 27
-            },
-            {
-              "index_A": 28,
-              "index_B": 28
-            },
-            {
-              "index_A": 29,
-              "index_B": 29
-            },
-            {
-              "index_A": 30,
-              "index_B": 30
-            },
-            {
-              "index_A": 31,
-              "index_B": 31
-            },
-            {
-              "index_A": 32,
-              "index_B": 32
-            },
-            {
-              "index_A": 33,
-              "index_B": 33
-            },
-            {
-              "index_A": 34,
-              "index_B": 34
-            },
-            {
-              "index_A": 35,
-              "index_B": 35
-            },
-            {
-              "index_A": 36,
-              "index_B": 36
-            },
-            {
-              "index_A": 37,
-              "index_B": 37
-            },
-            {
-              "index_A": 39,
-              "index_B": 47
-            },
-            {
-              "index_A": 40,
-              "index_B": 48
-            },
-            {
-              "index_A": 41,
-              "index_B": 49
-            },
-            {
-              "index_A": 42,
-              "index_B": 50
-            },
-            {
-              "index_A": 43,
-              "index_B": 51
-            },
-            {
-              "index_A": 44,
-              "index_B": 52
-            },
-            {
-              "index_A": 45,
-              "index_B": 53
-            },
-            {
-              "index_A": 46,
-              "index_B": 54
-            },
-            {
-              "index_A": 47,
-              "index_B": 4
-            },
-            {
-              "index_A": 48,
-              "index_B": 5
-            },
-            {
-              "index_A": 49,
-              "index_B": 2
-            },
-            {
-              "index_A": 50,
-              "index_B": 3
-            }
-          ],
-          "score": 0.0740818220681718,
-          "annotations": {
-            "score": 0.0740818220681718
-          }
-        }
-      ]
-    },
-    {
-      "type": "TransformationViz",
-      "gufe-key": "Transformation-ef18390c00fa488789dc9d971ff46696",
-      "name": "lig_CHEMBL1086410 to lig_CHEMBL1077227",
-      "protocol": "DummyProtocol-e74b8a34526e7a7a5541d63e9ef511d5",
-      "stateA": "ChemicalSystem-80c9ef06e4ed6089affca6564aab63fb",
-      "stateB": "ChemicalSystem-c6cb2e4c6d8a67863d3b966c20172e69",
-      "mappings": [
-        {
-          "type": "LigandAtomMappingViz",
-          "gufe-key": "LigandAtomMapping-354cee4fb68f13ed8a9c9b4a49814512",
-          "name": "lig_CHEMBL1086410 -> lig_CHEMBL1077227",
-          "componentA": "SmallMoleculeComponent-a9dde068a082697b8843ff7842b09bb5",
-          "componentB": "SmallMoleculeComponent-33935fcedaef6168b467606c858eb85d",
-          "componentA_to_componentB": [
-            {
-              "index_A": 7,
-              "index_B": 7
-            },
-            {
-              "index_A": 8,
-              "index_B": 8
-            },
-            {
-              "index_A": 9,
-              "index_B": 9
-            },
-            {
-              "index_A": 10,
-              "index_B": 10
-            },
-            {
-              "index_A": 11,
-              "index_B": 11
-            },
-            {
-              "index_A": 12,
-              "index_B": 12
-            },
-            {
-              "index_A": 13,
-              "index_B": 13
-            },
-            {
-              "index_A": 14,
-              "index_B": 14
-            },
-            {
-              "index_A": 15,
-              "index_B": 15
-            },
-            {
-              "index_A": 16,
-              "index_B": 16
-            },
-            {
-              "index_A": 17,
-              "index_B": 17
-            },
-            {
-              "index_A": 18,
-              "index_B": 18
-            },
-            {
-              "index_A": 19,
-              "index_B": 19
-            },
-            {
-              "index_A": 20,
-              "index_B": 20
-            },
-            {
-              "index_A": 21,
-              "index_B": 21
-            },
-            {
-              "index_A": 22,
-              "index_B": 22
-            },
-            {
-              "index_A": 23,
-              "index_B": 23
-            },
-            {
-              "index_A": 24,
-              "index_B": 24
-            },
-            {
-              "index_A": 25,
-              "index_B": 25
-            },
-            {
-              "index_A": 26,
-              "index_B": 26
-            },
-            {
-              "index_A": 27,
-              "index_B": 27
-            },
-            {
-              "index_A": 28,
-              "index_B": 28
-            },
-            {
-              "index_A": 29,
-              "index_B": 29
-            },
-            {
-              "index_A": 30,
-              "index_B": 30
-            },
-            {
-              "index_A": 31,
-              "index_B": 31
-            },
-            {
-              "index_A": 32,
-              "index_B": 32
-            },
-            {
-              "index_A": 33,
-              "index_B": 33
-            },
-            {
-              "index_A": 34,
-              "index_B": 34
-            },
-            {
-              "index_A": 35,
-              "index_B": 35
-            },
-            {
-              "index_A": 36,
-              "index_B": 36
-            },
-            {
-              "index_A": 37,
-              "index_B": 37
-            },
-            {
-              "index_A": 38,
-              "index_B": 38
-            },
-            {
-              "index_A": 39,
-              "index_B": 39
-            },
-            {
-              "index_A": 40,
-              "index_B": 40
-            },
-            {
-              "index_A": 41,
-              "index_B": 41
-            },
-            {
-              "index_A": 42,
-              "index_B": 56
-            },
-            {
-              "index_A": 47,
-              "index_B": 47
-            },
-            {
-              "index_A": 48,
-              "index_B": 48
-            },
-            {
-              "index_A": 49,
-              "index_B": 49
-            },
-            {
-              "index_A": 50,
-              "index_B": 50
-            },
-            {
-              "index_A": 51,
-              "index_B": 51
-            },
-            {
-              "index_A": 52,
-              "index_B": 52
-            },
-            {
-              "index_A": 53,
-              "index_B": 53
-            },
-            {
-              "index_A": 54,
-              "index_B": 54
-            },
-            {
-              "index_A": 59,
-              "index_B": 42
-            }
-          ],
-          "score": 0.02725317930340126,
-          "annotations": {
-            "score": 0.02725317930340126
           }
         }
       ]

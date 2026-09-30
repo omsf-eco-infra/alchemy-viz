@@ -14,7 +14,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import "../src/index.js";
 import { VIEW_STATE_GLOBAL } from "../src/shared/element.js";
 import type { NetworkViewState } from "../src/views/ligand-network.js";
-import { clearFakeEngines, flush, readExample, seedFakeEngines } from "./helpers.js";
+import { clearFakeEngines, flush, readExample, seedFakeEngines, type SeededEnginesResult } from "./helpers.js";
 
 interface NetworkElement extends HTMLElement {
   payload: unknown;
@@ -40,13 +40,43 @@ const edgeHits = (node: HTMLElement): SVGLineElement[] =>
   Array.from(node.querySelectorAll<SVGLineElement>("line[stroke=transparent]"));
 
 describe("a ligand network's view state", () => {
+  let engines: SeededEnginesResult;
+
   beforeEach(() => {
-    seedFakeEngines();
+    engines = seedFakeEngines();
   });
   afterEach(() => {
     clearFakeEngines();
     delete (globalThis as unknown as SeedGlobal)[VIEW_STATE_GLOBAL];
     document.body.replaceChildren();
+  });
+
+  it("does not lay the network out again when the panes are resized", async () => {
+    // Asked for in review: a large network rearranging itself on every window
+    // resize is disruptive, because the arrangement is what the reader has read.
+    const node = await mountNetwork();
+    expect(engines.simulations).toBe(1);
+    const before = node.viewState().nodes;
+
+    const handle = node.querySelector<HTMLElement>('div[style*="col-resize"]')!;
+    handle.setPointerCapture = () => {};
+    handle.releasePointerCapture = () => {};
+    const host = handle.parentElement!;
+    host.getBoundingClientRect = () =>
+      ({ left: 0, top: 0, width: 1000, height: 600, right: 1000, bottom: 600, x: 0, y: 0, toJSON: () => ({}) }) as DOMRect;
+    for (const [type, x] of [
+      ["pointerdown", 500],
+      ["pointermove", 300],
+      ["pointerup", 300],
+    ] as const) {
+      const event = new MouseEvent(type, { bubbles: true, clientX: x, clientY: 0 });
+      Object.defineProperty(event, "pointerId", { value: 1 });
+      handle.dispatchEvent(event);
+    }
+    await flush();
+
+    expect(engines.simulations).toBe(1);
+    expect(node.viewState().nodes).toEqual(before);
   });
 
   it("reports where every ligand is, where the camera is, and what is open", async () => {
@@ -116,38 +146,6 @@ describe("a ligand network's view state", () => {
     expect((await mountNetwork()).viewState().scale).toBe(0.375);
     document.body.replaceChildren();
     expect((await mountNetwork()).viewState().scale).not.toBe(0.375);
-  });
-
-  it("still lays the network out again when a layout is chosen", async () => {
-    // The restored positions are what every redraw uses, so that a resize or the
-    // menu opening does not undo where the reader left the network. Choosing a
-    // layout is the one redraw that *is* asking for a new arrangement, and it
-    // used to be answered with the old one: the seed was overwritten by the
-    // positions it was meant to replace, and the picker was dead for good.
-    seed({
-      nodes: [
-        [11, 12],
-        [21, 22],
-        [31, 32],
-      ],
-      scale: 1,
-      tx: 0,
-      ty: 0,
-      selected: 0,
-    });
-    const node = await mountNetwork();
-    expect(node.querySelector("g.gufe-node")!.getAttribute("transform")).toBe("translate(11,12)");
-
-    const picker = node.querySelector<HTMLSelectElement>("select")!;
-    picker.value = "Circular";
-    picker.dispatchEvent(new Event("change"));
-    await flush();
-
-    const placed = Array.from(node.querySelectorAll<SVGGElement>("g.gufe-node")).map((g) =>
-      g.getAttribute("transform"),
-    );
-    expect(placed[0]).not.toBe("translate(11,12)");
-    expect(new Set(placed).size).toBe(3);
   });
 
   it("ignores state that does not match the network on screen", async () => {

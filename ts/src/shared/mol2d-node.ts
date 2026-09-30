@@ -17,7 +17,7 @@
  * shape of its own nodes - so it draws its own plate and this drops RDKit's.
  *
  * Which rect that is depends on how the depiction was asked for: white when it
- * was drawn for paper, and fully transparent when `depict-theme.ts` asked for no
+ * was drawn for paper, and fully transparent when `mol2d-theme.ts` asked for no
  * background at all. Both are dropped, so a build that ignored the option and a
  * build that honoured it leave the same thing behind.
  */

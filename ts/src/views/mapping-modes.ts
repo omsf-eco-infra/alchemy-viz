@@ -28,7 +28,7 @@
  * are taught, so both modes follow gufe. See `shared/atom-colors.ts`.
  *
  * They follow it through one call rather than two implementations: `markGroups`
- * in `shared/depict-style.ts` says which atoms are marked and in what colour,
+ * in `shared/mol2d-style.ts` says which atoms are marked and in what colour,
  * and `render2D` and `renderColored` both ask it. Someone looking at a mapping
  * flat and then in space is looking at one claim drawn twice, so the two must
  * not be able to disagree about a single atom.
@@ -40,11 +40,11 @@ import { loadRDKit, type RDKitModule } from "../shared/engines.js";
 import { centredMessage, statChip } from "../shared/panels.js";
 import type { Vec3 } from "../shared/kabsch.js";
 import { placeDepiction, type Molecule } from "../shared/sdf.js";
-import { layoutPair } from "../shared/depict-layout.js";
-import { depictGround } from "../shared/depict-theme.js";
+import { layoutPair } from "../shared/mol2d-layout.js";
+import { mol2dGround } from "../shared/mol2d-theme.js";
 import {
-  DEPICT_STYLE,
-  depictStyledSVG,
+  MOL2D_STYLE,
+  mol2dStyledSVG,
   depictionDetails,
   effectiveMarkStyle,
   markGroups,
@@ -52,7 +52,7 @@ import {
   postProcessDepiction,
   threeDmolColor,
   type Side,
-} from "../shared/depict-style.js";
+} from "../shared/mol2d-style.js";
 import { MOL } from "../shared/molecule-colors.js";
 import {
   CHIP,
@@ -71,7 +71,7 @@ import { pairColour, openfeShift, relations } from "./atom-mapping.js";
 import type { MappingStage } from "./mapping-stage.js";
 import type { LigandAtomMappingViz } from "../schema/types.js";
 
-const DEPICT_SIZE = 420;
+const MOL2D_SIZE = 420;
 
 /**
  * Sizes, all of them the prototype's.
@@ -123,9 +123,9 @@ const OPENFE = {
  */
 const RELATION_COLOR: Record<RelationKind, string | null> = {
   mapped: null,
-  element: DEPICT_STYLE.modifiedColor,
-  uniqueA: DEPICT_STYLE.destroyedColor,
-  uniqueB: DEPICT_STYLE.createdColor,
+  element: MOL2D_STYLE.modifiedColor,
+  uniqueA: MOL2D_STYLE.destroyedColor,
+  uniqueB: MOL2D_STYLE.createdColor,
 };
 
 /** Narrowest a correspondence column may be, in pixels: about `123 Cl -> 123 Cl`. */
@@ -177,7 +177,7 @@ function sidesOf(pair: MappedPair): {
   side: Side;
   custom: ReadonlySet<number>;
 }[] {
-  const custom = parseAtomSpec(DEPICT_STYLE.customSpec);
+  const custom = parseAtomSpec(MOL2D_STYLE.customSpec);
   return [
     { mol: pair.molA, uniques: pair.uniquesA, side: "left" as Side, custom: custom.left },
     { mol: pair.molB, uniques: pair.uniquesB, side: "right" as Side, custom: custom.right },
@@ -216,7 +216,7 @@ export function renderPlain(stage: MappingStage, pair: MappedPair): void {
  * atom simply swells and takes the colour.
  */
 export function renderColored(stage: MappingStage, pair: MappedPair): void {
-  const style = DEPICT_STYLE;
+  const style = MOL2D_STYLE;
   const mol = MOL();
   for (const side of sidesOf(pair)) {
     const box = stage.box(side.mol.name);
@@ -393,18 +393,18 @@ export function renderLines(stage: MappingStage, pair: MappedPair): void {
  * not follow the prototype.
  *
  * *How* those atoms are drawn is not decided here at all. It is one JSON
- * document, `shared/depict-style.ts`, authored by hand in the editor that file
+ * document, `shared/mol2d-style.ts`, authored by hand in the editor that file
  * links to and compiled into this bundle. At its defaults it draws what gufe
  * draws.
  */
 export function render2D(stage: MappingStage, pair: MappedPair): void {
-  const style = DEPICT_STYLE;
+  const style = MOL2D_STYLE;
   const targets = sidesOf(pair).map((side) => {
     const wrap = el("div", "flex:1;display:flex;flex-direction:column;position:relative;min-height:0;");
     const box = el(
       "div",
       "flex:1;min-height:0;display:flex;align-items:center;justify-content:center;padding:8px;" +
-        `background:${depictGround()};`,
+        `background:${mol2dGround()};`,
     );
     box.appendChild(centredMessage("Loading 2D depiction..."));
     wrap.appendChild(box);
@@ -426,14 +426,14 @@ export function render2D(stage: MappingStage, pair: MappedPair): void {
       const laid = layoutPair(RDKit, pair.from.sdf, pair.to.sdf, style.layout, style.alignPair ? pair.pairs : null);
       for (const { box, side } of targets) {
         const groups = markGroups(style, side.mol, side.uniques, side.side);
-        const details = depictionDetails(style, DEPICT_SIZE, groups, side.custom, markStyle, side.mol.symbols.length);
-        const drawn = depictStyledSVG(RDKit, side.side === "left" ? laid.left : laid.right, DEPICT_SIZE, details);
+        const details = depictionDetails(style, MOL2D_SIZE, groups, side.custom, markStyle, side.mol.symbols.length);
+        const drawn = mol2dStyledSVG(RDKit, side.side === "left" ? laid.left : laid.right, MOL2D_SIZE, details);
         box.replaceChildren();
         if (!drawn) {
           box.appendChild(centredMessage("Failed to parse molecule", true));
           continue;
         }
-        placeDepiction(box, drawn, DEPICT_SIZE);
+        placeDepiction(box, drawn, MOL2D_SIZE);
         // After it is in the document: the post-processing reads the styles
         // RDKit set on each element, which needs the elements to be real.
         const svg = box.querySelector("svg");
@@ -512,9 +512,9 @@ export function renderInfo(stage: MappingStage, pair: MappedPair, payload: Ligan
   };
 
   filterChip("mapped atoms", pairs.size, ["mapped", "element"]);
-  filterChip("element changes", uniquesA.elements.length, ["element"], DEPICT_STYLE.modifiedColor);
-  filterChip(`unique to ${nameA}`, uniquesA.atoms.length, ["uniqueA"], DEPICT_STYLE.destroyedColor);
-  filterChip(`unique to ${nameB}`, uniquesB.atoms.length, ["uniqueB"], DEPICT_STYLE.createdColor);
+  filterChip("element changes", uniquesA.elements.length, ["element"], MOL2D_STYLE.modifiedColor);
+  filterChip(`unique to ${nameA}`, uniquesA.atoms.length, ["uniqueA"], MOL2D_STYLE.destroyedColor);
+  filterChip(`unique to ${nameB}`, uniquesB.atoms.length, ["uniqueB"], MOL2D_STYLE.createdColor);
   plainChip(`atoms in ${nameA}`, String(molA.symbols.length));
   plainChip(`atoms in ${nameB}`, String(molB.symbols.length));
   plainChip("score", payload.score == null ? NO_VALUE : payload.score.toFixed(3));

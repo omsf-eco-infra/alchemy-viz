@@ -352,7 +352,7 @@ export function seedFakeEngines(options: SeedOptions = {}): SeededEnginesResult 
   _resetEnginesForTests();
   // `brokenD3` seeds an object with no `forceSimulation` on it - which is what
   // the view sees when the CDN is unreachable, and never a real fetch.
-  globalThis.__gufeEngines = { threeDmol, rdkit, d3: options.brokenD3 ? {} : makeFakeD3(result) };
+  globalThis.__gufeEngines = { threeDmol, rdkit, d3Force: options.brokenD3 ? {} : makeFakeD3(result) };
   return result;
 }
 

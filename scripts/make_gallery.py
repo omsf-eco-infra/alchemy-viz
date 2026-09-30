@@ -69,7 +69,7 @@ NOTES = {
         "contract is not inheritance on the other, so both sides say it separately."
     ),
     "solvated_pdb": "`SolvatedPDBComponentViz`, dispatched to the same element for the same reason.",
-    "ligand_network": "Radial graph of the ligands, with the selected edge's atom mapping on the right.",
+    "ligand_network": "Force-directed graph of the ligands, with the selected edge's atom mapping on the right.",
     "ligand_network_named": "The same network with the ligands named, so labels replace gufe keys.",
     "ligand_network_medium": (
         "Ten TYK2 ligands and the nine mappings OpenFE's RBFE tutorial plans between them: a real "
@@ -121,13 +121,36 @@ NOTES = {
     ),
     "alchemical_network_medium": (
         "The same ten TYK2 ligands as a binding campaign: every mapping becomes two transformations, "
-        "a solvent leg and a complex leg, so the graph is two components rather than one. The complex "
-        "leg's systems each carry the TYK2 protein, which the registry holds once for all ten."
+        "a solvent leg and a complex leg, and every ligand two chemical systems. The picture is the "
+        "ligand map it was planned as - one box per ligand and one line per pair, with the legs "
+        "behind them: a box lists the components of all of its legs at once, and a line opens on "
+        "one of its transformations with the others a tab away. The complex leg's systems each "
+        "carry the TYK2 protein, which the registry holds once for all ten."
     ),
     "alchemical_network_large": (
         "The two-hundred-ligand graph one layer up from `ligand_network_large`, with the same 594 "
         "edges - the level-of-detail rule seen on the alchemical view at the size it was written for. "
         "**The mappings are synthetic**, as they are in the ligand view of the same graph."
+    ),
+    "alchemical_network_absolute": (
+        "Absolute rather than relative: every transformation decouples one ligand from water, so "
+        "none of them carries an atom mapping and they all end at the same reference state - a "
+        "chemical system with no ligand in it, which is why the graph is a star. Clicking an edge "
+        "shows the ligand it removes where a relative edge would show its mapping."
+    ),
+    "alchemical_network_mixed": (
+        "Both kinds in one campaign, which is what a planner produces when part of a series can be "
+        "mapped onto itself and part of it cannot: four TYK2 mappings run in both legs, and two of "
+        "the ligands are anchored by an absolute transformation into the apo protein. The apo "
+        "system is the one box carrying no ligand, and so the one with nothing drawn in it."
+    ),
+    "alchemical_network_protocols": (
+        "The TYK2 campaign run under three protocols, which is the one thing a network names per "
+        "transformation and every other fixture here keeps constant: seven mappings under hybrid "
+        "topology in both legs, two rerun by non-equilibrium cycling, and two ligands anchored by "
+        "an absolute transformation that neither relative protocol could run. A chip per protocol "
+        "rather than a count, and picking one colours the lines it runs - which is the question "
+        "twenty lines drawn alike cannot answer."
     ),
     "chemical_system": (
         "The system's components down the left, the selected one drawn on the right in whichever "
@@ -146,7 +169,9 @@ NOTES = {
         "from `ligand_network_docked`, in the site they were docked into. They are the busiest "
         "ligand of that network and the five partners it overlaps best, so this is what an edge of "
         "that graph looks like in three dimensions. Nothing here arranges them - the poses and the "
-        "kinase arrive in one frame and no coordinate is touched."
+        "kinase arrive in one frame and no coordinate is touched. The scene opens on the first pose "
+        "alone, because six overlaid molecules in the same element colours are a thicket rather "
+        "than a site; the eye beside each ligand in the strip is what puts the others in."
     ),
     "solvent": (
         "A solvent component is a specification rather than a structure, so its view is a settings "
@@ -278,29 +303,30 @@ Every view alchemy-viz draws today, as a picture.
 > notebook shows a blank under every cell there. `image/png` is the one output
 > type that survives.
 >
-> **To run the real thing**, open
-> [`alchemy-viz-demo.ipynb`](./alchemy-viz-demo.ipynb) - every payload type, every
-> delivery mode, the live gufe objects and the byte costs:
->
-> ```
-> pixi run notebook     # JupyterLab
-> pixi run marimo       # the same notebook, in marimo
-> ```
-
-**Using OpenFE?** These pictures are of committed example payloads, which is not
-how you will call this. Your own objects go in directly - `view(network)`,
-`view(campaign)` - because openfe re-exports gufe's classes rather than defining
-its own, so there is no conversion step. The demo notebook opens on one view and
-then on that path: a `network_setup/` directory from `openfe plan-rbfe-network`,
-the same thing planned in Python, and the shell equivalent. See
-[**Your own objects**](./alchemy-viz-demo.ipynb).
->
 > **You can run this one too.** Its cells hold the real `view()` call, so
 > running it replaces each screenshot with the live, interactive view - a good
 > way to check that a picture is honest. Just do not commit the result: that
 > strips out the pictures this file exists to carry. `pixi run gallery`
 > regenerates them, and is what to run whenever you change what a view draws.
 > [`README.md`](./README.md) is the full note.
+
+**Using OpenFE?** These pictures are of committed example payloads, which is not
+how you will call this. Your own objects go in directly - `view(network)`,
+`view(campaign)` - because openfe re-exports gufe's classes rather than defining
+its own, so there is no conversion step.
+[`docs/openfe.md`](../../docs/openfe.md) is that path: the `network_setup/`
+directory `openfe plan-rbfe-network` writes, the same campaign planned in Python,
+and where `view()` goes in the sequence. [`docs/cli.md`](../../docs/cli.md) is the
+shell equivalent, which needs no notebook at all.
+
+The interactive version of this file is
+[`alchemy-viz-demo.ipynb`](./alchemy-viz-demo.ipynb), ten cells on what a notebook
+cell gets:
+
+```
+pixi run notebook     # JupyterLab
+pixi run marimo       # the same notebook, in marimo
+```
 
 Every payload type the schema declares is drawn, so what follows is the whole of
 what alchemy-viz can show. Where two types share an element - the three PDB kinds,

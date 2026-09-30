@@ -24,12 +24,15 @@ Run one vitest file with `npx vitest run ts/tests/<name>.test.ts`.
 They are large enough to cost more context than they can repay. Use `head`,
 `jq`, or `grep` if you need a fact from one.
 
-- `examples/ligand_network_docked.json` (2.4M),
+- `examples/ligand_network_docked.json` (2.9M),
   `alchemical_network_large.json` (1.9M), `ligand_network_large.json` (1.4M),
-  `alchemical_network_medium.json` (511K), `chemical_system_ensemble.json`
-  (433K), `chemical_system_complex.json` (398K), `protein.json` (217K)
+  `alchemical_network_protocols.json` (513K),
+  `alchemical_network_medium.json` (511K), `alchemical_network_mixed.json`
+  (448K), `alchemical_network_septop.json` (445K),
+  `chemical_system_ensemble.json` (433K),
+  `chemical_system_complex.json` (398K), `protein.json` (217K)
 - `scripts/data/jak2_docked_poses.sdf` (1.4M), `jak2_protein.pdb` (389K),
-  `jak2_network_edges.json` (133K), `tyk2_protein.pdb`, `large_network.sdf`
+  `jak2_network_edges.json` (191K), `tyk2_protein.pdb`, `large_network.sdf`
   (~400K each)
 - `python/alchemy_viz/_assets/alchemy-viz.js` (~400K, generated)
 - `scratch/` is scratch, not part of the project
@@ -61,7 +64,15 @@ Edit the source, then run the command.
 - the atom mapping is three files, not one: `atom-mapping.ts` is the element and
   the facts `preparePair` works out, `mapping-modes.ts` the six ways of drawing
   them, `mapping-stage.ts` the boxes and the viewer lifecycle
+- the alchemical network draws a box per ligand rather than a node per chemical
+  system: `alchemical-legs.ts` is the collapsing (which systems are one ligand,
+  what a leg is and what it is called), `alchemical-network.ts` the drawing
 - Python page/notebook plumbing: `html.py`, `notebook.py`, `cli.py`
+- user-facing prose: `docs/` - one page per way of calling this (`cli.md`,
+  `openfe.md`, `notebooks.md`, `views.md`, `embedding.md`,
+  `troubleshooting.md`). `README.md` is the overview and the contributor
+  setup; `examples/notebooks/` is only what a notebook cell does. A new view
+  needs a row in `docs/views.md`, which CI does not check
 - a framejs frame: `.claude/skills/framejs-alchemy-viz/` - by default a frame
   loads the built bundle from jsDelivr and mounts `<alchemy-view>`
 

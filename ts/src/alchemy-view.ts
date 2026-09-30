@@ -17,6 +17,10 @@
  * not an object, a type with no view, a missing required field - becomes a panel
  * that names what happened and where.
  *
+ * A `source` attribute, if the page carries one, names the file the payload was
+ * generated from and is handed to the mounted view, which draws it beside its
+ * title. See `shared/source.ts`.
+ *
  * When the debug switch is on (`?debug` in the URL, a `debug` attribute on the
  * element, or `window.ALCHEMY_VIZ_DEBUG`) the payload is also printed to the
  * console verbatim, before it is validated. That is the answer to "what JSON did
@@ -26,6 +30,7 @@
 import { el } from "./shared/dom.js";
 import { centredMessage } from "./shared/panels.js";
 import { logPayload } from "./shared/debug.js";
+import { SOURCE_ATTRIBUTE, sourceName } from "./shared/source.js";
 import {
   defineElement,
   AlchemyElement,
@@ -140,6 +145,11 @@ export class AlchemyView extends AlchemyElement<unknown> {
       payload?: unknown;
     };
     child.style.cssText = "flex:1;min-height:0;min-width:0;";
+    // Handed on rather than looked up by the view: a view then reads the file
+    // it is drawing off its own element, and nothing has to know it might be
+    // nested inside a dispatcher. See `shared/source.ts`.
+    const source = sourceName(this);
+    if (source) child.setAttribute(SOURCE_ATTRIBUTE, source);
     // Set the payload before connecting: the element renders in
     // `connectedCallback`, so this makes it a single render rather than a
     // placeholder that is immediately replaced.

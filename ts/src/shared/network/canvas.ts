@@ -228,6 +228,16 @@ export function visibleAt<N extends { x: number; y: number }>(
 export interface DetailPane {
   /** Point the pane at a payload. */
   show(payload: unknown): void;
+  /**
+   * Put the view's own DOM there instead of a payload.
+   *
+   * For what the pane has to show that is not one gufe object: an alchemical
+   * network's protocols are registry entries with a share of the network each,
+   * and a list of them is a list rather than something `VIEW_TAGS` has an
+   * element for. Mounting it unmounts the nested view, which is what releases
+   * whatever that view had built.
+   */
+  content(node: HTMLElement): void;
   /** Put a sentence there instead of a view. */
   message(text: string): void;
   cleanup(): void;
@@ -263,6 +273,9 @@ export function detailPane(host: HTMLElement): DetailPane {
       // already mounted would disconnect and reconnect it, which for these
       // elements means tearing down a viewer and building it again.
       if (child.parentNode !== body) body.replaceChildren(child);
+    },
+    content(node: HTMLElement): void {
+      body.replaceChildren(node);
     },
     message(text: string): void {
       body.replaceChildren(centredMessage(text));

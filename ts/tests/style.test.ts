@@ -150,10 +150,45 @@ describe("theme.ts", () => {
     expect(contrast(netNodeStroke, netCanvasBg)).toBeGreaterThan(contrast(cardBorder, netCanvasBg));
   });
 
+  it("keeps the edge selection colour off the score ramp, in both themes", () => {
+    // An edge says its score in its width and its colour. A selection drawn in
+    // a ramp colour says it a third time, wrongly: the worst mapping in a
+    // network, once clicked, used to be the widest and bluest line on the
+    // canvas. The outline has to be legible against the ground it is drawn on
+    // and unlike anything the ramp can produce.
+    for (const [name, theme] of Object.entries(THEMES)) {
+      const [low, high] = theme.netEdgeRamp;
+      expect([low, high, theme.netHaloColor], `${name} outlines a selection in a score colour`).not.toContain(
+        theme.netEdgeSelect,
+      );
+      // 3:1 is the floor for a graphic that has to be seen rather than read,
+      // and the rails are hairlines: below it the bracket is a smudge.
+      expect(contrast(theme.netEdgeSelect, theme.netCanvasBg), `${name} hides the selection rails`).toBeGreaterThan(3);
+      // `high` is the brightest thing the ramp can draw, and is named here so
+      // this fails if the ramp is ever changed to the selection colour.
+      expect(high, `${name} draws a score in the selection colour`).not.toBe(theme.netEdgeSelect);
+    }
+  });
+
   it("holds no chemical colour", () => {
     const text = readFileSync(join(SRC, "shared", "theme.ts"), "utf-8");
     for (const key of ["colorCore", "colorUnique", "linesMol", "overlayMol", "linesDash"]) {
       expect(text, `theme.ts still holds ${key}`).not.toContain(key);
+    }
+  });
+});
+
+describe("the protocol palette", () => {
+  it("carries ten distinct colours in both themes, none of them the resting stroke", () => {
+    // A campaign that ran a protocol per leg across five targets names ten, and
+    // the chip row puts all ten side by side: two chips the same colour say
+    // those protocols are one. The tenth is also a lens on the canvas, so none
+    // of them may be the colour an unlit line is already drawn in.
+    for (const [name, theme] of Object.entries(THEMES)) {
+      const palette = theme.netProtocolStroke;
+      expect(palette.length, `${name} has fewer than ten protocol colours`).toBeGreaterThanOrEqual(10);
+      expect(new Set(palette).size, `${name} repeats a protocol colour`).toBe(palette.length);
+      expect(palette, `${name} draws a lens in the resting stroke`).not.toContain(theme.netEdgeLine);
     }
   });
 });

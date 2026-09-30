@@ -22,7 +22,7 @@ import { mount } from "./mount.js";
 import { withDebugFlag } from "../shared/debug.js";
 import { errText } from "../shared/dom.js";
 import { MAPPING_COLORS } from "../shared/atom-colors.js";
-import { depictGround, setDarkDepictions } from "../shared/depict-theme.js";
+import { mol2dGround, setDarkDepictions } from "../shared/mol2d-theme.js";
 import { V } from "../shared/theme.js";
 
 /** gufe's drawings, if they have been generated. */
@@ -50,7 +50,7 @@ function panel(title: string, note: string): { wrap: HTMLElement; body: HTMLElem
   wrap.appendChild(bar);
 
   const body = document.createElement("div");
-  body.style.cssText = `flex:1;min-height:0;display:flex;background:${depictGround()};`;
+  body.style.cssText = `flex:1;min-height:0;display:flex;background:${mol2dGround()};`;
   wrap.appendChild(body);
   return { wrap, body };
 }

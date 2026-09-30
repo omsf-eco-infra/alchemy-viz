@@ -13,20 +13,21 @@
  * edge opens `<gufe-atom-mapping>`, a node opens `<gufe-small-molecule>`. Which
  * is open is the `Selection` below, and it is saved with the view.
  *
- * d3 is used for one thing: the force layout. Zoom, pan, drag, the colour ramp
- * and the SVG itself are plain DOM, so a network still draws when d3 cannot be
- * fetched - it falls back to the circular layout and says why.
+ * d3 is used for one thing: the force layout, which is the only arrangement
+ * this view draws. Zoom, pan, drag, the colour ramp and the SVG itself are
+ * plain DOM, so a network still draws when d3 cannot be fetched - it keeps the
+ * ring the nodes were seeded on and says why.
  */
 
 import { el, esc, truncate } from "../shared/dom.js";
-import { dropdown } from "../shared/controls.js";
 import { centredMessage, floatingWarning, headerStrip, statChip } from "../shared/panels.js";
+import { sourceName } from "../shared/source.js";
 import { chromeMenu, orientMenuPanel, splitter } from "../shared/chrome.js";
 import { framejsMenuItem } from "../shared/framejs.js";
 import { defineElement, generations, AlchemyElement, seededViewState, type ViewHandle } from "../shared/element.js";
-import { choice, flag, num, type Setting } from "../shared/settings.js";
+import { flag, num, type Setting } from "../shared/settings.js";
 import { svg } from "../shared/svg.js";
-import { resetControl } from "../shared/interact.js";
+import { floatingReset } from "../shared/interact.js";
 import { extentOf, sceneCamera, type Camera } from "../shared/camera.js";
 import { withoutLayout } from "../shared/layout.js";
 import { optionalRDKit, type RDKitModule } from "../shared/engines.js";
@@ -41,13 +42,13 @@ import {
   visibleAt,
   type DetailPane,
 } from "../shared/network/canvas.js";
-import { DEPICT_STYLE, rgbTriple } from "../shared/depict-style.js";
-import { depictSVG } from "../shared/sdf.js";
+import { MOL2D_STYLE, rgbTriple } from "../shared/mol2d-style.js";
+import { mol2dSVG } from "../shared/sdf.js";
 import { chargeChange, chargeLabel } from "../shared/charge.js";
-import { depictThemeOptions, nodeCardCaption, nodeCardGround } from "../shared/depict-theme.js";
-import { mountDepiction } from "../shared/depict-node.js";
+import { mol2dThemeOptions, nodeCardCaption, nodeCardGround } from "../shared/mol2d-theme.js";
+import { mountDepiction } from "../shared/mol2d-node.js";
 import { createMatcher, type MatchOutcome } from "../shared/smarts.js";
-import { FONT, SPACE, TOOLBAR, TOOLTIP, WEIGHT } from "../shared/style.js";
+import { FONT, SPACE, TOOLTIP, WEIGHT } from "../shared/style.js";
 import { T, V } from "../shared/theme.js";
 import { buildRegistry, entryLabel, type RegistryIndex } from "../schema/registry.js";
 import { mappingPayloadFor } from "./atom-mapping.js";
@@ -93,9 +94,6 @@ interface NetEdge extends LigandAtomMappingViz {
   from: NetNode;
   to: NetNode;
 }
-
-const LAYOUTS = ["Force-directed", "Circular", "Radial"] as const;
-type Layout = (typeof LAYOUTS)[number];
 
 // --- restoring a view ------------------------------------------------------
 //
@@ -247,10 +245,10 @@ const CHARGE_BADGE = {
   bigFontSize: 30,
 };
 const CHARGE_DASH = "6 4";
-const DEPICT_SIZE = 200;
+const MOL2D_SIZE = 200;
 
 /** How much clear ground is left between the structure's square and the ring. */
-const DEPICT_PADDING = 2;
+const MOL2D_PADDING = 2;
 
 /**
  * The square a structure is drawn in, inside a round node.
@@ -263,9 +261,9 @@ const DEPICT_PADDING = 2;
  * long one only reaches the sides, where the circle is widest.
  *
  * RDKit's own margin inside the box is on top of this, so the clearance a reader
- * sees is a little more than `DEPICT_PADDING` rather than exactly it.
+ * sees is a little more than `MOL2D_PADDING` rather than exactly it.
  */
-const DEPICT_FIT = Math.SQRT2 * (NODE_RADIUS - DEPICT_PADDING);
+const MOL2D_FIT = Math.SQRT2 * (NODE_RADIUS - MOL2D_PADDING);
 const LABEL_MAX_CHARS = 14;
 const INITIALS_SIZE = 18;
 
@@ -293,7 +291,7 @@ const CAPTION = {
  * crossing the threshold changes what is inside a node and not how big it is.
  * What it is for is clearing the way: without it a structure is drawn over the
  * styled disc and has the network's own edges running through it. Which colour
- * that is comes from `depict-theme.ts`, along with the palette the structure on
+ * that is comes from `mol2d-theme.ts`, along with the palette the structure on
  * it is drawn in, because a plate and its ink are one decision.
  *
  * It carries the node's ring too, in `NODE_STROKE`, which is the styled disc's
@@ -335,8 +333,28 @@ const MATCH_ATOM_RADIUS = 0.4;
  */
 const matchRgb = (): [number, number, number] => rgbTriple(T.netMatchAtom);
 
-/** The selection halo, sized from the edge or the node it sits under. */
+/** The selection halo around a node, sized from the node it sits under. */
 const HALO = { padding: 4, opacity: 0.95 };
+
+/**
+ * The two rails that mark the selected edge.
+ *
+ * An edge says its score twice - in its width and in its colour - and a
+ * selection drawn in either of those channels overwrites it. The old halo was
+ * four pixels of the ramp's own top colour each side, which against a 1.5px
+ * edge meant a selected mapping of 0.00 drew wider and bluer than an unselected
+ * 1.00: the picture said "best mapping here" about the worst one.
+ *
+ * So the selection is drawn as shape rather than as weight: a thin pink rail
+ * either side of the edge, held off it by `gap` so that the edge's own colour
+ * and width run between them untouched. Two hairlines and a channel of canvas
+ * read as a bracket around the line, which nothing in the ramp can imitate.
+ *
+ * It is two lines under the edge rather than two rails drawn separately: the
+ * outer one is `netEdgeSelect`, and the inner one is the canvas covering the
+ * middle of it, which is what leaves a rail showing either side.
+ */
+const EDGE_SELECT = { gap: 2, rail: 1, opacity: 1 };
 
 /**
  * One zoom level: everything the network draws differently at that distance.
@@ -438,11 +456,21 @@ const FORCE = {
   linkScoreBonus: 90,
   linkStrength: 0.45,
   // Repulsion is local rather than the width of the graph. Reaching further
-  // does not move neighbours apart - collision already decides that - it only
-  // inflates the whole layout, and a graph spread over thousands of units is
-  // one that is both too small to read as a whole and too crowded to read up
-  // close.
-  chargeStrength: -900,
+  // does not move neighbours apart, it only inflates the whole layout, and a
+  // graph spread over thousands of units is one that is both too small to read
+  // as a whole and too crowded to read up close. `chargeDistanceMax` is what
+  // holds that line, and widening it past this buys nothing measurable.
+  //
+  // What does move neighbours apart is the strength inside that range, and
+  // collision alone is not enough of it: a ligand only ever pushed at the
+  // moment its circle touches another settles hard against that contact, which
+  // leaves a knot of ligands at arm's length from each other and the mappings
+  // between them crossing over and running under circles they have nothing to
+  // do with. Repulsion that is already firm before anything touches is what
+  // spreads a crowded neighbourhood out enough to follow a line through it.
+  // Past roughly this the layout stops untangling and only grows, framing every
+  // ligand smaller for no clearer a picture.
+  chargeStrength: -2400,
   chargeDistanceMin: 20,
   chargeDistanceMax: 900,
   centerStrength: 0.08,
@@ -658,7 +686,7 @@ function levelOfDetail(parts: DetailParts): {
    * element colours are what a reader picks a ligand out by. On a dark page
    * these are the dark ones, which is the page on which `PLATE` is dark.
    */
-  const depictOptions = depictThemeOptions("cpk");
+  const mol2dOptions = mol2dThemeOptions("cpk");
   const matchColor = matchRgb();
 
   /** The match a structure was drawn against, so a new one knows what to redraw. */
@@ -670,13 +698,13 @@ function levelOfDetail(parts: DetailParts): {
     const atoms = parts.matched().get(index);
     const drawn =
       node.sdf &&
-      depictSVG(
+      mol2dSVG(
         RDKit,
         node.sdf,
-        DEPICT_SIZE,
-        DEPICT_STYLE.layout,
+        MOL2D_SIZE,
+        MOL2D_STYLE.layout,
         atoms && { atoms, color: matchColor, radius: MATCH_ATOM_RADIUS },
-        depictOptions,
+        mol2dOptions,
       );
     if (!drawn) {
       depictions.refused(index);
@@ -685,7 +713,7 @@ function levelOfDetail(parts: DetailParts): {
     // The ground RDKit draws behind a structure is dropped on the way in, and
     // `PLATE`'s disc is what this view puts there instead: round, and exactly
     // the size of the node rather than of the square the depiction was drawn in.
-    if (!mountDepiction(parts.depictionGroups[index], drawn, DEPICT_SIZE, DEPICT_FIT)) {
+    if (!mountDepiction(parts.depictionGroups[index], drawn, MOL2D_SIZE, MOL2D_FIT)) {
       depictions.refused(index);
       return;
     }
@@ -859,17 +887,29 @@ interface MenuParts {
   refresh(): void;
   /** Bring one ligand into view and select it. */
   focus(index: number): void;
+  /** Bring one mapping into view and open it. */
+  focusEdge(index: number): void;
   selected: Set<string>;
   filter: { minScore: number };
   query: { text: string };
+  /**
+   * The mapping-score threshold: where it is kept across reloads, and where the
+   * slider hands back the way to put it at zero.
+   *
+   * The view owns the setting rather than the menu because the reset over the
+   * canvas clears the threshold as well as the camera, and it has to do that
+   * before anyone has opened the menu - the slider is only built on the first
+   * open, so it registers itself once it exists.
+   */
+  score: { setting: Setting<number>; onReset(reset: () => void): void };
   /** Colour the ligands containing a substructure. Nothing is hidden by it. */
   match(smarts: string): Promise<MatchOutcome>;
 }
 
 /**
- * The network's menu: search, the ligand list, and the score filter.
+ * The network's menu: search, the two lists, and the score filter.
  *
- * The skeleton - search, SMARTS box, count, list, hint, export, clear - is
+ * The skeleton - tabs, search, SMARTS box, count, list, hint, copy, clear - is
  * `networkMenu`, which the alchemical network builds its menu from too. What is
  * here is what a *ligand* network's menu is: it searches names, SMILES and gufe
  * keys, it filters on mapping score, and its rows carry no mark because a node
@@ -877,19 +917,40 @@ interface MenuParts {
  *
  * The score filter is the one control the other view has no equivalent of. A
  * ligand network's edges carry a score and hiding the poor ones is the question
- * people ask of it; an alchemical network has legs instead.
+ * people ask of it; an alchemical network has legs instead. It reaches both
+ * lists, which is where a threshold on edges can say what it left: on the canvas
+ * a dimmed line is still a line, and here the mapping's row is gone and so is
+ * any ligand left with no mapping above the threshold.
  */
+/**
+ * Does this ligand still have a mapping at or above the threshold?
+ *
+ * What the score filter means for the ligand list. The canvas keeps every
+ * ligand on it whatever the threshold - a disc with no lines left is itself the
+ * answer to "what did that cut" - so this is the list's own rule, not a shared
+ * one.
+ */
+function mappedAbove(node: NetNode, edges: readonly NetEdge[], minScore: number): boolean {
+  const key = node["gufe-key"];
+  return edges.some(
+    (edge) =>
+      (edge.score ?? 0) >= minScore && (edge.from["gufe-key"] === key || edge.to["gufe-key"] === key),
+  );
+}
+
 function buildMenu(parts: MenuParts): HTMLDivElement {
-  const scoreSetting = num("ligand-network.minScore", 0, 0, 1);
-  return networkMenu<NetNode>({
+  const scoreSetting = parts.score.setting;
+  // Set when the slider is built, which is before anything can press either of
+  // the two things that clear it.
+  let zeroScore = (): void => {};
+  return networkMenu<NetNode, NetEdge>({
     namespace: "ligand-network",
-    noun: "ligands",
     nodes: parts.nodes,
     edges: parts.edges,
     selected: parts.selected,
     query: parts.query,
     search: {
-      placeholder: "Search ligands",
+      placeholder: "Search",
       label: "Search ligands by name, SMILES or gufe key",
     },
     // The SMARTS box sits below the search and does the opposite thing: the
@@ -905,7 +966,8 @@ function buildMenu(parts: MenuParts): HTMLDivElement {
       },
     },
     match: (pattern) => parts.match(pattern),
-    filters: () => {
+    resetFilters: () => zeroScore(),
+    filters: (rerender) => {
       const row = el("div", `display:flex;align-items:center;gap:${SPACE.lg};font-size:${FONT.small};color:${V.textMuted};`);
       const value = el("span", `min-width:28px;color:${V.textPrimary};`, "0.00");
       const score = el("input", "flex:1;") as HTMLInputElement;
@@ -913,36 +975,93 @@ function buildMenu(parts: MenuParts): HTMLDivElement {
       score.min = "0";
       score.max = "1";
       score.step = "0.01";
-      score.value = String(scoreSetting.get());
-      parts.filter.minScore = Number(score.value);
       score.setAttribute("aria-label", "Hide mappings scoring below this");
-      // Only the canvas emphasis answers this, not the list: the threshold is
-      // about edges, and the list holds ligands.
+      // One way to move the threshold, whether it was the slider, a reload or
+      // the reset that moved it, so the number beside the slider, the filter
+      // the view reads and what is remembered cannot end up saying three
+      // different things.
+      const setScore = (next: number): void => {
+        score.value = String(next);
+        value.textContent = next.toFixed(2);
+        parts.filter.minScore = next;
+        scoreSetting.set(next);
+      };
+      setScore(scoreSetting.get());
+      // The canvas emphasis, the mapping list, and the ligand list: a ligand
+      // with no mapping left above the threshold drops out of its list too.
       score.oninput = () => {
-        parts.filter.minScore = Number(score.value);
-        value.textContent = parts.filter.minScore.toFixed(2);
-        scoreSetting.set(parts.filter.minScore);
+        setScore(Number(score.value));
+        rerender();
         parts.refresh();
       };
+      zeroScore = () => setScore(0);
+      // The reset over the canvas is outside the menu and owes it a redraw;
+      // `resetFilters` is the menu's own and is followed by one.
+      parts.score.onReset(() => {
+        zeroScore();
+        rerender();
+        parts.refresh();
+      });
       row.appendChild(el("span", "", "score >="));
       row.appendChild(score);
       row.appendChild(value);
       return [row];
     },
-    shows: (node) => matchesQuery(node, parts.query.text.trim().toLowerCase()),
+    // The threshold reaches this list too. A ligand whose every mapping scores
+    // below it has nothing left in the network being asked about, so listing it
+    // under a count that says how many survived was read as the filter not
+    // working. Zero is "no threshold", where every ligand is listed however it
+    // is connected - including one with no mappings at all.
+    shows: (node) =>
+      matchesQuery(node, parts.query.text.trim().toLowerCase()) &&
+      (parts.filter.minScore <= 0 || mappedAbove(node, parts.edges, parts.filter.minScore)),
     row: (node) => ({
       name: label(node),
       title: `${label(node)}\n${node.smiles ?? ""}`,
     }),
-    export: {
+    // The threshold first, because a mapping below it is one this view is being
+    // told not to show at all; then either end against the search, because a
+    // search for one ligand is asking which mappings it has.
+    edgeShows: (edge) => {
+      if ((edge.score ?? 0) < parts.filter.minScore) return false;
+      const text = parts.query.text.trim().toLowerCase();
+      return matchesQuery(edge.from, text) || matchesQuery(edge.to, text);
+    },
+    edgeRow: (edge) => ({
+      // The score before the name, where the alchemical network puts its
+      // colour swatch: it is what the slider above the list acts on, and a
+      // threshold with no scores in sight is a control with nothing to aim at.
+      before: scoreMark(edge.score),
+      name: `${label(edge.from)} to ${label(edge.to)}`,
+      title: `${label(edge.from)} to ${label(edge.to)}\n${
+        edge.score == null ? "no score" : `score ${edge.score.toFixed(3)}`
+      }`,
+    }),
+    words: {
       // Named "mappings" rather than "edges": on this canvas an edge is a
       // mapping, and the panel says so everywhere else.
-      nodes: { button: "Ligands", plural: "ligands" },
-      edges: { button: "Edges", plural: "mappings" },
+      nodes: { tab: "Ligands", plural: "ligands" },
+      edges: { tab: "Mappings", plural: "mappings" },
     },
     refresh: parts.refresh,
     focus: parts.focus,
+    focusEdge: parts.focusEdge,
   });
+}
+
+/**
+ * A mapping's score, as the mark at the head of its row.
+ *
+ * Two decimals, the same as the number written on the line itself, so a row and
+ * the canvas cannot appear to disagree about the same mapping. Fixed-width, so
+ * the names down a list of mappings still line up.
+ */
+function scoreMark(score: number | null | undefined): HTMLSpanElement {
+  return el(
+    "span",
+    `flex-shrink:0;min-width:26px;font-variant-numeric:tabular-nums;color:${V.textMuted2};`,
+    score == null ? "--" : score.toFixed(2),
+  );
 }
 
 /**
@@ -961,6 +1080,8 @@ interface NetworkScene {
   setEmphasis(nodeKeys: ReadonlySet<string> | null, edgeIndices: ReadonlySet<number> | null): void;
   setMatches(matched: ReadonlyMap<number, number[]>): void;
   focusOn(index: number): void;
+  /** Frame one mapping: the midpoint of its two ligands, so both ends stay on screen. */
+  focusOnEdge(index: number): void;
   fit(): void;
   reset(): void;
   /** Where the canvas is now, and how to put it back there. */
@@ -990,7 +1111,7 @@ export class GufeLigandNetwork extends AlchemyElement<LigandNetworkViz> {
       ends: (edge) => [edge.componentA, edge.componentB],
     });
 
-    const bar = headerStrip(payload.name || "Ligand network");
+    const bar = headerStrip(payload.name || "Ligand network", sourceName(this));
     bar.statsEl.appendChild(statChip("ligands", String(nodes.length)));
     bar.statsEl.appendChild(statChip("mappings", String(edges.length)));
     host.appendChild(bar);
@@ -1003,6 +1124,16 @@ export class GufeLigandNetwork extends AlchemyElement<LigandNetworkViz> {
     const selected = new Set<string>();
     const filter = { minScore: 0 };
     const query = { text: "" };
+
+    // The score threshold lives out here with the selection and the query, not
+    // in the menu, because the reset over the canvas clears it too: hiding the
+    // poor mappings is a way of looking at the network, and "put it back" has
+    // to mean the whole of what was changed rather than the camera alone.
+    const scoreSetting = num("ligand-network.minScore", 0, 0, 1);
+    // A no-op until the menu has been opened once, which is also the only time
+    // a threshold can be anything but zero: the slider is what reads the
+    // remembered value, and it is built with the rest of the menu.
+    let resetScore = (): void => {};
 
     /**
      * RDKit, fetched once and only if something asks.
@@ -1051,12 +1182,24 @@ export class GufeLigandNetwork extends AlchemyElement<LigandNetworkViz> {
           selected,
           filter,
           query,
+          score: {
+            setting: scoreSetting,
+            onReset: (reset) => {
+              resetScore = reset;
+            },
+          },
           refresh: () => applyEmphasis(),
           // Jumping to a ligand and opening it are one action: the list is
           // how you find one you cannot see, and finding it is not the point.
           focus: (index) => {
             scene?.focusOn(index);
             select({ kind: "ligand", index });
+          },
+          // The same for a mapping, which the pane can draw as well as a
+          // ligand: the list is how a reader reaches one of nine hundred edges.
+          focusEdge: (index) => {
+            scene?.focusOnEdge(index);
+            select({ kind: "edge", index });
           },
           match: (pattern) => runMatch(pattern),
         }),
@@ -1099,14 +1242,20 @@ export class GufeLigandNetwork extends AlchemyElement<LigandNetworkViz> {
 
     const canvas = el("div", `flex:1;position:relative;overflow:hidden;min-height:0;background:${V.netCanvasBg};`);
     left.appendChild(canvas);
-    const layoutSetting = choice<Layout>("ligand-network.layout", "Force-directed", LAYOUTS);
-    const toolbar = this.#toolbar(
-      (next) => draw(next),
-      () => scene?.reset(),
-      layoutSetting,
-      edges.some((edge) => chargeChange(edge.from, edge.to) !== 0),
+    this.#scoreLegend(canvas, edges.some((edge) => chargeChange(edge.from, edge.to) !== 0));
+    floatingReset(
+      canvas,
+      () => {
+        // The setting as well as the slider: with the menu never opened there
+        // is no slider to move, and a remembered threshold would otherwise come
+        // back the moment someone opened it, after a reset had said it was gone.
+        scoreSetting.set(0);
+        filter.minScore = 0;
+        resetScore();
+        scene?.reset();
+      },
+      "Reset pan, zoom and the score filter",
     );
-    left.appendChild(toolbar.bar);
 
     const detail = this.#detailPane(right, registry);
 
@@ -1151,20 +1300,23 @@ export class GufeLigandNetwork extends AlchemyElement<LigandNetworkViz> {
     let pendingTransform = restored && { scale: restored.scale, tx: restored.tx, ty: restored.ty };
 
     /**
-     * The positions the view opened on, or null once a layout has replaced them.
-     *
-     * Every redraw uses them while they last, because a resize or the menu
-     * opening is not a request to lay the network out again: they are where the
-     * reader left it, and a simulation run against a canvas of a different size
-     * would not reproduce them.
-     *
-     * Choosing a layout *is* that request, and it is what drops them - which is
-     * why this is a variable rather than the state object it came from. Read
-     * straight off `restored` on every redraw, the picker was dead for the life
-     * of a restored view: each new layout was seeded and then immediately
-     * overwritten by the positions it was meant to replace.
+     * The positions the view opened on, put back on the first draw and then let
+     * go of: they are where the reader left it, and a simulation run against a
+     * canvas of a different size would not reproduce them.
      */
-    let opening = restored ? restored.nodes : null;
+    const opening = restored ? restored.nodes : null;
+
+    /**
+     * Whether the nodes already carry positions worth keeping.
+     *
+     * True once a layout has settled, or once the restored positions have been
+     * put back. A resize or the menu opening is a redraw, not a request to
+     * arrange the network again - asked for in review, where a large network
+     * rearranging on every window resize was called disruptive - so a redraw
+     * past this point paints the arrangement that is already on screen. It is
+     * also what makes a node the reader dragged stay where they put it.
+     */
+    let laidOut = false;
 
     /**
      * What the detail pane is showing, and what the halos mark.
@@ -1184,7 +1336,6 @@ export class GufeLigandNetwork extends AlchemyElement<LigandNetworkViz> {
     /** Where the canvas is, or the identity view before there is one to ask. */
     const transformNow = (): { scale: number; tx: number; ty: number } =>
       scene?.transform() ?? { scale: 1, tx: 0, ty: 0 };
-    let layout: Layout = layoutSetting.get();
     let forceUnavailable = false;
     /** Which redraw is the current one, and whether the view is still alive. */
     const eras = generations();
@@ -1220,19 +1371,14 @@ export class GufeLigandNetwork extends AlchemyElement<LigandNetworkViz> {
     /** Likewise the SMARTS colouring, which outlives any one scene. */
     const applyMatches = (): void => scene?.setMatches(matched);
 
-    const draw = (next: Layout = layout): void => {
-      // A redraw that is not a change of layout - the menu opening, the window
-      // resizing - must not throw away where the reader has panned to. Only a
-      // new layout is a new picture, and only a new picture is worth reframing.
-      // Before the first paint there is no camera to keep, so that one frames.
-      // A scene exists exactly when a paint has installed one, so it is also
-      // the answer to "is there a camera worth keeping".
-      const keepCamera = scene && next === layout ? scene.transform() : null;
-      // A new layout is a request to lay the network out again, which is exactly
-      // what the opening positions would prevent. See `opening`.
-      if (next !== layout) opening = null;
+    const draw = (): void => {
+      // A redraw - the menu opening, the window resizing - must not throw away
+      // where the reader has panned to. Before the first paint there is no
+      // camera to keep, so that one frames. A scene exists exactly when a paint
+      // has installed one, so it is also the answer to "is there a camera worth
+      // keeping".
+      const keepCamera = scene?.transform() ?? null;
       const current = eras.start();
-      layout = next;
       scene?.cleanup();
       scene = null;
       // Every one of them, not the first: a paint that has already been dropped
@@ -1241,8 +1387,13 @@ export class GufeLigandNetwork extends AlchemyElement<LigandNetworkViz> {
 
       const width = canvas.clientWidth || 800;
       const height = canvas.clientHeight || 600;
-      seedPositions(nodes, width, height, layout, edges);
-      if (opening) placeNodesAt(nodes, opening);
+      if (!laidOut) {
+        seedPositions(nodes, width, height);
+        if (opening) {
+          placeNodesAt(nodes, opening);
+          laidOut = true;
+        }
+      }
 
       const paint = () => {
         if (!current()) return;
@@ -1267,10 +1418,10 @@ export class GufeLigandNetwork extends AlchemyElement<LigandNetworkViz> {
         }
       };
 
-      // A restored network is placed, not laid out: the positions it came with
-      // are the answer the simulation would spend a second failing to reproduce
-      // against a canvas of a different size.
-      if (layout !== "Force-directed" || forceUnavailable || opening) {
+      // A network that is already arranged is painted, not laid out again: a
+      // restored one came with its positions, and one this view laid out is
+      // sitting in front of a reader who has read it.
+      if (forceUnavailable || laidOut) {
         paint();
         return;
       }
@@ -1281,14 +1432,15 @@ export class GufeLigandNetwork extends AlchemyElement<LigandNetworkViz> {
       relax(nodes, edges, width, height).then((relaxed) => {
         if (!current()) return;
         if (relaxed) {
+          laidOut = true;
           paint();
           return;
         }
-        // No d3, so no force layout. Say so once, and show something.
+        // No d3, so no force layout. Say so once, and show something: the ring
+        // the nodes were seeded on is a network a reader can still read.
         forceUnavailable = true;
-        toolbar.picker.value = "Circular";
-        floatingWarning(canvas, "d3 could not be loaded - showing the circular layout instead");
-        draw("Circular");
+        floatingWarning(canvas, "d3 could not be loaded - showing the ligands in a ring instead");
+        draw();
       }, paint);
     };
 
@@ -1315,20 +1467,27 @@ export class GufeLigandNetwork extends AlchemyElement<LigandNetworkViz> {
     };
   }
 
-  #toolbar(
-    onLayout: (layout: Layout) => void,
-    onReset: () => void,
-    layoutSetting: Setting<string>,
-    anyChargeChange: boolean,
-  ): { bar: HTMLDivElement; picker: HTMLSelectElement } {
-    const toolbar = el(
+  /**
+   * The key to the edge colours, floating over the bottom right of the canvas.
+   *
+   * A row under the graph costs every network a strip of height for something
+   * most readers consult once; over the picture it costs nothing, and bottom
+   * right is the corner the reset control does not already sit in. No card
+   * behind it - a panel over the canvas reads as another thing to look at, and
+   * the key is not one. It takes no pointer events, so a drag that starts on it
+   * still reaches the network.
+   */
+  #scoreLegend(canvas: HTMLDivElement, anyChargeChange: boolean): void {
+    const legend = el(
       "div",
-      TOOLBAR,
+      `position:absolute;right:${SPACE.xl};bottom:${SPACE.xl};z-index:10;pointer-events:none;` +
+        `display:flex;align-items:center;gap:${SPACE.xxl};flex-wrap:wrap;justify-content:flex-end;` +
+        `max-width:calc(100% - ${SPACE.xl} - ${SPACE.xl});font-size:${FONT.tiny};color:${V.textMuted};`,
     );
 
-    const legend = el("div", `display:flex;align-items:center;gap:6px;font-size:${FONT.small};color:${V.textMuted};`);
-    legend.appendChild(el("span", "", "score"));
-    legend.appendChild(
+    const score = el("div", `display:flex;align-items:center;gap:${SPACE.md};`);
+    score.appendChild(el("span", "", "score"));
+    score.appendChild(
       el(
         "span",
         // The literal ramp rather than a custom property: the edges it is a key
@@ -1337,14 +1496,14 @@ export class GufeLigandNetwork extends AlchemyElement<LigandNetworkViz> {
         `width:40px;height:4px;border-radius:2px;background:linear-gradient(to right,${T.netEdgeRamp.join(",")});`,
       ),
     );
-    legend.appendChild(el("span", "", "0 -> 1"));
-    toolbar.appendChild(legend);
+    score.appendChild(el("span", "", "0 -> 1"));
+    legend.appendChild(score);
 
     // Only where there is one to explain. A network whose ligands all carry the
     // same charge is the common case, and a key for a line it does not draw is
     // a reader looking for something that is not there.
     if (anyChargeChange) {
-      const charge = el("div", `display:flex;align-items:center;gap:6px;font-size:${FONT.small};color:${V.textMuted};`);
+      const charge = el("div", `display:flex;align-items:center;gap:${SPACE.md};`);
       charge.appendChild(
         el(
           "span",
@@ -1352,20 +1511,10 @@ export class GufeLigandNetwork extends AlchemyElement<LigandNetworkViz> {
         ),
       );
       charge.appendChild(el("span", "", "net charge change"));
-      toolbar.appendChild(charge);
+      legend.appendChild(charge);
     }
 
-    toolbar.appendChild(el("label", `font-size:${FONT.body};margin-left:auto;color:${V.textMuted};`, "Layout"));
-    const picker = dropdown(
-      LAYOUTS.map((name) => ({ id: name, label: name })),
-      layoutSetting.get(),
-      (id) => onLayout(id as Layout),
-      layoutSetting,
-    );
-    toolbar.appendChild(picker);
-    toolbar.appendChild(resetControl(onReset, "Reset pan and zoom"));
-
-    return { bar: toolbar, picker };
+    canvas.appendChild(legend);
   }
 
   /**
@@ -1423,7 +1572,10 @@ export class GufeLigandNetwork extends AlchemyElement<LigandNetworkViz> {
     const markerFor = arrowMarkers(defs);
     root.appendChild(defs);
 
-    const halos: SVGLineElement[] = [];
+    /** Per edge: the two lines that bracket it when it is selected. */
+    const rails: { outer: SVGLineElement; inner: SVGLineElement }[] = [];
+    /** The edges themselves, so nothing has to index into `lines` by stride. */
+    const drawn: SVGLineElement[] = [];
     const lines = svg("g");
     const hits = svg("g");
     const labels = svg("g", { "pointer-events": "none" });
@@ -1433,12 +1585,22 @@ export class GufeLigandNetwork extends AlchemyElement<LigandNetworkViz> {
     for (const edge of edges) {
       const colour = scoreColor(edge.score);
       const width = EDGE_MIN_WIDTH + (edge.score ?? 0.5) * (EDGE_MAX_WIDTH - EDGE_MIN_WIDTH);
-      const halo = svg("line", {
-        stroke: T.netHaloColor,
-        // Sized from the edge underneath, so a thick edge does not outgrow its
-        // own halo and a thin one is not swamped by it.
-        "stroke-width": width + HALO.padding * 2,
-        "stroke-linecap": "round",
+      // Both sized from the edge underneath, so the rails run parallel to it at
+      // the same distance whatever its width.
+      const outer = svg("line", {
+        class: "gufe-edge-select",
+        stroke: T.netEdgeSelect,
+        "stroke-width": width + (EDGE_SELECT.gap + EDGE_SELECT.rail) * 2,
+        "stroke-linecap": "butt",
+        opacity: 0,
+        "pointer-events": "none",
+      });
+      // The canvas, covering the middle of the pink and leaving the two rails.
+      const inner = svg("line", {
+        class: "gufe-edge-select-gap",
+        stroke: T.netCanvasBg,
+        "stroke-width": width + EDGE_SELECT.gap * 2,
+        "stroke-linecap": "butt",
         opacity: 0,
         "pointer-events": "none",
       });
@@ -1476,8 +1638,9 @@ export class GufeLigandNetwork extends AlchemyElement<LigandNetworkViz> {
         );
       });
       hit.addEventListener("mouseleave", () => tip.hide());
-      halos.push(halo);
-      lines.append(halo, line);
+      rails.push({ outer, inner });
+      drawn.push(line);
+      lines.append(outer, inner, line);
       hits.appendChild(hit);
 
       // The score, as bare text. The group is kept even for an edge that has
@@ -1632,7 +1795,7 @@ export class GufeLigandNetwork extends AlchemyElement<LigandNetworkViz> {
 
     const place = () => {
       edges.forEach((edge, i) => {
-        for (const line of [halos[i], lines.children[i * 2 + 1], hits.children[i]]) {
+        for (const line of [rails[i].outer, rails[i].inner, drawn[i], hits.children[i]]) {
           const target = line as SVGElement;
           target.setAttribute("x1", String(edge.from.x));
           target.setAttribute("y1", String(edge.from.y));
@@ -1681,7 +1844,11 @@ export class GufeLigandNetwork extends AlchemyElement<LigandNetworkViz> {
       setSelected(selection: Selection) {
         const edge = selection?.kind === "edge" ? selection.index : -1;
         const ligand = selection?.kind === "ligand" ? selection.index : -1;
-        halos.forEach((halo, i) => halo.setAttribute("opacity", i === edge ? String(HALO.opacity) : "0"));
+        rails.forEach(({ outer, inner }, i) => {
+          const opacity = i === edge ? String(EDGE_SELECT.opacity) : "0";
+          outer.setAttribute("opacity", opacity);
+          inner.setAttribute("opacity", opacity);
+        });
         nodeHalos.forEach((halo, i) => halo.setAttribute("opacity", i === ligand ? String(HALO.opacity) : "0"));
       },
 
@@ -1716,7 +1883,7 @@ export class GufeLigandNetwork extends AlchemyElement<LigandNetworkViz> {
         edges.forEach((_edge, i) => {
           const lit = !edgeIndices || edgeIndices.has(i);
           const opacity = lit ? "0.9" : String(DIM.edge);
-          (lines.children[i * 2 + 1] as SVGElement).setAttribute("stroke-opacity", opacity);
+          drawn[i].setAttribute("stroke-opacity", opacity);
           (labels.children[i] as SVGElement).setAttribute("opacity", lit ? "1" : String(DIM.edge));
         });
       },
@@ -1724,6 +1891,14 @@ export class GufeLigandNetwork extends AlchemyElement<LigandNetworkViz> {
       focusOn(index: number) {
         const node = nodes[index];
         if (node) view.centreOn(node.x, node.y);
+      },
+
+      focusOnEdge(index: number) {
+        const edge = edges[index];
+        // The midpoint rather than one end: what a reader picked out of the
+        // list is the mapping, and a mapping framed on one of its ligands is a
+        // mapping with the other end off the screen.
+        if (edge) view.centreOn((edge.from.x + edge.to.x) / 2, (edge.from.y + edge.to.y) / 2);
       },
 
       fit: view.fit,
@@ -1772,76 +1947,36 @@ export class GufeLigandNetwork extends AlchemyElement<LigandNetworkViz> {
   }
 }
 
-// --- layouts ---------------------------------------------------------------
+// --- seeding ---------------------------------------------------------------
 
 /**
- * Give every node a starting position.
+ * Give every node a starting position, on a ring around the canvas.
  *
- * Circular and Radial are the answer; for Force-directed it is the seed. Either
- * way it is deterministic, which is what makes the picture the same on every
- * reload - d3's own phyllotaxis seeding is fine but ours is one line and lets
- * the force layout converge from something already spread out.
+ * The force simulation is the arrangement this view draws; this is only what it
+ * starts from, and what stays on screen when d3 cannot be fetched. It is
+ * deterministic, which is what makes the picture the same on every reload -
+ * d3's own phyllotaxis seeding is fine but ours is one line and lets the force
+ * layout converge from something already spread out.
  */
-function seedPositions(nodes: NetNode[], width: number, height: number, layout: Layout, edges: NetEdge[]): void {
+function seedPositions(nodes: NetNode[], width: number, height: number): void {
   const cx = width / 2;
   const cy = height / 2;
-  const ring = (subset: NetNode[], radius: number) => {
-    subset.forEach((node, i) => {
-      const angle = (2 * Math.PI * i) / Math.max(1, subset.length) - Math.PI / 2;
-      node.x = cx + radius * Math.cos(angle);
-      node.y = cy + radius * Math.sin(angle);
-      node.fx = layout === "Force-directed" ? undefined : node.x;
-      node.fy = layout === "Force-directed" ? undefined : node.y;
-    });
-  };
-
-  if (layout === "Radial" && nodes.length) {
-    // Breadth-first rings from the best-connected ligand - the shape a hub-and-
-    // spoke network actually has, which a circle hides.
-    const neighbours = new Map<string, string[]>(nodes.map((n) => [n["gufe-key"], []]));
-    for (const edge of edges) {
-      neighbours.get(edge.from["gufe-key"])!.push(edge.to["gufe-key"]);
-      neighbours.get(edge.to["gufe-key"])!.push(edge.from["gufe-key"]);
-    }
-    const byKey = new Map(nodes.map((n) => [n["gufe-key"], n]));
-    const start = nodes.reduce((best, n) =>
-      neighbours.get(n["gufe-key"])!.length > neighbours.get(best["gufe-key"])!.length ? n : best,
-    );
-
-    const seen = new Set([start["gufe-key"]]);
-    let level = [start["gufe-key"]];
-    let depth = 0;
-    const step = Math.min(width, height) * 0.18;
-    while (level.length) {
-      ring(
-        level.map((key) => byKey.get(key)!),
-        depth === 0 ? 0 : depth * step + 40,
-      );
-      const next: string[] = [];
-      for (const id of level) {
-        for (const other of neighbours.get(id)!) {
-          if (!seen.has(other)) {
-            seen.add(other);
-            next.push(other);
-          }
-        }
-      }
-      level = next;
-      depth++;
-    }
-    // Anything unreachable from the hub still needs somewhere to be.
-    ring(nodes.filter((n) => !seen.has(n["gufe-key"])), Math.min(width, height) * 0.45);
-    return;
-  }
-
-  ring(nodes, Math.min(width, height) * 0.34);
+  const radius = Math.min(width, height) * 0.34;
+  nodes.forEach((node, i) => {
+    const angle = (2 * Math.PI * i) / Math.max(1, nodes.length) - Math.PI / 2;
+    node.x = cx + radius * Math.cos(angle);
+    node.y = cy + radius * Math.sin(angle);
+    // Nothing is pinned: a seed the simulation cannot move is not a seed.
+    node.fx = undefined;
+    node.fy = undefined;
+  });
 }
 
 /**
  * Relax the seeded positions with d3's force simulation, in place.
  *
  * Resolves `false` when d3 is unreachable, which is the offline case the
- * caller turns into the circular layout plus a banner rather than an error.
+ * caller turns into the seeded ring plus a banner rather than an error.
  */
 function relax(nodes: NetNode[], edges: NetEdge[], width: number, height: number): Promise<boolean> {
   return relaxWith<NetNode, D3Link>({

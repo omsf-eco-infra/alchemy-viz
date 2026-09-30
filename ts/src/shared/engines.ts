@@ -1,10 +1,10 @@
 /**
  * Lazy engine loaders.
  *
- * Nothing heavy is imported statically, because everything statically imported
- * blocks first paint. Each engine is fetched the first time a view actually
- * needs it: a protein page never pays for RDKit's ~7 MB of WebAssembly, and a
- * small-molecule page never pays for d3.
+ * Each engine is fetched the first time a view actually
+ * needs it:
+ *  - RDKit ~7 MB of WebAssembly
+ *  - d3-force
  *
  * A host may instead **pre-seed** an engine through `globalThis.__gufeEngines`,
  * in which case nothing is fetched at all. A seeded value may be the module
@@ -131,7 +131,7 @@ export interface RDKitModule {
 interface SeededEngines {
   threeDmol?: ThreeDmolModule | Promise<ThreeDmolModule>;
   rdkit?: RDKitModule | Promise<RDKitModule>;
-  d3?: unknown;
+  d3Force?: unknown;
 }
 
 declare global {
@@ -144,30 +144,14 @@ declare global {
   }
 }
 
-// --- where the engines come from when they are not pre-seeded --------------
-//
-// Pinned exactly, never to a range and never to whatever a CDN calls latest. A
-// page built today and opened in a year has to draw the same picture, and an
-// engine that changes under a fixed payload turns a rendering bug into one
-// nobody can reproduce. RDKit is the sharpest case: the pinned `.js` is also
-// what pins the `.wasm`, which Emscripten fetches from the script's own
-// directory, and it is where feature detection like `get_qmol` gets its answer.
-//
-// Moving a pin is a deliberate edit here, with the page re-checked afterwards.
-
-const ENGINE_VERSIONS = {
-  threeDmol: "2.5.5",
-  rdkit: "2025.3.4-1.0.0",
-  d3: "7.9.0",
-} as const;
-
 // Built here rather than at the import site, so the bundler leaves them alone
 // and anything vendoring these instead has one obvious place to look.
 
 const ENGINE_URLS = {
-  threeDmol: `https://unpkg.com/3dmol@${ENGINE_VERSIONS.threeDmol}/build/3Dmol-min.js`,
-  rdkit: `https://unpkg.com/@rdkit/rdkit@${ENGINE_VERSIONS.rdkit}/dist/RDKit_minimal.js`,
-  d3: `https://cdn.jsdelivr.net/npm/d3@${ENGINE_VERSIONS.d3}/+esm`,
+  // pinned versions
+  threeDmol: `https://unpkg.com/3dmol@2.5.5/build/3Dmol-min.js`,
+  rdkit: `https://unpkg.com/@rdkit/rdkit@2025.3.4-1.0.0/dist/RDKit_minimal.js`,
+  d3Force: `https://cdn.jsdelivr.net/npm/d3-force@3.0.0/+esm`,
 } as const;
 
 function preseeded<T>(name: keyof SeededEngines): Promise<T> | null {
@@ -268,18 +252,18 @@ export function optionalRDKit(): Promise<RDKitModule | null> {
   }));
 }
 
-// --- d3 (graph views) ------------------------------------------------------
+// --- d3-force (graph views) ------------------------------------------------
 
-let d3Promise: Promise<unknown> | null = null;
+let d3ForcePromise: Promise<unknown> | null = null;
 
-export function loadD3(): Promise<unknown> {
-  if (!d3Promise) {
-    const url = ENGINE_URLS.d3;
+export function loadD3Force(): Promise<unknown> {
+  if (!d3ForcePromise) {
+    const url = ENGINE_URLS.d3Force;
     // Through a variable, so the bundler treats it as a runtime URL rather than
     // trying to resolve and inline a CDN module at build time.
-    d3Promise = preseeded<unknown>("d3") ?? import(/* @vite-ignore */ url);
+    d3ForcePromise = preseeded<unknown>("d3Force") ?? import(/* @vite-ignore */ url);
   }
-  return d3Promise;
+  return d3ForcePromise;
 }
 
 /**
@@ -293,11 +277,7 @@ export function loadD3(): Promise<unknown> {
  */
 export function releaseViewer(viewer: ThreeDmolViewer | null): void {
   if (!viewer) return;
-  try {
-    viewer.spin(false);
-  } catch {
-    /* 3Dmol v1 quirk */
-  }
+  viewer.spin(false);
   try {
     viewer.clear();
   } catch {
@@ -311,5 +291,5 @@ export function _resetEnginesForTests(): void {
   threeDmolPromise = null;
   rdkitPromise = null;
   optionalRdkitPromise = null;
-  d3Promise = null;
+  d3ForcePromise = null;
 }

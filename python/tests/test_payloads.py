@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import re
+from collections import Counter
 
 import pytest
 from alchemy_viz import payload_for
@@ -650,6 +651,137 @@ class TestBuilders:
             key for key in payload["nodes"] if proteins[0]["gufe-key"] in registry[key]["components"].values()
         ]
         assert len(with_protein) == len(payload["nodes"]) // 2
+
+    def test_an_absolute_network_is_a_star_of_edges_that_carry_no_mapping(self):
+        """The shape an ABFE or ASFE set makes, which no relative fixture has.
+
+        A relative transformation carries a ligand at both ends and a mapping
+        between them. An absolute one carries a ligand at one end only and no
+        mapping at all, so the payload has two things in it that the four
+        relative networks never produce: a chemical system with no small
+        molecule in it, and a transformation whose ``mappings`` is empty. Both
+        are what the views have to survive, and this is where they come from.
+
+        Every edge ends at the one reference state, which is what makes the
+        graph a star rather than a row of disjoint pairs - see
+        :func:`scripts.make_examples._absolute_network`.
+        """
+        from .conftest import read_example
+
+        payload = read_example("alchemical_network_absolute.json")
+        registry = _registry(payload)
+
+        assert payload["edges"], "an absolute network with no edges proves nothing"
+        for edge in payload["edges"]:
+            assert edge["mappings"] == []
+
+        def ligands(key: str) -> list[str]:
+            return [
+                component
+                for component in registry[key]["components"].values()
+                if registry[component]["type"] == "SmallMoleculeComponentViz"
+            ]
+
+        # One end of every edge carries a ligand and the other carries none.
+        for edge in payload["edges"]:
+            assert len(ligands(edge["stateA"])) == 1
+            assert ligands(edge["stateB"]) == []
+
+        # And it is the same reference state every time, so the nodes are the
+        # ligands plus one rather than twice the edges.
+        references = {edge["stateB"] for edge in payload["edges"]}
+        assert len(references) == 1
+        assert len(payload["nodes"]) == len(payload["edges"]) + 1
+
+        _validate(payload)
+
+    def test_a_mixed_network_carries_relative_and_absolute_edges_at_once(self):
+        """Both kinds in one graph, which is what a planner really produces.
+
+        ``alchemical_network_mixed.json`` runs four TYK2 mappings in both legs
+        and anchors two of its ligands with an absolute transformation each. The
+        point of the fixture is that the two kinds are told apart by the payload
+        alone: an edge with a mapping against an edge without one, and a third
+        composition - the apo protein - beside the two legs.
+        """
+        from .conftest import read_example
+
+        payload = read_example("alchemical_network_mixed.json")
+        registry = _registry(payload)
+
+        relative = [edge for edge in payload["edges"] if edge["mappings"]]
+        absolute = [edge for edge in payload["edges"] if not edge["mappings"]]
+        assert len(relative) == 8
+        assert len(absolute) == 2
+
+        def composition(key: str) -> tuple[str, ...]:
+            return tuple(sorted({registry[c]["type"] for c in registry[key]["components"].values()}))
+
+        compositions = {composition(key) for key in payload["nodes"]}
+        assert compositions == {
+            ("SmallMoleculeComponentViz", "SolventComponentViz"),
+            ("ProteinComponentViz", "SmallMoleculeComponentViz", "SolventComponentViz"),
+            ("ProteinComponentViz", "SolventComponentViz"),
+        }
+
+        # The absolute transformations meet at the apo system, and start from
+        # complex systems the relative edges already reach - anchors in the
+        # network rather than two more pairs beside it.
+        apo = {edge["stateB"] for edge in absolute}
+        assert len(apo) == 1
+        assert composition(*apo) == ("ProteinComponentViz", "SolventComponentViz")
+        relative_ends = {edge[side] for edge in relative for side in ("stateA", "stateB")}
+        assert {edge["stateA"] for edge in absolute} <= relative_ends
+
+        # One protein for the whole graph, complex systems and apo alike.
+        proteins = [entry for entry in payload["registry"] if entry["type"] == "ProteinComponentViz"]
+        assert len(proteins) == 1
+
+        _validate(payload)
+
+    def test_a_network_may_name_a_protocol_per_transformation(self):
+        """Three protocols over twenty transformations, which one field per edge allows.
+
+        ``alchemical_network_protocols.json`` is the fixture for the thing the
+        schema has always said and no other example showed: ``protocol`` is a
+        field of a transformation, not of a network. Most of its edges name a
+        relative protocol, four name another, and the two absolute anchors name a
+        third - so a reader of the payload can tell which part of the campaign
+        was run how, and the registry holds each protocol once however many edges
+        point at it.
+        """
+        from .conftest import read_example
+
+        payload = read_example("alchemical_network_protocols.json")
+        registry = _registry(payload)
+
+        named = [edge["protocol"] for edge in payload["edges"]]
+        assert len(named) == 20
+        counts = Counter(registry[key]["gufe_type"] for key in named)
+        assert counts == Counter(
+            {
+                "RelativeHybridTopologyProtocol": 14,
+                "NonEquilibriumCyclingProtocol": 4,
+                "AbsoluteSolvationProtocol": 2,
+            }
+        )
+
+        # Once each in the registry, whatever the edges do: a protocol is a
+        # registry entry for the same reason a protein is.
+        entries = [entry for entry in payload["registry"] if entry["type"] == "ProtocolViz"]
+        assert len(entries) == 3
+        assert {entry["gufe-key"] for entry in entries} == set(named)
+        # A Protocol has no name of its own, so the class name is all a reader gets.
+        assert all(entry["name"] == "" for entry in entries)
+
+        # The absolute edges are the ones with no mapping, and they are the ones
+        # under the protocol that decouples rather than mutates - which is why
+        # this campaign names more than one in the first place.
+        absolute = [edge for edge in payload["edges"] if not edge["mappings"]]
+        assert len(absolute) == 2
+        assert {registry[edge["protocol"]]["gufe_type"] for edge in absolute} == {"AbsoluteSolvationProtocol"}
+
+        _validate(payload)
 
     def test_a_registry_entry_is_the_same_object_as_a_standalone_payload(self):
         """The claim the one-object-per-gufe-class rule is making, asserted directly.

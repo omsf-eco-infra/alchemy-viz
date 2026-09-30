@@ -29,6 +29,7 @@
 import { button } from "./controls.js";
 import { el } from "./dom.js";
 import type { ThreeDmolViewer } from "./engines.js";
+import { SPACE } from "./style.js";
 
 /** What every helper here hands back so a view can release it. */
 export interface Interaction {
@@ -301,5 +302,24 @@ export function resetControl(onReset: () => void, label = "Reset view"): HTMLBut
   node.title = label;
   node.setAttribute("aria-label", label);
   node.onclick = onReset;
+  return node;
+}
+
+/**
+ * The same button, floating over the bottom left of a canvas rather than in a
+ * bar below it.
+ *
+ * A graph view's strip under the canvas was a whole row of height spent on one
+ * small button that is only ever pressed after a reader has flung the network
+ * somewhere; the picture wants that height more than the button does. Floating
+ * it keeps it where it always was - bottom left, one click away - without
+ * charging every network a row for it.
+ *
+ * The host must be `position:relative`.
+ */
+export function floatingReset(host: HTMLElement, onReset: () => void, label = "Reset view"): HTMLButtonElement {
+  const node = resetControl(onReset, label);
+  node.style.cssText += `position:absolute;left:${SPACE.xl};bottom:${SPACE.xl};z-index:10;`;
+  host.appendChild(node);
   return node;
 }

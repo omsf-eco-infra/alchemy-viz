@@ -14,6 +14,7 @@
 
 import { el } from "../shared/dom.js";
 import { card, fieldRow, headerStrip, typeBadge } from "../shared/panels.js";
+import { sourceName } from "../shared/source.js";
 import { defineElement, AlchemyElement, type ViewHandle } from "../shared/element.js";
 import { FONT } from "../shared/style.js";
 import { V } from "../shared/theme.js";
@@ -25,7 +26,7 @@ export class GufeUnknownComponent extends AlchemyElement<UnknownComponentViz> {
   }
 
   protected renderView(host: HTMLDivElement, payload: UnknownComponentViz): ViewHandle {
-    const bar = headerStrip(payload.name || "Unnamed component");
+    const bar = headerStrip(payload.name || "Unnamed component", sourceName(this));
     bar.statsEl.appendChild(typeBadge(payload.gufe_type));
     host.appendChild(bar);
 

@@ -99,4 +99,14 @@ describe("the dropzone banner", () => {
     expect(banner().style.opacity).toBe("1");
     expect(banner().style.pointerEvents).toBe("auto");
   });
+
+  it("tells the view which file was dropped, as well as the tab", async () => {
+    await drop(JSON.stringify(readExample("ligand_network.json")));
+
+    const view = document.body.querySelector("alchemy-view")!;
+    expect(view.getAttribute("source")).toBe("payload.json");
+    expect(document.title).toContain("payload.json");
+    // The header is the point of the attribute: the tab said it already.
+    expect(view.querySelector(".gufe-header-source")?.textContent).toBe("payload.json");
+  });
 });

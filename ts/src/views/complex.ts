@@ -94,6 +94,33 @@ type Focus = (typeof FOCUS_MODES)[number]["id"];
 const SITE_ZOOM_OUT = 0.4;
 
 export class GufeComplex extends AlchemyElement<ChemicalSystemViz> {
+  /**
+   * Which ligands are in the scene, by their index in `complexPartsFor`'s own
+   * `ligands` - or null to let the element decide, which is the first alone.
+   *
+   * Set by whatever mounts this, before the payload, and owned by it. The
+   * control that edits it is the component strip of `<gufe-chemical-system>`,
+   * for two reasons: that strip already names every ligand, so a second list of
+   * the same names over the picture was the same word twice with two states to
+   * keep in step; and the strip outlives this element, which is torn down and
+   * rebuilt every time a reader clicks to another pane and back. A set held out
+   * there is what makes the choice survive that round trip.
+   *
+   * Mounted on its own - no strip, nobody to hand one over - the element opens
+   * on the first ligand and stays there, which is the safe half of the reason
+   * this defaults the way it does.
+   */
+  ligandsShown: Set<number> | null = null;
+
+  /**
+   * Redraw after the host has edited `ligandsShown`.
+   *
+   * Assigned by `renderView`, so a call before the first render or after a
+   * teardown does nothing rather than throwing - which is what a host holding a
+   * detached element and a live set needs it to do.
+   */
+  refreshLigands: () => void = () => {};
+
   protected override placeholder(): string {
     return "Waiting for a ChemicalSystem payload...";
   }
@@ -108,6 +135,20 @@ export class GufeComplex extends AlchemyElement<ChemicalSystemViz> {
     // ligand as though it were a chain.
     const proteinModels = parts.structures.map((_, i) => i);
     const ligandModels = parts.ligands.map((_, i) => parts.structures.length + i);
+
+    // Which ligands are in the picture. A bound leg carries one and this is it;
+    // an ensemble carries a pose per ligand, all in the same frame, and drawing
+    // every one of them at once is a thicket rather than a complex - the site
+    // disappears behind a dozen overlaid molecules drawn in the same element
+    // colours, with nothing on screen to say which is which. So the scene opens
+    // on the first, and the strip beside it is where the rest are turned on.
+    // Handed over rather than made here where there is a host to hand it: see
+    // `ligandsShown`.
+    const shown = this.ligandsShown ?? new Set<number>(parts.ligands.length ? [0] : []);
+    this.ligandsShown = shown;
+
+    /** The models of the ligands now drawn, in the order they were loaded. */
+    const shownModels = (): number[] => ligandModels.filter((_, i) => shown.has(i));
 
     // Which framing is in force. Read before the scene is built: a menu that
     // was left open builds its controls during that call, and the focus buttons
@@ -165,7 +206,14 @@ export class GufeComplex extends AlchemyElement<ChemicalSystemViz> {
       const viewer = scene.viewer();
       if (!viewer) return;
       applyProteinStyles(viewer, scene.opts, stats, scene.showStatus, { model: proteinModels }, scene.stillWanted);
-      applyLigandStyles(viewer, { model: ligandModels });
+      const drawn = shownModels();
+      const hidden = ligandModels.filter((_, i) => !shown.has(i));
+      if (drawn.length) applyLigandStyles(viewer, { model: drawn });
+      // Styled with nothing rather than removed from the viewer: the model stays
+      // parsed, so showing it again is a restyle instead of a second trip
+      // through the SDF, and every model index above it keeps its place - which
+      // is what `proteinModels` and `ligandModels` are indices into.
+      if (hidden.length) viewer.setStyle({ model: hidden }, {});
       viewer.render();
     }
 
@@ -180,8 +228,9 @@ export class GufeComplex extends AlchemyElement<ChemicalSystemViz> {
     function reframe(): void {
       const viewer = scene.viewer();
       if (!viewer) return;
-      if (focus === "site" && ligandModels.length) {
-        viewer.zoomTo({ model: ligandModels });
+      const drawn = shownModels();
+      if (focus === "site" && drawn.length) {
+        viewer.zoomTo({ model: drawn });
         viewer.zoom(SITE_ZOOM_OUT);
       } else {
         viewer.zoomTo();
@@ -206,16 +255,27 @@ export class GufeComplex extends AlchemyElement<ChemicalSystemViz> {
       return {};
     }
 
-    scene.setStats(complexStatsParts(parts, () => stats));
+    const updateStats = (): void => scene.setStats(complexStatsParts(parts, shown, stats));
+
+    updateStats();
     try {
       // The first structure's statistics, which is all of them in every payload
       // gufe produces: a system with two proteins in it has no natural single
       // readout, and the colour-by-residue gradient needs one structure's range.
       stats = parsePdbStats(parts.structures[0].pdb);
-      scene.setStats(complexStatsParts(parts, () => stats));
+      updateStats();
     } catch (e) {
       scene.showStatus(`PDB parse error: ${errText(e)}`, "error");
     }
+
+    // Deliberately no reframing in here. Showing another pose is a change to
+    // what is in the site, not a request to be taken somewhere else, and a
+    // camera that jumped every time a ligand was turned on would undo the angle
+    // the reader had just found. `Reset` is still the way back to the framing.
+    this.refreshLigands = () => {
+      restyle();
+      updateStats();
+    };
 
     scene.showStatus("Loading 3D viewer...");
     load3Dmol()
@@ -249,15 +309,20 @@ export class GufeComplex extends AlchemyElement<ChemicalSystemViz> {
  * The protein statistics are the same line `<gufe-protein>` shows, so the two
  * panes of one system agree about the structure, with the ligand's own atom
  * count in front of it - that being the number a reader of a complex is
- * actually checking.
+ * actually checking. Where there are several, the count is of the ones drawn
+ * rather than of the ones in the payload, because a total that counted poses
+ * nobody can see would not be the atom count of anything on screen.
  */
-function complexStatsParts(parts: ComplexParts, stats: () => PdbStats | null): string[] {
-  const atoms = parts.ligands.reduce((total, ligand) => {
+function complexStatsParts(parts: ComplexParts, shown: Set<number>, structure: PdbStats | null): string[] {
+  const drawn = parts.ligands.filter((_, at) => shown.has(at));
+  const atoms = drawn.reduce((total, ligand) => {
     const counts = parseCounts(ligand.sdf);
     return counts ? total + counts.atoms : total;
   }, 0);
-  const ligand = `${parts.ligands.length === 1 ? "ligand" : `${parts.ligands.length} ligands`} ${atoms} atoms`;
-  const structure = stats();
+  const ligand =
+    parts.ligands.length === 1
+      ? `ligand ${atoms} atoms`
+      : `${drawn.length} of ${parts.ligands.length} ligands shown, ${atoms} atoms`;
   return structure ? [ligand, ...proteinStatsParts(structure)] : [ligand];
 }
 

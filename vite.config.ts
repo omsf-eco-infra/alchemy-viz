@@ -1,10 +1,17 @@
-import { existsSync, readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import {
+  existsSync,
+  readFileSync,
+} from 'node:fs';
+import { resolve } from 'node:path';
+
 // vitest's re-export of Vite's defineConfig, so the `test` block below is typed.
 // `Plugin` comes from the same place on purpose: vitest carries its own copy of
 // Vite, and a `Plugin` imported straight from `vite` is a different type to the
 // one this config's `plugins` field expects.
-import { defineConfig, type Plugin } from "vitest/config";
+import {
+  defineConfig,
+  type Plugin,
+} from 'vitest/config';
 
 /**
  * Hand the menu's framejs share button a single-file bundle.
@@ -46,7 +53,7 @@ function devBundle(): Plugin {
  * the list goes through it.
  */
 const ROUTES: [string, string][] = [
-  ["/gallery.html", "one example per view, the one worth looking at"],
+  ["/gallery.html", "curated examples"],
   ["/gallery-all.html", "every payload in examples/, sizes and duplicates"],
   ["/", "drop a payload JSON on the page"],
   ["/parity.html", "our atom mapping beside gufe's own"],

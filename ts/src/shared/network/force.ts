@@ -22,7 +22,7 @@
  * not, and `id`/`distance` are typed against them.
  */
 
-import { loadD3 } from "../engines.js";
+import { loadD3Force } from "../engines.js";
 
 /**
  * One force, as a chain of setters. Not every force answers every one of these -
@@ -92,7 +92,7 @@ export interface RelaxSpec<N, L> {
 export async function relax<N, L>(spec: RelaxSpec<N, L>): Promise<boolean> {
   let d3: D3ForceModule<N, L>;
   try {
-    d3 = (await loadD3()) as D3ForceModule<N, L>;
+    d3 = (await loadD3Force()) as D3ForceModule<N, L>;
     if (typeof d3?.forceSimulation !== "function") return false;
   } catch {
     return false;

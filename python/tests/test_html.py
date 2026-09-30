@@ -12,7 +12,7 @@ import re
 import pytest
 from alchemy_viz import bundle_source, to_html
 from alchemy_viz.cli import main
-from alchemy_viz.html import _script_safe, default_output_path
+from alchemy_viz.html import _script_safe, default_output_path, shell_html
 
 from .conftest import REPO, read_example
 
@@ -99,6 +99,28 @@ class TestToHtml:
         # Nothing else about the page changes: same bundle, same payload block.
         assert html.replace("<alchemy-view debug>", "<alchemy-view>") == to_html(read_example("solvent.json"))
 
+    def test_source_names_the_file_for_the_header(self):
+        """The view reads this off the element and draws it beside its title."""
+        html = to_html(read_example("solvent.json"), source="tyk2.json")
+
+        assert '<alchemy-view source="tyk2.json"></alchemy-view>' in html
+
+    def test_source_is_escaped(self):
+        """A file name is arbitrary text, and this one goes inside an attribute."""
+        html = to_html(read_example("solvent.json"), source='" onload="alert(1)')
+
+        assert 'onload="alert(1)"' not in html
+        assert "&quot; onload=&quot;alert(1)" in html
+
+    def test_source_and_debug_sit_on_the_same_element(self):
+        html = to_html(read_example("solvent.json"), source="tyk2.json", debug=True)
+
+        assert '<alchemy-view debug source="tyk2.json"></alchemy-view>' in html
+
+    def test_the_shell_can_name_a_file_too(self):
+        assert '<alchemy-view source="tyk2.json"></alchemy-view>' in shell_html(source="tyk2.json")
+        assert "<alchemy-view></alchemy-view>" in shell_html()
+
     def test_refuses_an_object_it_cannot_visualize(self):
         with pytest.raises(TypeError):
             to_html(object())
@@ -127,6 +149,39 @@ class TestCli:
         assert written.read_text().startswith("<!doctype html>")
         assert "mol.json.html" in capsys.readouterr().out
 
+    def test_the_tab_says_which_file_was_rendered(self, tmp_path, capsys):
+        """Asked for in review: the payload's name is on the page, the file's is not."""
+        source = tmp_path / "mol.json"
+        source.write_text(json.dumps(read_example("small_molecule.json")))
+
+        assert main([str(source), "-o", "-"]) == 0
+        assert "<title>mol.json</title>" in capsys.readouterr().out
+
+    def test_the_header_says_which_file_was_rendered(self, tmp_path, capsys):
+        """The tab is one place to say it, and it is gone from a screenshot."""
+        source = tmp_path / "mol.json"
+        source.write_text(json.dumps(read_example("small_molecule.json")))
+
+        assert main([str(source), "-o", "-"]) == 0
+        assert '<alchemy-view source="mol.json"></alchemy-view>' in capsys.readouterr().out
+
+    def test_the_header_names_the_file_whatever_the_title_says(self, tmp_path, capsys):
+        """`--title` renames the tab. The file rendered is still the file rendered."""
+        source = tmp_path / "mol.json"
+        source.write_text(json.dumps(read_example("small_molecule.json")))
+
+        assert main([str(source), "-o", "-", "--title", "custom"]) == 0
+        written = capsys.readouterr().out
+        assert "<title>custom</title>" in written
+        assert '<alchemy-view source="mol.json"></alchemy-view>' in written
+
+    def test_an_explicit_title_still_wins(self, tmp_path, capsys):
+        source = tmp_path / "mol.json"
+        source.write_text(json.dumps(read_example("small_molecule.json")))
+
+        assert main([str(source), "-o", "-", "--title", "custom"]) == 0
+        assert "<title>custom</title>" in capsys.readouterr().out
+
     def test_honours_an_explicit_output(self, tmp_path):
         source = tmp_path / "mol.json"
         source.write_text(json.dumps(read_example("protein_fragment.json")))
@@ -149,7 +204,8 @@ class TestCli:
         source.write_text(json.dumps(read_example("small_molecule.json")))
 
         assert main([str(source), "--debug", "-o", "-"]) == 0
-        assert "<alchemy-view debug></alchemy-view>" in capsys.readouterr().out
+        # Beside the file name every page the CLI writes carries.
+        assert '<alchemy-view debug source="mol.json"></alchemy-view>' in capsys.readouterr().out
 
     def test_missing_input_is_a_clean_error(self, tmp_path):
         with pytest.raises(SystemExit) as exc:

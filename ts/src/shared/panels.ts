@@ -51,6 +51,11 @@ export interface HeaderStrip extends HTMLDivElement {
   titleEl: HTMLSpanElement;
   statsEl: HTMLDivElement;
   /**
+   * The file this payload was generated from, when a generator said - absent
+   * from the strip entirely when nothing did, rather than an empty element.
+   */
+  sourceEl?: HTMLSpanElement;
+  /**
    * Where `chromeMenu` puts its button: first in the strip, so the control sits
    * at the top left in every view that has one. Empty, and taking no room, until
    * a view asks for a menu.
@@ -69,8 +74,14 @@ export interface HeaderStrip extends HTMLDivElement {
  * Deliberately no subtitle. What a payload is belongs in the payload's own name;
  * what type it is, the view already is - a gufe class name beside the title
  * reads as "Ligand network LigandNetwork", which says one thing in two fonts.
+ *
+ * `source` is the exception that proves the rule, and is not a subtitle: it is
+ * the name of the file this page was generated from, which is a different fact
+ * from what the payload calls itself and one the payload does not hold. It is
+ * drawn in the monospace of a path and at the weight of a caption so that the
+ * title stays the thing being read. See `shared/source.ts`.
  */
-export function headerStrip(title: string): HeaderStrip {
+export function headerStrip(title: string, source = ""): HeaderStrip {
   const bar = el("div", HEADER) as HeaderStrip;
   bar.className = "gufe-header";
   bar.titleEl = el(
@@ -92,6 +103,18 @@ export function headerStrip(title: string): HeaderStrip {
   // First, so the menu button is at the top left wherever a view carries one.
   bar.appendChild(bar.toggleEl);
   bar.textEl.appendChild(bar.titleEl);
+  if (source) {
+    bar.sourceEl = el(
+      "span",
+      `font-family:${FONT.mono};font-size:${FONT.small};color:${TEXT.faint};min-width:0;overflow-wrap:anywhere;`,
+      source,
+    );
+    // Named so a test can find it and a host can restyle it, the way
+    // `gufe-header` itself is.
+    bar.sourceEl.className = "gufe-header-source";
+    bar.sourceEl.title = `Generated from ${source}`;
+    bar.textEl.appendChild(bar.sourceEl);
+  }
   bar.textEl.appendChild(bar.statsEl);
   bar.appendChild(bar.textEl);
   return bar;

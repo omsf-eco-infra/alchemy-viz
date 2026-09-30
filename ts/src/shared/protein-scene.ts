@@ -238,7 +238,17 @@ export function proteinScene(spec: ProteinSceneSpec): ProteinScene {
     PROTEIN_COLOR_SCHEMES.map((c) => c.id),
   );
   const watersSetting = flag("protein.waters", spec.waters);
-  const heteroSetting = flag("protein.hetero", true);
+  // Off by default. What `hetflag` marks is not "the interesting small molecule
+  // in this structure" - it is every record a PDB does not call polymer, which
+  // for a prepared system means the ACE and NME caps on each terminus, the
+  // counter-ions, the lipids. Drawn as sticks and spheres beside a cartoon or
+  // outside a surface (which is computed over the polymer only), those read as
+  // stray molecules floating next to the protein, and a reader who has not been
+  // told what a cap is has no way to tell them from a ligand. The bound ligand
+  // in a complex comes from its own component and is styled separately, so
+  // nothing a view is actually about is hidden by this. A stored choice still
+  // wins, as with every other control here.
+  const heteroSetting = flag("protein.hetero", false);
   const spinSetting = flag("protein.spin", false);
 
   const opts: ProteinOptions = {

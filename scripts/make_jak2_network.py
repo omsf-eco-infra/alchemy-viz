@@ -44,6 +44,15 @@ where MCS finishes at all, which on the least similar pairs it does not. So an
 edge here does mean something, and the thing it means is geometric: these atoms
 occupy the same place in the site. It is not a planner's opinion about which
 transformation is cheap, and the network is not a plan.
+
+The search runs over the heavy atoms, for the reason :class:`Pose` gives, but
+the mapping it returns is not heavy atoms only: :func:`hydrogen_mapping` then
+pairs every hydrogen hanging off a mapped heavy pair with one on its partner.
+A heavy atom that is the same atom of the series carries the same hydrogens, so
+the cutoff that decides the heavy pairs has no part in that; what the geometry
+decides is only which hydrogen of a pair is which. A mapping that stopped at the
+heavy atoms would be drawing a distinction neither its own heavy atoms nor any
+real mapper draws.
 """
 
 from __future__ import annotations
@@ -114,16 +123,21 @@ def load_poses(path: pathlib.Path) -> list:
 
 
 class Pose:
-    """One pose's heavy atoms: where they are, what they are, what they bond to.
+    """One pose's atoms: where they are, what they are, what they bond to.
 
-    Heavy atoms only, because a hydrogen is where the force field put it rather
-    than where the density is, and two poses that agree about a ring can disagree
-    about which way a methyl points.
+    The heavy atoms are the ones the correspondence is *searched* over, and they
+    are what `index`, `coords`, `elements` and `bonds` hold. A hydrogen is where
+    the force field put it rather than where the density is, so letting one
+    anchor a pair would let a rotated methyl decide which ring atom sits where.
+    Hydrogens are carried beside that, under the heavy atom they hang off, and
+    are paired afterwards from the heavy pairs - see :func:`hydrogen_mapping`.
 
     Prepared once per ligand rather than once per pair. Everything below indexes
-    atoms by their position in `index`, and `index` holds the molecule's own atom
-    indices, so a mapping converts back to what gufe expects at the end and
-    nowhere in between.
+    heavy atoms by their position in `index`, and `index` holds the molecule's
+    own atom indices, so a mapping converts back to what gufe expects at the end
+    and nowhere in between. `hydrogens` and `hydrogen_coords` are the exception:
+    they are keyed and valued in the molecule's own indices throughout, because
+    nothing searches over them.
     """
 
     def __init__(self, mol):
@@ -141,6 +155,20 @@ class Pose:
                 self.bonds[position[a]].add(position[b])
                 self.bonds[position[b]].add(position[a])
 
+        #: Heavy atom -> the hydrogens bonded to it, in the molecule's own
+        #: indices. A hydrogen bonded to anything other than exactly one heavy
+        #: atom has no parent to inherit a pair from and is left out.
+        self.hydrogens: dict[int, list[int]] = {atom: [] for atom in self.index}
+        self.hydrogen_coords: dict[int, np.ndarray] = {}
+        for atom in mol.GetAtoms():
+            if atom.GetAtomicNum() != 1:
+                continue
+            parents = [neighbour.GetIdx() for neighbour in atom.GetNeighbors()]
+            if len(parents) != 1 or parents[0] not in self.hydrogens:
+                continue
+            self.hydrogens[parents[0]].append(atom.GetIdx())
+            self.hydrogen_coords[atom.GetIdx()] = np.array(list(conformer.GetAtomPosition(atom.GetIdx())))
+
     def __len__(self) -> int:
         return len(self.index)
 
@@ -148,14 +176,17 @@ class Pose:
 def geometric_mapping(poseA: Pose, poseB: Pose, cutoff: float = CUTOFF) -> dict[int, int]:
     """Atoms of ``poseA`` paired with the atoms of ``poseB`` they sit on.
 
-    Three steps, and the second two are what keep it from being a proximity
-    table. Pair greedily, nearest first, one atom to one atom and only between
-    atoms of the same element. Then drop every pair standing on its own - a pair
-    survives only if one of its atom's bonded neighbours is paired with one of
-    the other's, repeated until nothing more falls out, which removes the
-    coincidence of an oxygen of one ligand sitting where an unrelated oxygen of
-    the other happens to be. Then keep the largest connected piece of what is
-    left, so the correspondence is one substructure rather than several.
+    Three steps over the heavy atoms, and the second two are what keep it from
+    being a proximity table. Pair greedily, nearest first, one atom to one atom
+    and only between atoms of the same element. Then drop every pair standing on
+    its own - a pair survives only if one of its atom's bonded neighbours is
+    paired with one of the other's, repeated until nothing more falls out, which
+    removes the coincidence of an oxygen of one ligand sitting where an unrelated
+    oxygen of the other happens to be. Then keep the largest connected piece of
+    what is left, so the correspondence is one substructure rather than several.
+
+    :func:`hydrogen_mapping` then hangs the hydrogens off that, and the two are
+    returned as one mapping.
 
     Returns the molecules' own atom indices, which is what a
     ``LigandAtomMapping`` is written in.
@@ -180,7 +211,51 @@ def geometric_mapping(poseA: Pose, poseB: Pose, cutoff: float = CUTOFF) -> dict[
 
     paired = _bonded_support(paired, poseA.bonds, poseB.bonds)
     paired = _largest_connected(paired, poseA.bonds)
-    return {poseA.index[i]: poseB.index[j] for i, j in paired.items()}
+    heavy = {poseA.index[i]: poseB.index[j] for i, j in paired.items()}
+    return heavy | hydrogen_mapping(heavy, poseA, poseB)
+
+
+def hydrogen_mapping(heavy: dict[int, int], poseA: Pose, poseB: Pose) -> dict[int, int]:
+    """The hydrogens of a heavy atom pair, paired with each other.
+
+    Searching over the hydrogens is what :class:`Pose` avoids; inheriting them
+    is not the same thing. Once two heavy atoms are known to be the same atom of
+    the series, a hydrogen on one is the same hydrogen as one on the other, so
+    the candidates are enumerated within a heavy pair and nowhere across it, and
+    every one of them is taken: `CUTOFF` is the heavy atoms' test and no part of
+    this. A carbon that is the same carbon does not have different hydrogens on
+    it, and the rotation that leaves a methyl's three pointing somewhere else is
+    a torsion the transformation is free to turn back - which is the answer both
+    LOMAP and Kartograf give, and dropping the three would be this fixture
+    inventing a distinction its own heavy atoms do not draw.
+
+    What the geometry is still used for is *which* hydrogen is which. Within a
+    pair they are matched nearest first, so wherever a rotation has not moved
+    them the pairing is the one the poses show; where it has, one consistent
+    one-to-one choice is as good as another and nearest-first keeps it
+    deterministic. A count that differs across the pair - a mapped carbon
+    carrying two hydrogens against three - leaves the remainder unmapped, which
+    is the one case a hydrogen has nothing to be the same as.
+    """
+    candidates: list[tuple[float, int, int]] = []
+    for atomA, atomB in heavy.items():
+        for hydrogenA in poseA.hydrogens[atomA]:
+            for hydrogenB in poseB.hydrogens[atomB]:
+                distance = float(np.linalg.norm(poseA.hydrogen_coords[hydrogenA] - poseB.hydrogen_coords[hydrogenB]))
+                candidates.append((distance, hydrogenA, hydrogenB))
+
+    # Sorted the way the heavy candidates are, so a tie between two hydrogens of
+    # one methyl is broken by the molecule's own atom order.
+    takenA: set[int] = set()
+    takenB: set[int] = set()
+    paired: dict[int, int] = {}
+    for _, hydrogenA, hydrogenB in sorted(candidates):
+        if hydrogenA in takenA or hydrogenB in takenB:
+            continue
+        takenA.add(hydrogenA)
+        takenB.add(hydrogenB)
+        paired[hydrogenA] = hydrogenB
+    return paired
 
 
 def _bonded_support(paired: dict[int, int], graphA: dict[int, set[int]], graphB: dict[int, set[int]]) -> dict[int, int]:
@@ -220,21 +295,28 @@ def _largest_connected(paired: dict[int, int], graphA: dict[int, set[int]]) -> d
 
 
 def overlap_score(mapping: dict[int, int], poseA: Pose, poseB: Pose) -> float:
-    """Mapped atoms as a fraction of the larger ligand's heavy atoms.
+    """Mapped heavy atoms as a fraction of the larger ligand's heavy atoms.
 
     The larger rather than the smaller, so growing a ligand and mapping all of
     the original does not score as a perfect match. It is in [0, 1] and it is an
     overlap, not a LOMAP score: nothing here estimates the cost of a
     transformation.
+
+    Heavy atoms on both sides of the fraction. A hydrogen is mapped because its
+    parent is, so counting it would weight a pair by how many hydrogens the
+    shared substructure happens to carry - a saturated ring scoring above an
+    aromatic one that overlaps just as well - which is a fact about the scaffold
+    and not about the overlap.
     """
-    return len(mapping) / max(len(poseA), len(poseB))
+    heavy = set(poseA.index)
+    return sum(1 for atom in mapping if atom in heavy) / max(len(poseA), len(poseB))
 
 
 def plan(mols: list, partners: int = PARTNERS) -> list[dict]:
     """Join each ligand to the ligands its pose overlaps best.
 
-    Every pair is scored, which is 35 thousand comparisons and about two seconds,
-    and then each ligand keeps its `partners` best. The union of those is the
+    Every pair is scored, which is 35 thousand comparisons and a few seconds, and
+    then each ligand keeps its `partners` best. The union of those is the
     network: undirected, so a ligand that several others choose ends up with more
     than `partners` edges, which is what makes it look like a planned network
     rather than a ring.

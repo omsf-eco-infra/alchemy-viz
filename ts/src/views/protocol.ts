@@ -14,6 +14,7 @@
 
 import { el } from "../shared/dom.js";
 import { card, fieldRow, headerStrip, typeBadge } from "../shared/panels.js";
+import { sourceName } from "../shared/source.js";
 import { defineElement, AlchemyElement, type ViewHandle } from "../shared/element.js";
 import { FONT } from "../shared/style.js";
 import { V } from "../shared/theme.js";
@@ -27,7 +28,7 @@ export class GufeProtocol extends AlchemyElement<ProtocolViz> {
   protected renderView(host: HTMLDivElement, payload: ProtocolViz): ViewHandle {
     // A Protocol has no name of its own, so `name` is normally empty and the
     // class name is what identifies it to a reader.
-    const bar = headerStrip(payload.gufe_type || payload.name || "Protocol");
+    const bar = headerStrip(payload.gufe_type || payload.name || "Protocol", sourceName(this));
     bar.statsEl.appendChild(typeBadge(payload.gufe_type));
     host.appendChild(bar);
 

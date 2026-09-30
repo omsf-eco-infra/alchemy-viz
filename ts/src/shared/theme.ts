@@ -101,7 +101,7 @@ export interface Theme {
    * The ground a full-panel 2D depiction is drawn on. It tracks `viewerBg`, so
    * switching a molecule between 2D and 3D does not switch grounds under it.
    *
-   * A view asks `depict-theme.ts` for this rather than reading it here, because
+   * A view asks `mol2d-theme.ts` for this rather than reading it here, because
    * the depiction ground and the palette RDKit draws with have to be decided
    * together: light ink on a light ground is nothing at all.
    */
@@ -137,14 +137,14 @@ export interface Theme {
    * The same colour as the canvas in both themes, which is what makes it a
    * plate rather than a card: on a ligand network it is invisible and only
    * hides what it covers, and inside an alchemical network's coloured box it
-   * reads as the picture's own ground. A view asks `depict-theme.ts` for it,
+   * reads as the picture's own ground. A view asks `mol2d-theme.ts` for it,
    * because it has to move with the palette its structures are drawn in.
    */
-  netDepictBg: string;
+  netMol2dBg: string;
   /** A ligand's name under its structure: quieter than the structure itself. */
   netNodeCaption: string;
-  /** The same name where it sits on `netDepictBg`, which the plate decides and not the theme. */
-  netDepictCaption: string;
+  /** The same name where it sits on `netMol2dBg`, which the plate decides and not the theme. */
+  netMol2dCaption: string;
   netInitials: string;
   /**
    * A ligand matching the SMARTS pattern: its disc, and the atoms that matched
@@ -158,6 +158,24 @@ export interface Theme {
   netEdgeLine: string;
   netEdgeLabel: string;
   netHaloColor: string;
+  /**
+   * The rails drawn either side of the selected edge of a ligand network.
+   *
+   * Not `netHaloColor`, which is the top of `netEdgeRamp` or near enough: a
+   * halo in a ramp colour says "score 1" in the one channel the edge is
+   * already using to say what its score is, and a selected mapping of 0.00
+   * then draws as the widest, bluest line on the canvas. Pink is off the ramp
+   * at both ends and away from the amber a SMARTS match is drawn in, so
+   * selection is told apart from score by hue as well as by shape.
+   *
+   * Deeper in the light theme than in the dark one, which is the usual reason:
+   * the same pink that reads as a firm line on white is a smudge on
+   * `netCanvasBg`.
+   *
+   * A node halo keeps the accent, because a node carries no ramp colour for
+   * one to be confused with.
+   */
+  netEdgeSelect: string;
   /**
    * The compositions a network's chemical systems come in, one colour each.
    *
@@ -174,6 +192,25 @@ export interface Theme {
    */
   netGroupFill: string[];
   netGroupStroke: string[];
+  /**
+   * The protocols a network runs, one colour each.
+   *
+   * Its own palette rather than the group one, because the two answer different
+   * questions and are capped differently. A composition is a fact about the
+   * boxes, and five of them is already more than a picture can say; a protocol
+   * is a lens the reader picks one of, and a campaign that split its legs by
+   * settings can honestly run ten - a per-leg protocol across five targets is
+   * an ordinary sweep, not a pathological payload.
+   *
+   * Ten, spread around the wheel so that neighbours in the chip row are not
+   * neighbours in hue, and with the neutral last: a grey reads as "no colour",
+   * which is the wrong thing for the first protocol a network names. None of
+   * them is `netEdgeLine` - a lens drawn in the resting stroke is a lens that
+   * only shows up as a change of weight. One lens is lit at a time, so these
+   * never have to be told apart from each other on the canvas, only from the
+   * line that is not lit; the chip row is where they are read side by side.
+   */
+  netProtocolStroke: string[];
 }
 
 export const THEMES: { dark: Theme; light: Theme } = {
@@ -227,9 +264,9 @@ export const THEMES: { dark: Theme; light: Theme } = {
     netNodeFill: "#33334d",
     netNodeStroke: "#6a6c82",
     netNodeLabel: "#f2f3f7",
-    netDepictBg: "#2b2b40",
+    netMol2dBg: "#2b2b40",
     netNodeCaption: "#b9bccb",
-    netDepictCaption: "#b9bccb",
+    netMol2dCaption: "#b9bccb",
     netInitials: "#51cbee",
     netMatchFill: "#4a3c22",
     netMatchStroke: "#e69f00",
@@ -238,8 +275,21 @@ export const THEMES: { dark: Theme; light: Theme } = {
     netEdgeLine: "#8f93a6",
     netEdgeLabel: "#f2f3f7",
     netHaloColor: "#51cbee",
+    netEdgeSelect: "#e0457e",
     netGroupFill: ["#1f3a63", "#12403c", "#3a1f37", "#4a3c22", "#243a5e"],
     netGroupStroke: ["#4182e4", "#00bdaa", "#c060b8", "#e69f00", "#8f93a6"],
+    netProtocolStroke: [
+      "#4182e4",
+      "#00bdaa",
+      "#c060b8",
+      "#e69f00",
+      "#5ec26a",
+      "#f4714e",
+      "#9d8df1",
+      "#ef6f9b",
+      "#b5c94a",
+      "#c7cbdd",
+    ],
   },
   light: {
     appBg: "#ffffff",
@@ -291,9 +341,9 @@ export const THEMES: { dark: Theme; light: Theme } = {
     netNodeFill: "#ffffff",
     netNodeStroke: "#cccccc",
     netNodeLabel: "#333333",
-    netDepictBg: "#ffffff",
+    netMol2dBg: "#ffffff",
     netNodeCaption: "#666666",
-    netDepictCaption: "#666666",
+    netMol2dCaption: "#666666",
     netInitials: "#4182e4",
     netMatchFill: "#fdf1d8",
     netMatchStroke: "#e69f00",
@@ -302,8 +352,21 @@ export const THEMES: { dark: Theme; light: Theme } = {
     netEdgeLine: "#999999",
     netEdgeLabel: "#333333",
     netHaloColor: "#51cbee",
+    netEdgeSelect: "#c2185b",
     netGroupFill: ["#e6effc", "#d9f5f2", "#f6e7f4", "#fdf1d8", "#eef0f4"],
     netGroupStroke: ["#4182e4", "#009e8f", "#8a2283", "#c07d00", "#666666"],
+    netProtocolStroke: [
+      "#2f6fd0",
+      "#009e8f",
+      "#8a2283",
+      "#c07d00",
+      "#2e8b3d",
+      "#d1441c",
+      "#6a4fd0",
+      "#b3306a",
+      "#6f7d1c",
+      "#4a5160",
+    ],
   },
 };
 

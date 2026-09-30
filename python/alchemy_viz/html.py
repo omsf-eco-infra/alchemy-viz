@@ -14,12 +14,18 @@ and bootstrap, for a host that delivers the payload itself - the notebook widget
 ``to_html(obj, debug=True)`` bakes in the debug switch, which makes the bundle
 print the payload to the console; a page written without it still answers to
 ``?debug`` in its URL.
+
+``to_html(obj, source="tyk2.json")`` names the file the payload came from, which
+the view then draws beside its own title. The payload cannot say it - what a
+file on disk is called is not part of a gufe object - so a caller reading one
+has to pass it on, and :mod:`alchemy_viz.cli` does.
 """
 
 from __future__ import annotations
 
 import json
 import re
+from html import escape as escape_html
 from importlib import resources
 from pathlib import Path
 from string import Template
@@ -96,11 +102,26 @@ try {
 }
 """
 
+
 _CDN_ENGINES_NOTE = (
     "<!-- RDKit / 3Dmol / d3 are fetched from their CDNs on demand, and only by a\n"
     '     view that needs them. A future engines="bundled" mode will inline\n'
     "     them and drops the network requirement entirely. -->"
 )
+
+
+def _view_attributes(*, debug: bool, source: str | None) -> str:
+    """The attributes to put on ``<alchemy-view>``, ready to interpolate.
+
+    ``debug`` is a bare boolean attribute, because that is what the bundle tests
+    for - no value to keep in step between the two languages. ``source`` carries
+    a value and so is quoted and escaped: it is a file name from a command line,
+    which is arbitrary text.
+    """
+    attributes = " debug" if debug else ""
+    if source:
+        attributes += f' source="{escape_html(source, quote=True)}"'
+    return attributes
 
 
 def _script_safe(text: str) -> str:
@@ -110,10 +131,6 @@ def _script_safe(text: str) -> str:
     regex literal, where ``<\/script`` is an identity escape meaning the same thing.
     """
     return re.sub(r"</(script)", r"<\\/\1", text, flags=re.IGNORECASE)
-
-
-def _escape_html(text: str) -> str:
-    return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
 
 def _as_payload_dict(obj: GufeTokenizable | dict[str, Any]) -> dict[str, Any]:
@@ -126,13 +143,24 @@ def _as_payload_dict(obj: GufeTokenizable | dict[str, Any]) -> dict[str, Any]:
     return payload_for(obj)
 
 
-def to_html(obj: GufeTokenizable | dict[str, Any], *, title: str | None = None, debug: bool = False) -> str:
+def to_html(
+    obj: GufeTokenizable | dict[str, Any],
+    *,
+    title: str | None = None,
+    source: str | None = None,
+    debug: bool = False,
+) -> str:
     """Return a standalone HTML page that renders ``obj``, as a string.
 
     ``obj`` is a GufeTokenizable or an already-built payload dict. ``title`` defaults
     to the payload's name, then its type. ``debug`` bakes in the switch that prints
     the payload to the browser console, for handing someone a file that does it on
     its own; the same page also answers to ``<url>?debug``.
+
+    ``source`` is the file ``obj`` was read from, and is drawn in the
+    visualization's own header beside the payload's name. A caller that started
+    from a path has it and the payload does not, which is why it is a keyword
+    here rather than something the builders could work out.
 
     Nothing is written to disk. Raises ``TypeError`` for an object this cannot
     visualize, and :exc:`BundleMissing` if the compiled bundle is not installed.
@@ -142,7 +170,7 @@ def to_html(obj: GufeTokenizable | dict[str, Any], *, title: str | None = None, 
     # `Template.substitute` scans the template once, so a placeholder appearing
     # inside a substituted value (e.g. the payload or bundle) is left alone.
     return _TEMPLATE.substitute(
-        title=_escape_html(title or payload.get("name") or payload.get("type") or "alchemy-viz"),
+        title=escape_html(title or payload.get("name") or payload.get("type") or "alchemy-viz", quote=False),
         payload=_PAYLOAD_BLOCK.substitute(
             # `</` cannot appear inside a <script> block, whatever the payload
             # holds; `\/` is a legal JSON escape, so this survives JSON.parse
@@ -152,30 +180,32 @@ def to_html(obj: GufeTokenizable | dict[str, Any], *, title: str | None = None, 
         engines=_CDN_ENGINES_NOTE,
         code=_script_safe(bundle_source()),
         bootstrap=_BOOTSTRAP,
-        # A bare boolean attribute, because that is what the element tests for -
-        # no value to keep in step between the two languages.
-        view_attributes=" debug" if debug else "",
+        view_attributes=_view_attributes(debug=debug, source=source),
     )
 
 
-def shell_html(*, title: str = "alchemy-viz") -> str:
+def shell_html(*, title: str = "alchemy-viz", source: str | None = None) -> str:
     """Return the same page as :func:`to_html`, minus the payload.
 
     The notebook widget writes this into an iframe and then sets ``.payload`` on the
     ``<alchemy-view>`` inside it, so the payload arrives over the widget comm. One
     template, two fillings.
 
+    ``source`` means what it means in :func:`to_html`, and belongs on the shell
+    rather than with the payload for the same reason the debug switch does: the
+    element reads it while the view is being built.
+
     The elements are defined by the time the iframe's ``load`` event fires, because
     a module script delays it. A host that set ``.payload`` before then would be
     assigning to an un-upgraded element, shadowing the class's accessor.
     """
     return _TEMPLATE.substitute(
-        title=_escape_html(title),
+        title=escape_html(title, quote=False),
         payload="",
         engines=_CDN_ENGINES_NOTE,
         code=_script_safe(bundle_source()),
         bootstrap="",
-        view_attributes="",
+        view_attributes=_view_attributes(debug=False, source=source),
     )
 
 

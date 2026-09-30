@@ -387,7 +387,13 @@ export interface ChromeMenuOptions {
   /** Accessible name for the button. */
   label?: string;
   /**
-   * Appended below whatever `build` returned, on the same first open.
+   * Appended *into* whatever `build` returned, last, on the same first open.
+   *
+   * Into it rather than beside it, because what `build` returns is the panel
+   * itself - its padding, its background, the gap between its controls - and a
+   * row appended beside it is a row outside all three: a button running from
+   * edge to edge under a panel that stops above it, which is what this did
+   * until somebody looked at it.
    *
    * This is how the share button gets into every menu without this file knowing
    * that framejs exists. Calling `framejsMenuItem` directly would make the
@@ -428,7 +434,10 @@ function openFreeEnergyIcon(): HTMLSpanElement {
 /**
  * Three bars, drawn rather than typed, so the glyph is not a Unicode dependency.
  *
- * Superseded by the mark above, kept for switching back - see `MENU_ICON`.
+ * What the button shows. The mark above was tried first and reported as not
+ * looking like a button at all: a logo in the corner of a page is a logo, and
+ * nobody clicks one to find a search box behind it. Three bars is the one glyph
+ * that is only ever a menu.
  */
 function hamburgerIcon(): HTMLSpanElement {
   const icon = el("span", `display:inline-flex;flex-direction:column;gap:${SPACE.xs};justify-content:center;`);
@@ -448,12 +457,12 @@ function hamburgerIcon(): HTMLSpanElement {
 const MENU_ICONS = {
   /** The OpenFE mark, as `docs.openfree.energy` uses it. */
   openFreeEnergy: openFreeEnergyIcon,
-  /** Three bars: the generic form, for a build that should carry no branding. */
+  /** Three bars: the generic form, and the one that reads as a menu. */
   hamburger: hamburgerIcon,
 } as const;
 
 /** Which one the button shows. Change this word to switch. */
-const MENU_ICON: () => HTMLSpanElement = MENU_ICONS.openFreeEnergy;
+const MENU_ICON: () => HTMLSpanElement = MENU_ICONS.hamburger;
 
 /**
  * Attach a collapsible menu to `into`, and hand back the panel to place.
@@ -467,7 +476,9 @@ const MENU_ICON: () => HTMLSpanElement = MENU_ICONS.openFreeEnergy;
  */
 export function chromeMenu(
   into: HeaderStrip | HTMLElement,
-  build: () => Node,
+  // An element rather than any `Node`, because `extras` is appended into it:
+  // the panel a view builds is what carries the padding its controls sit in.
+  build: () => HTMLElement,
   options: ChromeMenuOptions = {},
 ): ChromeMenu {
   let open = options.remember ? options.remember.get() : (options.open ?? CHROME_OPEN_BY_DEFAULT);
@@ -488,9 +499,19 @@ export function chromeMenu(
    * the first toggle and the panel silently goes back to running off the bottom.
    */
   const panel = el("div", "flex-shrink:0;display:flex;flex-direction:column;min-height:0;");
-  const toggle = button(`display:inline-flex;align-items:center;gap:${SPACE.md};padding:${SPACE.sm} ${SPACE.lg};`);
+  // The bars and nothing else. Square padding, because a button holding one
+  // 14px glyph and the padding of a button holding a word is a button with a
+  // hole in one side of it.
+  const toggle = button(`display:inline-flex;align-items:center;padding:${SPACE.sm};`);
   toggle.appendChild(MENU_ICON());
-  toggle.setAttribute("aria-label", options.label || "Toggle menu");
+  // Which leaves the button with no text at all, so the accessible name is the
+  // whole of what it says: "Search, filter and select ligands" says what is
+  // behind it, which is what somebody who cannot see the bars needs to be told.
+  // `title` puts the same sentence under the pointer, since a reader who cannot
+  // read the bars has nothing else to go on either.
+  const name = options.label || "Toggle menu";
+  toggle.setAttribute("aria-label", name);
+  toggle.title = name;
 
   const apply = (): void => {
     // Build once, on the first open, and never again. `replaceChildren` is
@@ -498,11 +519,14 @@ export function chromeMenu(
     // be holding references into.
     if (open && !built) {
       built = true;
-      panel.appendChild(build());
-      // Last in every menu, after whatever the view put there. What this is in
-      // practice is the share button; see `ChromeMenuOptions.extras` for why it
-      // arrives as a callback rather than as an import.
-      options.extras?.(panel);
+      const body = build();
+      panel.appendChild(body);
+      // Last in every menu, inside what the view built rather than under it, so
+      // the row sits in the same column as the controls above it and is laid
+      // out by the same padding and gap. What this is in practice is the share
+      // button; see `ChromeMenuOptions.extras` for why it arrives as a callback
+      // rather than as an import.
+      options.extras?.(body);
     }
     panel.style.display = open ? "flex" : "none";
     // The stylesheet paints the open state from this, so saying it is the whole

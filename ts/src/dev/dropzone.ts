@@ -12,9 +12,35 @@
 import "../index.js";
 import { mount } from "./mount.js";
 import { errText } from "../shared/dom.js";
+import { SOURCE_ATTRIBUTE } from "../shared/source.js";
 import { V } from "../shared/theme.js";
 
 const DROP_HINT = "Drop a payload JSON anywhere on this page";
+
+/** The page's own title, to put whatever is loaded in front of. */
+const BASE_TITLE = "alchemy-viz";
+
+/**
+ * The readable name of a dropped file or a `?file=` URL.
+ *
+ * The basename, because the dev URL for `examples/` is a `/@fs/...` path nobody
+ * can read, and the query string is dropped with it because `?t=` cache
+ * busters are not part of what a file is called.
+ */
+function basename(source: string): string {
+  return decodeURIComponent(source.split("?")[0]).split("/").pop() || "";
+}
+
+/**
+ * Say which file is on screen in the browser's own title bar.
+ *
+ * Asked for in review: several examples draw a similar picture, and the tab was
+ * the only place left that could say which one this is. The view's own header
+ * says it too, from the attribute `showing` sets.
+ */
+function titleFor(name: string): void {
+  document.title = name ? `${name} - ${BASE_TITLE}` : BASE_TITLE;
+}
 
 /** How long a message about something that worked stays up. */
 export const BANNER_MS = 3000;
@@ -61,6 +87,20 @@ export function installDropzone(host: HTMLElement): void {
     hideTimer = isError ? null : setTimeout(hide, BANNER_MS);
   };
 
+  /**
+   * Draw `payload`, and say everywhere which file it came from.
+   *
+   * The attribute is set before the payload, not after: assigning `.payload` is
+   * what renders, so a name that arrived afterwards would be a header built
+   * without it.
+   */
+  const showing = (payload: unknown, name: string): void => {
+    if (name) view.setAttribute(SOURCE_ATTRIBUTE, name);
+    else view.removeAttribute(SOURCE_ATTRIBUTE);
+    view.payload = payload;
+    titleFor(name);
+  };
+
   const overlay = document.createElement("div");
   overlay.style.cssText =
     "position:fixed;inset:0;z-index:999;display:none;pointer-events:none;" +
@@ -97,7 +137,7 @@ export function installDropzone(host: HTMLElement): void {
     }
     void readPayload(file)
       .then((payload) => {
-        view.payload = payload;
+        showing(payload, file.name);
         say(`${file.name} - drop another to replace it`);
       })
       .catch((err: unknown) => say(`${file.name}: ${errText(err)}`, true));
@@ -117,7 +157,7 @@ export function installDropzone(host: HTMLElement): void {
         return r.json();
       })
       .then((payload) => {
-        view.payload = payload;
+        showing(payload, basename(wanted));
         say(`${wanted} - drop a file to replace it`);
       })
       .catch((err: unknown) => say(`${wanted}: ${errText(err)}`, true));

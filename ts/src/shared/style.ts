@@ -94,7 +94,7 @@ export const SURFACE = {
 } as const;
 
 // The 2D depiction ground is deliberately absent. It has to be decided with the
-// palette RDKit draws in, so it comes from `depictGround()` in `depict-theme.ts`
+// palette RDKit draws in, so it comes from `mol2dGround()` in `mol2d-theme.ts`
 // and is read when a view draws rather than when this module loads.
 
 // --- controls --------------------------------------------------------------
@@ -221,7 +221,11 @@ export const MENU_PANEL_STACKED_SHARE = "45%";
  */
 export const MENU_LIST = "flex:1 1 auto;min-height:84px;overflow:auto;display:flex;flex-direction:column;gap:3px;";
 
-/** The row of controls under a canvas: both graph views carry one. */
+/**
+ * The row of controls under a canvas: the keys and the layout picker, where a
+ * view has any. The reset is not among them - it floats over the canvas, so
+ * that a view with nothing to explain draws no row at all.
+ */
 export const TOOLBAR =
   `display:flex;align-items:center;gap:${SPACE.xl};flex-wrap:wrap;padding:${SPACE.lg} ${SPACE.xxl};` +
   `flex-shrink:0;background:${V.toolbarBg};border-top:1px solid ${V.toolbarBorder};`;
@@ -275,6 +279,18 @@ export const PANE_CHROME_OVERLAY =
 
 /** How far the menu panel's own contents start below the floating chrome. */
 export const PANE_CHROME_CLEARANCE = "42px";
+
+/**
+ * A list that has a detail pane to itself: the rows are what the pane is
+ * showing, so they take its padding and the whole of its height.
+ *
+ * Not `MENU_LIST`, which is the list inside a network menu and is laid out
+ * against the hint, the export block and the clear button below it. This one has
+ * nothing under it to leave room for, which is why it scrolls at the pane's edge
+ * rather than inside a panel.
+ */
+export const PANE_LIST =
+  `flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column;gap:${SPACE.sm};padding:${SPACE.xxl};`;
 
 /** A bordered box: the standard container for anything that is not a viewer. */
 export const CARD =
@@ -354,6 +370,15 @@ export const CHIP = {
    * not invite the click a `button` chip answers.
    */
   outline: `background:${V.btnBg};border-color:${V.btnBorder};color:${V.textPrimary};`,
+  /**
+   * What a `button` chip's border goes back to.
+   *
+   * The same value `button` sets, named so that a chip which overrides its
+   * border to say something - the alchemical network's protocol chips, where the
+   * picked one takes the colour its lines are drawn in - has a resting value to
+   * put back without reaching into the palette for it.
+   */
+  restBorder: V.btnBorder,
   className: "gufe-chip",
 } as const;
 

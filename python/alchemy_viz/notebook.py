@@ -13,12 +13,14 @@ Both end at the same two lines: create a ``<alchemy-view>``, set its
 and third-party visualization libraries cannot collide.
 
 anywidget is optional (``pip install alchemy-viz[notebook]``); without it
-:func:`view` returns the static layer alone.
+:func:`view` returns the static layer alone, which still draws the picture -
+what is lost is redrawing in place. The widget itself lives in
+:mod:`alchemy_viz._widget`, the one module that imports anywidget.
 """
 
 from __future__ import annotations
 
-import html as _stdlib_html
+from html import escape as escape_html
 from typing import Any
 
 from .html import _as_payload_dict, shell_html, to_html
@@ -26,43 +28,13 @@ from .html import _as_payload_dict, shell_html, to_html
 #: Tall enough for a 3D viewer to be usable, short enough to scroll past.
 DEFAULT_HEIGHT = "600px"
 
-# The widget's JavaScript, whole. It creates the iframe, waits for the shell to
-# load, and sets `.payload` - there is no protocol beyond that, because a
-# `srcdoc` iframe is same-origin and the parent can simply reach in.
-#
-# `load` is the handshake: a module script delays it, so by the time it fires
-# the custom elements are defined and `<alchemy-view>` has been upgraded. Setting
-# `.payload` earlier would create an own property shadowing the class accessor,
-# and the view would never draw.
-_ESM = """
-function render({ model, el }) {
-  const iframe = document.createElement("iframe");
-  iframe.style.cssText = "border:0;display:block;width:100%;";
-  iframe.style.height = model.get("height");
-
-  let view = null;
-  const draw = () => {
-    if (view) view.payload = model.get("payload");
-  };
-
-  iframe.addEventListener("load", () => {
-    view = iframe.contentDocument.querySelector("alchemy-view");
-    draw();
-  });
-
-  model.on("change:payload", draw);
-  model.on("change:height", () => {
-    iframe.style.height = model.get("height");
-  });
-
-  el.appendChild(iframe);
-  iframe.srcdoc = model.get("_shell");
-
-  return () => iframe.remove();
-}
-
-export default { render };
-"""
+#: Said in the plain-text line when the live layer was asked for and could not be
+#: had, so "why did this not update when I reassigned it" has an answer in the
+#: output itself rather than only in the docs.
+NO_ANYWIDGET_NOTE = (
+    "anywidget is not installed, so this view is a static page and will not automatically update"
+    "`pip install alchemy-viz[notebook]` for the live view."
+)
 
 
 def _iframe(page: str, height: str) -> str:
@@ -72,8 +44,8 @@ def _iframe(page: str, height: str) -> str:
     and the thing being shown is a whole document.
     """
     return (
-        f'<iframe srcdoc="{_stdlib_html.escape(page, quote=True)}" '
-        f'style="border:0;display:block;width:100%;height:{_stdlib_html.escape(height, quote=True)};"'
+        f'<iframe srcdoc="{escape_html(page, quote=True)}" '
+        f'style="border:0;display:block;width:100%;height:{escape_html(height, quote=True)};"'
         f"></iframe>"
     )
 
@@ -92,10 +64,18 @@ class StaticView:
     it as :attr:`page` for anyone who wants to write it somewhere.
     """
 
-    def __init__(self, page: str, *, height: str = DEFAULT_HEIGHT, summary: str = "alchemy-viz") -> None:
+    def __init__(
+        self,
+        page: str,
+        *,
+        height: str = DEFAULT_HEIGHT,
+        summary: str = "alchemy-viz",
+        note: str = "",
+    ) -> None:
         self.page = page
         self.height = height
-        self._summary = summary
+        self.note = note
+        self._summary = f"{summary} ({note})" if note else summary
 
     # Both hooks, deliberately. IPython prefers `_repr_mimebundle_`; marimo and
     # several others look for `_repr_html_` and nothing else.
@@ -107,82 +87,6 @@ class StaticView:
 
     def __repr__(self) -> str:
         return self._summary
-
-
-_widget_class = None
-
-
-def _widget_type():
-    """The anywidget subclass, built on first use.
-
-    Defined inside a function because ``anywidget`` is optional: importing it at
-    module scope would make ``import alchemy_viz`` fail without it.
-    """
-    global _widget_class
-    if _widget_class is not None:
-        return _widget_class
-
-    import anywidget
-    import traitlets
-
-    class GufeWidget(anywidget.AnyWidget):
-        """One ``<alchemy-view>``, live.
-
-        Assign a new payload - or a new gufe object, which is coerced - and the view
-        redraws in place::
-
-            w = alchemy_viz.view(ligand)
-            w.payload = other_ligand
-        """
-
-        _esm = _ESM
-
-        #: The page the iframe shows, minus its payload. Synced because it is
-        #: what the browser needs; see the note in `view` about what it costs.
-        _shell = traitlets.Unicode("").tag(sync=True)
-
-        payload = traitlets.Any(None).tag(sync=True)
-        height = traitlets.Unicode(DEFAULT_HEIGHT).tag(sync=True)
-
-        #: The static page, for frontends that will not run the widget. Not
-        #: synced: it never needs to cross the comm, it goes out with the
-        #: display message instead.
-        static_page = traitlets.Unicode("")
-
-        #: What a frontend shows when it renders neither.
-        summary = traitlets.Unicode("alchemy-viz")
-
-        @traitlets.validate("payload")
-        def _coerce_payload(self, proposal):
-            value = proposal["value"]
-            return None if value is None else _as_payload_dict(value)
-
-        @traitlets.observe("payload")
-        def _refresh_static(self, change):
-            # Keep the exported picture honest: whatever the widget is showing
-            # now is what a kernel-less reader should see.
-            if self.static_page and change["new"] is not None:
-                self.static_page = to_html(change["new"])
-                self.summary = _summary(change["new"])
-
-        def _repr_mimebundle_(self, **kwargs):
-            """The widget view, plus the page for anyone who cannot run it.
-
-            anywidget answers with ``(data, metadata)`` and ipywidgets with
-            ``data`` alone; both are shapes IPython accepts, so pass whichever
-            came back through rather than settling on one.
-            """
-            bundle = super()._repr_mimebundle_(**kwargs)
-            if not bundle or not self.static_page:
-                return bundle
-
-            data, metadata = bundle if isinstance(bundle, tuple) else (bundle, None)
-            data = dict(data)
-            data["text/html"] = _iframe(self.static_page, self.height)
-            return data if metadata is None else (data, metadata)
-
-    _widget_class = GufeWidget
-    return _widget_class
 
 
 def view(
@@ -200,7 +104,9 @@ def view(
     notebook blank; ``live=False`` forces the static layer.
 
     Returns a widget when anywidget is installed and ``live``, otherwise a
-    :class:`StaticView`. Both display; only the widget updates.
+    :class:`StaticView`. Both draw the same picture; only the widget redraws when
+    its ``.payload`` is reassigned, and a static view returned where a widget was
+    asked for says so in its plain-text line.
 
     Each displayed view sends the bundle to the browser - once per layer - and on
     JupyterLab those messages share the kernel's rate-limited iopub channel, so many
@@ -212,14 +118,16 @@ def view(
     payload = _as_payload_dict(obj)
     summary = _summary(payload)
 
+    note = ""
     if live:
         try:
-            widget_type = _widget_type()
+            from ._widget import AlchemyVizWidget
         except ImportError:
-            widget_type = None
-
-        if widget_type is not None:
-            return widget_type(
+            # Optional by design - see the module docstring. The static layer
+            # below is the answer, and `note` is how the reader learns why.
+            note = NO_ANYWIDGET_NOTE
+        else:
+            return AlchemyVizWidget(
                 _shell=shell_html(title=title or "alchemy-viz"),
                 payload=payload,
                 height=height,
@@ -227,4 +135,4 @@ def view(
                 summary=summary,
             )
 
-    return StaticView(to_html(payload, title=title), height=height, summary=summary)
+    return StaticView(to_html(payload, title=title), height=height, summary=summary, note=note)

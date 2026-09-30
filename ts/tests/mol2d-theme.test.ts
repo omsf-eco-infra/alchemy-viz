@@ -19,14 +19,14 @@ import {
 } from "../src/shared/atom-colors.js";
 import {
   darkDepictions,
-  depictGround,
-  depictThemeOptions,
+  mol2dGround,
+  mol2dThemeOptions,
   nodeCardCaption,
   nodeCardGround,
   setDarkDepictions,
-} from "../src/shared/depict-theme.js";
-import { DEFAULT_DEPICT_STYLE, depictionDetails } from "../src/shared/depict-style.js";
-import { depictSVG } from "../src/shared/sdf.js";
+} from "../src/shared/mol2d-theme.js";
+import { DEFAULT_MOL2D_STYLE, depictionDetails } from "../src/shared/mol2d-style.js";
+import { mol2dSVG } from "../src/shared/sdf.js";
 import { THEMES } from "../src/shared/theme.js";
 import { clearFakeEngines, seedFakeEngines, seededRDKit, type SeededEnginesResult } from "./helpers.js";
 
@@ -44,27 +44,27 @@ afterEach(() => {
 describe("2D depictions and the page theme", () => {
   it("starts on paper, which is what jsdom asks for", () => {
     expect(darkDepictions()).toBe(false);
-    expect(depictGround()).toBe(THEMES.light.canvas2DBg);
+    expect(mol2dGround()).toBe(THEMES.light.canvas2DBg);
   });
 
   it("draws gufe's black palette on paper and RDKit's dark one on a dark ground", () => {
-    expect(depictThemeOptions("mono").atomColourPalette).toBe(MAPPING_BW_PALETTE);
-    expect(depictThemeOptions("cpk")).toEqual({});
+    expect(mol2dThemeOptions("mono").atomColourPalette).toBe(MAPPING_BW_PALETTE);
+    expect(mol2dThemeOptions("cpk")).toEqual({});
 
     setDarkDepictions(true);
-    expect(depictThemeOptions("cpk").atomColourPalette).toBe(DARK_ATOM_PALETTE);
-    expect(depictThemeOptions("mono").atomColourPalette).toBe(DARK_MONO_PALETTE);
+    expect(mol2dThemeOptions("cpk").atomColourPalette).toBe(DARK_ATOM_PALETTE);
+    expect(mol2dThemeOptions("mono").atomColourPalette).toBe(DARK_MONO_PALETTE);
   });
 
   it("moves the ground with the palette, never one without the other", () => {
     setDarkDepictions(true);
-    expect(depictGround()).toBe(THEMES.dark.canvas2DBg);
-    expect(depictGround()).not.toBe(THEMES.light.canvas2DBg);
+    expect(mol2dGround()).toBe(THEMES.dark.canvas2DBg);
+    expect(mol2dGround()).not.toBe(THEMES.light.canvas2DBg);
   });
 
   it("colours the atom indices, which are notes and not annotations", () => {
     setDarkDepictions(true);
-    const options = depictThemeOptions("mono");
+    const options = mol2dThemeOptions("mono");
     // A mapping is drawn with `addAtomIndices`, and RDKit draws each index as an
     // atom *note*: `annotationColour` does not touch it, so a depiction with
     // every other ink right still numbers its atoms in black. This is the one
@@ -76,27 +76,27 @@ describe("2D depictions and the page theme", () => {
 
   it("asks for no background, so the view's own surface is the ground", () => {
     setDarkDepictions(true);
-    expect(depictThemeOptions("mono").backgroundColour).toEqual([0, 0, 0, 0]);
+    expect(mol2dThemeOptions("mono").backgroundColour).toEqual([0, 0, 0, 0]);
   });
 
   it("carries the dark options into a mapping's draw options", () => {
     setDarkDepictions(true);
-    const details = depictionDetails(DEFAULT_DEPICT_STYLE, 420, [], new Set(), "rdkit", 10);
+    const details = depictionDetails(DEFAULT_MOL2D_STYLE, 420, [], new Set(), "rdkit", 10);
     expect(details.atomColourPalette).toBe(DARK_MONO_PALETTE);
     expect(details.backgroundColour).toEqual([0, 0, 0, 0]);
     // and still everything the style asked for
-    expect(details.addAtomIndices).toBe(DEFAULT_DEPICT_STYLE.atomNumbers);
+    expect(details.addAtomIndices).toBe(DEFAULT_MOL2D_STYLE.atomNumbers);
     expect(details.width).toBe(420);
   });
 
   it("carries them into a single molecule's depiction, which has nothing to highlight", () => {
     const rdkit = seededRDKit();
-    depictSVG(rdkit, "mol", 300, "rdkit", undefined, depictThemeOptions("cpk"));
+    mol2dSVG(rdkit, "mol", 300, "rdkit", undefined, mol2dThemeOptions("cpk"));
     // Paper needs no options at all, so the plain drawing call is enough.
     expect(engines.highlighted).toHaveLength(0);
 
     setDarkDepictions(true);
-    depictSVG(rdkit, "mol", 300, "rdkit", undefined, depictThemeOptions("cpk"));
+    mol2dSVG(rdkit, "mol", 300, "rdkit", undefined, mol2dThemeOptions("cpk"));
     expect(engines.highlighted).toHaveLength(1);
     const details = JSON.parse(engines.highlighted[0]);
     expect(details.atomColourPalette["6"]).toEqual(DARK_ATOM_PALETTE[6]);
@@ -107,17 +107,17 @@ describe("2D depictions and the page theme", () => {
   it("moves a network node's plate with the structures drawn on it", () => {
     // The failure this rules out is a plate left on paper under a dark
     // structure, or the other way round: either is an empty-looking node.
-    expect(nodeCardGround()).toBe(THEMES.light.netDepictBg);
+    expect(nodeCardGround()).toBe(THEMES.light.netMol2dBg);
     setDarkDepictions(true);
-    expect(nodeCardGround()).toBe(THEMES.dark.netDepictBg);
-    expect(nodeCardGround()).not.toBe(THEMES.light.netDepictBg);
+    expect(nodeCardGround()).toBe(THEMES.dark.netMol2dBg);
+    expect(nodeCardGround()).not.toBe(THEMES.light.netMol2dBg);
     // and the name under it takes an ink that reads against the new plate
-    expect(nodeCardCaption()).toBe(THEMES.dark.netDepictCaption);
+    expect(nodeCardCaption()).toBe(THEMES.dark.netMol2dCaption);
   });
 
   it("keeps the plate the canvas's own colour, so it clears rather than shows", () => {
     for (const theme of [THEMES.light, THEMES.dark]) {
-      expect(theme.netDepictBg).toBe(theme.netCanvasBg);
+      expect(theme.netMol2dBg).toBe(theme.netCanvasBg);
     }
   });
 });

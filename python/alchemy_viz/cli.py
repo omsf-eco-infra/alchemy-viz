@@ -4,10 +4,6 @@ Input may be an alchemy-viz payload JSON - the files in ``examples/`` - or a
 serialized gufe object, which is deserialized into live gufe objects first and
 only then turned into a payload. TypeScript never sees gufe's JSON.
 
-The second form covers everything ``openfe plan-rbfe-network`` writes: the
-campaign at ``<output_dir>/<output_dir>.json``, each edge under
-``transformations/``, and ``ligand_network.graphml``.
-
 The payload path needs no gufe installed; reading a serialized gufe object does,
 from conda-forge. See :mod:`alchemy_viz._gufe`.
 """
@@ -135,7 +131,12 @@ def main(argv: list[str] | None = None) -> int:
         default=None,
         help="where to write the page (default: <input>.html, beside the input). Use - for stdout.",
     )
-    parser.add_argument("--title", default=None, help="page title (default: the payload's name)")
+    parser.add_argument(
+        "--title",
+        default=None,
+        help="page title (default: the input file's name, which is what the browser tab then says). "
+        "The visualization's header names the input file whatever this is set to.",
+    )
     parser.add_argument(
         "--debug",
         action="store_true",
@@ -148,7 +149,15 @@ def main(argv: list[str] | None = None) -> int:
         raise SystemExit(f"{args.input}: no such file")
 
     try:
-        html = to_html(load(args.input), title=args.title, debug=args.debug)
+        # The tab is titled after the file rather than after the payload, whose
+        # own name the header already carries; `source` is what puts the file
+        # name in that header too, beside it.
+        html = to_html(
+            load(args.input),
+            title=args.title or args.input.name,
+            source=args.input.name,
+            debug=args.debug,
+        )
     except TypeError as e:
         raise SystemExit(str(e)) from e
 

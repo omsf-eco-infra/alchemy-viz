@@ -10,7 +10,7 @@
  */
 
 import { errText } from "./dom.js";
-import type { Layout2D } from "./depict-layout.js";
+import type { Layout2D } from "./mol2d-layout.js";
 import type { RDKitModule } from "./engines.js";
 
 export interface Molecule {
@@ -132,17 +132,17 @@ export function parseCounts(sdf: string): { atoms: number; bonds: number } | nul
  * A build too old for `get_svg_with_highlights` simply draws without them.
  *
  * `drawOptions` is anything else RDKit should be told, already in the JSON form
- * its options take: `depict-theme.ts` produces the palette and inks a dark
+ * its options take: `mol2d-theme.ts` produces the palette and inks a dark
  * ground needs, and a caller drawing on white passes nothing. Same bargain as
  * `highlight` - this file stays about SDF and RDKit and knows nothing about
  * anyone's palette. A build too old for `get_svg_with_highlights` ignores them,
  * which draws a paper depiction rather than no depiction.
  */
-export interface DepictHighlight {
+export interface Mol2DHighlight {
   atoms: readonly number[];
   /**
    * The 0-to-1 RGB triple RDKit's drawing options take, which is what
-   * `rgbTriple` in `depict-style.ts` produces. Converted by the caller so this
+   * `rgbTriple` in `mol2d-style.ts` produces. Converted by the caller so this
    * file stays about SDF and RDKit and knows nothing about anyone's palette.
    */
   color: readonly [number, number, number];
@@ -150,12 +150,12 @@ export interface DepictHighlight {
   radius: number;
 }
 
-export function depictSVG(
+export function mol2dSVG(
   RDKit: RDKitModule,
   source: string,
   size: number,
   layout: Layout2D,
-  highlight?: DepictHighlight,
+  highlight?: Mol2DHighlight,
   drawOptions?: Record<string, unknown>,
 ): string | null {
   let rdmol = null;
@@ -188,7 +188,7 @@ export function depictSVG(
     }
     return rdmol.get_svg(size, size) || null;
   } catch (e) {
-    console.warn("[alchemy-viz] depictSVG threw -", errText(e));
+    console.warn("[alchemy-viz] mol2dSVG threw -", errText(e));
     return null;
   } finally {
     if (rdmol) {

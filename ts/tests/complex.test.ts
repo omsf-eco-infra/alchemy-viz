@@ -188,10 +188,12 @@ describe("<gufe-complex>", () => {
     // on top is the framing, which is the one thing a protein alone cannot be
     // asked about.
     // The share row every menu ends with is not one of these view's controls.
+    // Nor is the button that opens the menu, which carries no text at all.
+    const chrome = new Set(["Share to the web"]);
     const controls = (node: HTMLElement): string[] => {
       openMenu(node);
       return Array.from(node.querySelectorAll("button"), (b) => b.textContent ?? "").filter(
-        (label) => label && label !== "Share to the web",
+        (label) => label && !chrome.has(label),
       );
     };
 
@@ -212,6 +214,182 @@ describe("<gufe-complex>", () => {
 
     expect(engines.viewers).toHaveLength(0);
     expect(node.textContent).toContain("no ligand and structure");
+  });
+});
+
+describe("an ensemble of ligands in one site", () => {
+  let engines: SeededEnginesResult;
+  beforeEach(() => {
+    engines = seedFakeEngines();
+  });
+  afterEach(() => {
+    clearFakeEngines();
+    document.body.replaceChildren();
+  });
+
+  const ensemble = (): ChemicalSystemViz =>
+    readExample("chemical_system_ensemble.json") as unknown as ChemicalSystemViz;
+
+  const ligandNames = (): string[] => {
+    const payload = ensemble();
+    return complexPartsFor(payload, buildRegistry(payload)).ligands.map((ligand) => ligand.name!);
+  };
+
+  /**
+   * The eye beside one ligand in the component strip.
+   *
+   * Found by what it says rather than by where it sits: the strip is a card per
+   * component, and the eye is the second thing in the ligands' rows only.
+   */
+  const eye = (node: HTMLElement, name: string): HTMLButtonElement => {
+    const found = Array.from(node.querySelectorAll<HTMLButtonElement>(".gufe-components button")).find((b) =>
+      (b.getAttribute("aria-label") ?? "").endsWith(`${name} in the complex`),
+    );
+    if (!found) throw new Error(`no eye for ${name}`);
+    return found;
+  };
+
+  /** The strip's own card for one component, which is what opens its pane. */
+  const card = (node: HTMLElement, title: string): HTMLButtonElement => {
+    const found = Array.from(node.querySelectorAll<HTMLButtonElement>(".gufe-components button")).find(
+      (b) => b.querySelector("span")?.textContent === title,
+    );
+    if (!found) throw new Error(`no card titled ${title}`);
+    return found;
+  };
+
+  /**
+   * Which ligand models have something drawn in them, as the styling so far
+   * leaves it.
+   *
+   * A hidden pose is styled with `{}` rather than taken out of the viewer, so
+   * "is it on screen" is the last style aimed at its model rather than whether
+   * one ever was. Models 1 and up are the ligands: this system has one
+   * structure, and structures are loaded first.
+   */
+  const drawn = (viewer: (typeof engines)["viewers"][number]): number[] => {
+    const shown = new Set<number>();
+    for (const { selection, style } of viewer.styles) {
+      for (const model of (selection as { model?: number[] }).model ?? []) {
+        if (model === 0) continue;
+        if (Object.keys(style as object).length) shown.add(model);
+        else shown.delete(model);
+      }
+    }
+    return [...shown].sort((a, b) => a - b);
+  };
+
+  it("loads every pose but opens on the first alone", async () => {
+    // Every ligand is in the viewer - showing one later must not mean parsing
+    // an SDF again - and exactly one of them is drawn.
+    const names = ligandNames();
+    const node = mount("gufe-chemical-system", ensemble());
+    await flush();
+
+    expect(names.length).toBeGreaterThan(1);
+    const viewer = engines.viewers[0];
+    expect(viewer.calls.filter((c) => c.startsWith("addModel("))).toHaveLength(names.length + 1);
+    expect(drawn(viewer)).toEqual([1]);
+    // ... and the site is framed on that one rather than on all of them.
+    expect(viewer.calls.filter((c) => c.startsWith("zoomTo"))).toEqual(['zoomTo({"model":[1]})']);
+    // The eye says which, in the row that already names it: one list of ligands
+    // in this view, not two to keep in step.
+    expect(eye(node, names[0]).getAttribute("aria-pressed")).toBe("true");
+    expect(eye(node, names[1]).getAttribute("aria-pressed")).toBe("false");
+  });
+
+  it("shows and hides a pose from the strip", async () => {
+    const names = ligandNames();
+    const node = mount("gufe-chemical-system", ensemble());
+    await flush();
+
+    eye(node, names[1]).click();
+    await flush();
+    expect(eye(node, names[1]).getAttribute("aria-pressed")).toBe("true");
+    expect(drawn(engines.viewers[0])).toEqual([1, 2]);
+
+    eye(node, names[1]).click();
+    await flush();
+    expect(eye(node, names[1]).getAttribute("aria-pressed")).toBe("false");
+    expect(drawn(engines.viewers[0])).toEqual([1]);
+  });
+
+  it("leaves the camera where the reader put it", async () => {
+    // Showing another pose changes what is in the site, not where the site is
+    // being looked at from.
+    const names = ligandNames();
+    const node = mount("gufe-chemical-system", ensemble());
+    await flush();
+
+    const viewer = engines.viewers[0];
+    const framings = () => viewer.calls.filter((c) => c.startsWith("zoomTo") || c.startsWith("zoom(")).length;
+    const before = framings();
+    eye(node, names[1]).click();
+    await flush();
+    expect(framings()).toBe(before);
+  });
+
+  it("opens the complex when an eye is pressed from another pane", async () => {
+    // A control with nothing visible to show for itself is the one thing this
+    // must not be: what it changes is the complex, so pressing it is a way of
+    // asking for the complex.
+    const names = ligandNames();
+    const node = mount("gufe-chemical-system", ensemble());
+    await flush();
+
+    card(node, "solvent").click();
+    await flush();
+    expect(node.querySelector("gufe-complex")).toBeNull();
+
+    eye(node, names[1]).click();
+    await flush();
+    expect(node.querySelector("gufe-complex")).toBeTruthy();
+    expect(drawn(engines.viewers.at(-1)!)).toEqual([1, 2]);
+  });
+
+  it("keeps the choice across a trip to another pane and back", async () => {
+    // The complex element is torn down when the reader leaves it and rebuilt
+    // when they come back, so the set cannot live in there.
+    const names = ligandNames();
+    const node = mount("gufe-chemical-system", ensemble());
+    await flush();
+
+    eye(node, names[2]).click();
+    await flush();
+    card(node, "solvent").click();
+    await flush();
+    card(node, "Complex").click();
+    await flush();
+
+    expect(eye(node, names[2]).getAttribute("aria-pressed")).toBe("true");
+    expect(drawn(engines.viewers.at(-1)!)).toEqual([1, 3]);
+  });
+
+  it("counts the poses it is drawing, not the ones in the payload", async () => {
+    const names = ligandNames();
+    const node = mount("gufe-chemical-system", ensemble());
+    await flush();
+    openMenu(node);
+    expect(node.textContent).toContain(`1 of ${names.length} ligands shown`);
+
+    eye(node, names[1]).click();
+    await flush();
+    expect(node.textContent).toContain(`2 of ${names.length} ligands shown`);
+  });
+
+  it("offers no eye for a complex with one ligand in it", async () => {
+    // A control that can only be pressed to empty the picture is not a control.
+    const node = mount("gufe-chemical-system", complexPayload());
+    await flush();
+    expect(node.querySelector(".gufe-components button[aria-label]")).toBeNull();
+  });
+
+  it("draws the first ligand when it is mounted with no strip to ask", async () => {
+    // `<gufe-complex>` on its own has nobody to hand it a selection, and opens
+    // on the safe half of the default rather than on the thicket.
+    mount("gufe-complex", ensemble());
+    await flush();
+    expect(drawn(engines.viewers[0])).toEqual([1]);
   });
 });
 

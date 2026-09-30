@@ -474,3 +474,39 @@ describe("pinching a network canvas", () => {
     expect(root.dispatchEvent(touch("touchmove", 1))).toBe(true);
   });
 });
+
+/**
+ * Where the reset sits on a graph view.
+ *
+ * It used to be the only thing in a strip under the canvas, which charged every
+ * network a whole row of height for one small button. It floats over the bottom
+ * left of the canvas instead: still always in the same place, still one click
+ * from a network that has been flung off the edge, but the height goes to the
+ * picture.
+ */
+describe.each([
+  ["gufe-ligand-network", "ligand_network.json"],
+  ["gufe-alchemical-network", "alchemical_network.json"],
+])("%s reset", (tag, fixture) => {
+  beforeEach(() => {
+    seedFakeEngines();
+  });
+  afterEach(() => {
+    clearFakeEngines();
+    document.body.replaceChildren();
+  });
+
+  it("floats over the bottom left of the canvas rather than filling a row", async () => {
+    const node = mount(tag, readExample(fixture));
+    await flush();
+
+    const button = resetButton(node)!;
+    expect(button).toBeTruthy();
+    expect(button.style.position).toBe("absolute");
+    expect(button.style.bottom).toBeTruthy();
+    expect(button.style.left).toBeTruthy();
+    // In the canvas, which is what "floating over it" means: the same box the
+    // graph is drawn in, not a bar beside it.
+    expect(button.parentElement!.querySelector("svg.gufe-graph")).toBeTruthy();
+  });
+});

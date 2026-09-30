@@ -25,7 +25,7 @@ import {
 } from "../shared/element.js";
 import { num, text } from "../shared/settings.js";
 import { pickable } from "../shared/controls.js";
-import { FONT, PICK, WEIGHT } from "../shared/style.js";
+import { FONT, PICK, RADIUS, SPACE, WEIGHT } from "../shared/style.js";
 import { V } from "../shared/theme.js";
 import {
   buildRegistry,
@@ -33,7 +33,7 @@ import {
   lookup,
   type RegistryIndex,
 } from "../schema/registry.js";
-import { complexPartsFor, hasComplex } from "./complex.js";
+import { complexPartsFor, hasComplex, type GufeComplex } from "./complex.js";
 import type { ChemicalSystemViz, ComponentViz } from "../schema/types.js";
 
 /**
@@ -76,6 +76,14 @@ export function systemPayloadFor(
  * to the first, so the pane is never left empty by a label from somewhere else.
  */
 const OPEN_LABEL = "chemical-system.component";
+
+/**
+ * Where the complex pane is in the strip, when there is one.
+ *
+ * It is unshifted onto the front of the list, and the eyes beside the ligands
+ * need to name it: what they change is what that pane draws.
+ */
+const COMPLEX_PANE = 0;
 
 /**
  * How wide the strip is where there is room for it beside the drawing, before
@@ -121,6 +129,48 @@ function componentBadge(component: ComponentViz): HTMLSpanElement | null {
   return component.type === "UnknownComponentViz"
     ? typeBadge(component.gufe_type)
     : null;
+}
+
+/**
+ * An eye, drawn rather than typed so the glyph is not a Unicode dependency -
+ * the same reason `chrome.ts` draws its own three bars for the menu button.
+ *
+ * Struck through when what it stands for is not being drawn. A control whose
+ * two states differ only by a background is one a reader can only read if they
+ * have seen the other state, and the eyes in this strip are mostly seen one at
+ * a time.
+ */
+function eyeIcon(open: boolean): HTMLSpanElement {
+  const icon = el("span", "display:inline-flex;");
+  icon.innerHTML =
+    '<svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" focusable="false" fill="none" ' +
+    'stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">' +
+    '<path d="M1.6 8C3.3 5.3 5.5 4 8 4C10.5 4 12.7 5.3 14.4 8C12.7 10.7 10.5 12 8 12C5.5 12 3.3 10.7 1.6 8Z"/>' +
+    '<circle cx="8" cy="8" r="2.1"/>' +
+    (open ? "" : '<path d="M3.2 12.8L12.8 3.2"/>') +
+    "</svg>";
+  return icon;
+}
+
+/**
+ * The button the eye goes in: a square at the trailing edge of a ligand's card.
+ *
+ * `PICK.className` rather than a rule of its own, so it is painted by the same
+ * stylesheet as the card it sits against and the pair read as one row.
+ */
+function ligandEye(): HTMLButtonElement {
+  return pickable(
+    "display:flex;align-items:center;justify-content:center;flex-shrink:0;" +
+      `width:30px;border:1px solid;border-radius:${RADIUS.lg};cursor:pointer;color:${V.textMuted};`,
+  );
+}
+
+/** Say what one eye is showing - in its picture, its tooltip and `aria-pressed`. */
+function paintEye(eye: HTMLButtonElement, name: string, on: boolean): void {
+  eye.setAttribute("aria-pressed", String(on));
+  eye.title = on ? `Hide ${name} in the complex` : `Show ${name} in the complex`;
+  eye.setAttribute("aria-label", eye.title);
+  eye.replaceChildren(eyeIcon(on));
 }
 
 /**
@@ -207,6 +257,10 @@ export class GufeChemicalSystem extends AlchemyElement<ChemicalSystemViz> {
       "min-width:0;min-height:0;display:flex;flex-direction:column;" +
         `background:${V.panelBg};`,
     );
+    // Named so it can be found from outside: which column a row of this strip
+    // is in is not reachable by counting parents once a row holds more than the
+    // card, and a class is how that is visible in devtools and assertable.
+    aside.className = "gufe-components";
     split.appendChild(aside);
     aside.appendChild(systemTitle(name));
 
@@ -276,6 +330,11 @@ export class GufeChemicalSystem extends AlchemyElement<ChemicalSystemViz> {
       badge: HTMLSpanElement | null;
       /** The element this pane draws into `view`, mounted on selection. */
       element: HTMLElement & { resize?(): void };
+      /**
+       * Which ligand of the complex this pane's component is, where the complex
+       * draws more than one and the row therefore carries an eye.
+       */
+      ligand?: number;
       /** Point that element at what it should draw. Called on every selection. */
       point(): void;
     }
@@ -299,6 +358,41 @@ export class GufeChemicalSystem extends AlchemyElement<ChemicalSystemViz> {
         (structure) => (structure as ComponentViz) === component,
       );
 
+    /**
+     * Which ligands the complex pane draws, edited by the eyes in this strip.
+     *
+     * Held here rather than in `<gufe-complex>` for two reasons. The strip
+     * already names every ligand, so a second list of the same names over the
+     * picture was the same word twice with two states to keep in step - which
+     * is what this replaced. And the complex element is torn down every time a
+     * reader clicks to another pane and rebuilt when they click back, so a set
+     * held in there would forget the choice on the round trip while the strip
+     * that shows it stayed put.
+     *
+     * An ensemble opens on its first pose. A complex leg carries one ligand and
+     * opens on it, and gets no eyes: see `ligandToggles`.
+     */
+    const ligandsShown = new Set<number>(complexDrawn && parts.ligands.length ? [0] : []);
+
+    /**
+     * Which ligand of the complex a component is, if it is one of them.
+     *
+     * Reference equality, as `absorbed` above: both lists came out of the one
+     * registry, so the same key is the same object.
+     */
+    const ligandIndex = (component: ComponentViz): number | undefined => {
+      const at = (parts.ligands as ComponentViz[]).indexOf(component);
+      return at < 0 ? undefined : at;
+    };
+
+    /**
+     * Whether the strip carries eyes at all.
+     *
+     * One ligand is not a choice: the eye beside it could only ever be pressed
+     * to empty the scene the pane above it is for.
+     */
+    const ligandToggles = complexDrawn && parts.ligands.length > 1;
+
     const panes: Pane[] = entries
       .filter(([, component]) => !absorbed(component))
       .map(([label, component]) => ({
@@ -307,22 +401,30 @@ export class GufeChemicalSystem extends AlchemyElement<ChemicalSystemViz> {
         subtitle: componentLabel(component),
         badge: componentBadge(component),
         element: child,
+        ligand: ligandToggles ? ligandIndex(component) : undefined,
         point: () => {
           child.payload = component;
         },
       }));
 
+    // The complex pane, kept in a name of its own because the eyes below drive
+    // it. Typed as its class rather than as a bag of properties: `ligandsShown`
+    // and `refreshLigands` are a contract between these two files, and a
+    // structural cast would let either side rename half of it unnoticed.
+    let complexPane: GufeComplex | null = null;
+
     // It goes first because a complex leg is a complex before it is a protein
     // and a ligand, and the reader who has never opened one of these should
     // land on the picture that says so.
     if (complexDrawn) {
-      const complex = document.createElement("gufe-complex") as HTMLElement & {
-        payload: unknown;
-        resize?(): void;
-      };
+      const complex = document.createElement("gufe-complex") as GufeComplex;
       complex.style.cssText = "flex:1;min-width:0;min-height:0;";
       complex.setAttribute(HIDE_NAME_ATTRIBUTE, "");
+      // Before the payload, which is what makes the element render: it reads
+      // this on the way through and keeps drawing from it.
+      complex.ligandsShown = ligandsShown;
       complex.payload = payload;
+      complexPane = complex;
       panes.unshift({
         // Reserved rather than a plain word: this shares a namespace with the
         // system's own component labels, and those come from a user's Python.
@@ -354,10 +456,13 @@ export class GufeChemicalSystem extends AlchemyElement<ChemicalSystemViz> {
     const openLabel = text(OPEN_LABEL);
 
     const buttons: HTMLButtonElement[] = [];
+    /** Which pane is open, for the eyes: theirs is the complex, which is first. */
+    let openIndex = 0;
     const select = (index: number): void => {
       // Which one is open is `aria-pressed`, and the stylesheet paints from it.
       // See `PICK`.
       buttons.forEach((button, i) => button.setAttribute("aria-pressed", String(i === index)));
+      openIndex = index;
       panes[index].point();
       mount(panes[index].element);
     };
@@ -377,29 +482,68 @@ export class GufeChemicalSystem extends AlchemyElement<ChemicalSystemViz> {
       select(index);
     };
 
+    /** The eyes, and which ligand each one is for. Empty unless the strip has any. */
+    const eyes: { node: HTMLButtonElement; ligand: number; name: string }[] = [];
+    const paintEyes = (): void => {
+      for (const eye of eyes) paintEye(eye.node, eye.name, ligandsShown.has(eye.ligand));
+    };
+
     panes.forEach((pane, index) => {
-      // `PICK.card` is the card. What is overridden here is what this strip
-      // needs of it: the card fills the list it is in, and this list is a column
-      // only while there is room for one. Below `STACK_BELOW` it is a wrapping
-      // row, where `width:100%` would give every button its own line and there
-      // would be no band left to wrap. `width:auto` is the column's own stretch
-      // in one orientation and the button's content width in the other.
-      const button = pickable(`${PICK.card}width:auto;flex-shrink:0;max-width:100%;box-sizing:border-box;`);
+      // The row rather than the card carries the width, because a ligand's card
+      // has an eye beside it and the two are one row. The list is a column only
+      // while there is room for one: below `STACK_BELOW` it is a wrapping row,
+      // where `width:100%` would give every row its own line and there would be
+      // no band left to wrap. `width:auto` is the column's own stretch in one
+      // orientation and the content width in the other, and `stretch` is what
+      // makes an eye the height of the card it belongs to.
+      const row = el(
+        "div",
+        `display:flex;align-items:stretch;gap:${SPACE.sm};` +
+          "width:auto;flex-shrink:0;max-width:100%;min-width:0;",
+      );
+      // `PICK.card` is the card; what is overridden is that it now shares its
+      // row rather than filling the list.
+      const button = pickable(`${PICK.card}flex:1;width:auto;min-width:0;box-sizing:border-box;`);
+      // `anywhere`, because a card that shares its row with an eye is narrower
+      // than one that does not, and these are gufe labels and ligand names -
+      // one long token with nowhere to break. A button clips what overflows it,
+      // so the alternative to wrapping is a name cut off mid-word.
       button.appendChild(
-        el("span", `font-weight:700;color:${V.textPrimary};`, pane.title),
+        el("span", `font-weight:700;color:${V.textPrimary};overflow-wrap:anywhere;`, pane.title),
       );
       button.appendChild(
         el(
           "span",
-          `font-size:${FONT.small};color:${V.textMuted};`,
+          `font-size:${FONT.small};color:${V.textMuted};overflow-wrap:anywhere;`,
           pane.subtitle,
         ),
       );
       if (pane.badge) button.appendChild(pane.badge);
       button.onclick = () => open(index);
       buttons.push(button);
-      list.appendChild(button);
+      row.appendChild(button);
+
+      if (pane.ligand !== undefined) {
+        const ligand = pane.ligand;
+        const node = ligandEye();
+        node.onclick = () => {
+          if (ligandsShown.has(ligand)) ligandsShown.delete(ligand);
+          else ligandsShown.add(ligand);
+          paintEyes();
+          complexPane?.refreshLigands();
+          // The scene this changes is the complex, so this opens it. Pressed
+          // from a component's own pane it would otherwise be a control with
+          // nothing visible to show for itself, and a reader turning a pose on
+          // is asking to see the pose.
+          if (openIndex !== COMPLEX_PANE) open(COMPLEX_PANE);
+        };
+        eyes.push({ node, ligand, name: pane.subtitle });
+        row.appendChild(node);
+      }
+
+      list.appendChild(row);
     });
+    paintEyes();
 
     // The label this reader last opened, wherever this system has one under it.
     const remembered = panes.findIndex((pane) => pane.key === openLabel.get());

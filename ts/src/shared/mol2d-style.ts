@@ -3,7 +3,7 @@
  *
  * ## Where the values come from
  *
- * Not from here. `depict-style.json` next to this file is one exported document
+ * Not from here. `mol2d-style.json` next to this file is one exported document
  * from the editor at
  *
  *   https://framejs.app/j/5df86d91e8824b20a02908b52a6f07c3
@@ -11,14 +11,14 @@
  * which draws real transformation pairs with these exact values live, describes
  * every key, and exports this same document. The loop is: open the editor, move
  * the controls until the picture is right, export, drop the file over
- * `ts/src/shared/depict-style.json`, rebuild. The JSON is imported below, so it
+ * `ts/src/shared/mol2d-style.json`, rebuild. The JSON is imported below, so it
  * is compiled into the bundle and there is nothing to fetch and nothing to
  * configure at runtime.
  *
- * `schema/depict-style.schema.json` is the contract for that document, and its
+ * `schema/mol2d-style.schema.json` is the contract for that document, and its
  * `description` on each key is the written form of what the editor shows you.
  * Both ends read it: the editor validates what it exports, and
- * `ts/tests/depict-style.test.ts` validates what is committed here.
+ * `ts/tests/mol2d-style.test.ts` validates what is committed here.
  *
  * ## Why it is not part of the payload
  *
@@ -31,7 +31,7 @@
  *
  * ## The defaults draw what this project has always drawn
  *
- * `DEFAULT_DEPICT_STYLE` reproduces gufe's own `draw_mapping`: RDKit's
+ * `DEFAULT_MOL2D_STYLE` reproduces gufe's own `draw_mapping`: RDKit's
  * highlighting of the marked atoms and of the bonds around them, gufe's
  * black-and-white palette, atom indices on, `continuousHighlight` off, and every
  * numeric value equal to the RDKit default it stands in for, so passing it
@@ -39,16 +39,16 @@
  * against a known picture instead of a jump to a new one.
  *
  * The two exceptions are `layout` and `alignPair`, which default to what gufe
- * does rather than to drawing the stored conformer. See `DEFAULT_DEPICT_STYLE`.
+ * does rather than to drawing the stored conformer. See `DEFAULT_MOL2D_STYLE`.
  */
 
 import type { RDKitModule } from "./engines.js";
-import type { Layout2D } from "./depict-layout.js";
+import type { Layout2D } from "./mol2d-layout.js";
 import type { Molecule } from "./sdf.js";
 import { MAPPING_COLORS } from "./atom-colors.js";
-import { depictThemeOptions } from "./depict-theme.js";
+import { mol2dThemeOptions } from "./mol2d-theme.js";
 import { errText } from "./dom.js";
-import committed from "./depict-style.json" with { type: "json" };
+import committed from "./mol2d-style.json" with { type: "json" };
 
 /** How a marked atom's bonds are drawn. See the schema for what each does. */
 export type MarkStyle = "rdkit" | "recolor" | "halo";
@@ -62,12 +62,12 @@ export type ElementColors = "cpk" | "mono";
 /**
  * One depiction style document.
  *
- * Mirrors `schema/depict-style.schema.json`, which is the source of truth for
+ * Mirrors `schema/mol2d-style.schema.json`, which is the source of truth for
  * what each key means and what range it takes. A test asserts the two agree on
  * the key list and on every default, so this cannot drift from the contract the
  * editor writes against.
  */
-export interface DepictStyle {
+export interface Mol2DStyle {
   version: 1;
   layout: Layout2D;
   alignPair: boolean;
@@ -109,7 +109,7 @@ export interface DepictStyle {
  * seen at whatever angle it was posed at. The defaults here are gufe's two
  * calls, so they correct that rather than preserve it.
  */
-export const DEFAULT_DEPICT_STYLE: DepictStyle = {
+export const DEFAULT_MOL2D_STYLE: Mol2DStyle = {
   version: 1,
   layout: "rdkit",
   alignPair: true,
@@ -144,7 +144,7 @@ const HYDROGEN_MODES: readonly HydrogenMode[] = ["show", "dim", "hide"];
 const ELEMENT_COLORS: readonly ElementColors[] = ["cpk", "mono"];
 
 /** Ranges, kept beside the schema's `minimum`/`maximum` and checked against it. */
-export const DEPICT_STYLE_RANGES: Readonly<Record<string, readonly [number, number]>> = {
+export const MOL2D_STYLE_RANGES: Readonly<Record<string, readonly [number, number]>> = {
   circleRadius: [0.12, 0.6],
   circleStroke: [0.4, 4],
   numScale: [0.15, 0.9],
@@ -163,7 +163,7 @@ function pickEnum<T extends string>(value: unknown, allowed: readonly T[], fallb
 
 function pickNumber(value: unknown, key: string, fallback: number): number {
   if (typeof value !== "number" || !isFinite(value)) return fallback;
-  const range = DEPICT_STYLE_RANGES[key];
+  const range = MOL2D_STYLE_RANGES[key];
   if (!range) return value;
   return Math.min(range[1], Math.max(range[0], value));
 }
@@ -182,9 +182,9 @@ const pickColor = (value: unknown, fallback: string): string =>
  * dropped. There is deliberately no throwing: a picture drawn with one value
  * quietly corrected beats an error panel where a molecule should be.
  */
-export function normaliseDepictStyle(input: unknown): DepictStyle {
-  const raw = (input && typeof input === "object" ? input : {}) as Partial<Record<keyof DepictStyle, unknown>>;
-  const d = DEFAULT_DEPICT_STYLE;
+export function normaliseMol2DStyle(input: unknown): Mol2DStyle {
+  const raw = (input && typeof input === "object" ? input : {}) as Partial<Record<keyof Mol2DStyle, unknown>>;
+  const d = DEFAULT_MOL2D_STYLE;
   return {
     version: 1,
     layout: pickEnum(raw.layout, LAYOUTS, d.layout),
@@ -217,11 +217,11 @@ export function normaliseDepictStyle(input: unknown): DepictStyle {
 /**
  * The style this build draws with: the committed document, normalised.
  *
- * Replace `depict-style.json` with an export from the editor and rebuild; there
+ * Replace `mol2d-style.json` with an export from the editor and rebuild; there
  * is no setter, because a style that can change at runtime is a style two
  * pictures in the same page can disagree about.
  */
-export const DEPICT_STYLE: DepictStyle = normaliseDepictStyle(committed);
+export const MOL2D_STYLE: Mol2DStyle = normaliseMol2DStyle(committed);
 
 // --- atom sets -------------------------------------------------------------
 
@@ -374,7 +374,7 @@ export interface MarkGroup {
 
 /** What one side's classified atoms become, under `style`, in draw order. */
 export function markGroups(
-  style: DepictStyle,
+  style: Mol2DStyle,
   mol: Molecule,
   uniques: { atoms: readonly number[]; elements: readonly number[] },
   side: Side,
@@ -444,7 +444,7 @@ export function _resetSvgClassProbeForTests(): void {
 }
 
 /** The style actually in force, once RDKit has been asked what it can do. */
-export function effectiveMarkStyle(style: DepictStyle, RDKit: RDKitModule): MarkStyle {
+export function effectiveMarkStyle(style: Mol2DStyle, RDKit: RDKitModule): MarkStyle {
   if (style.style === "rdkit") return "rdkit";
   return svgClassesSupported(RDKit) ? style.style : "rdkit";
 }
@@ -459,7 +459,7 @@ export function effectiveMarkStyle(style: DepictStyle, RDKit: RDKitModule): Mark
  * bond and those mitre past each other at an acute vertex.
  */
 export function depictionDetails(
-  style: DepictStyle,
+  style: Mol2DStyle,
   size: number,
   groups: readonly MarkGroup[],
   custom: ReadonlySet<number>,
@@ -476,9 +476,9 @@ export function depictionDetails(
     bondLineWidth: style.bondWidth,
     scaleBondWidth: false,
   };
-  // The palette, and on a dark ground the inks that go with it. `depict-theme.ts`
+  // The palette, and on a dark ground the inks that go with it. `mol2d-theme.ts`
   // decides both together with the surface the view paints behind this.
-  Object.assign(details, depictThemeOptions(style.elementColors));
+  Object.assign(details, mol2dThemeOptions(style.elementColors));
   // gufe's setting, and the reason the marks read as marks rather than as bands.
   if (markStyle === "rdkit") details.continuousHighlight = false;
 
@@ -522,7 +522,7 @@ export function depictionDetails(
 }
 
 /** The depiction SVG for one panel, before any post-processing. */
-export function depictStyledSVG(
+export function mol2dStyledSVG(
   RDKit: RDKitModule,
   sdf: string,
   size: number,
@@ -538,7 +538,7 @@ export function depictStyledSVG(
     if (!rdmol.get_svg_with_highlights) return rdmol.get_svg(size, size) || null;
     return rdmol.get_svg_with_highlights(JSON.stringify(details)) || null;
   } catch (e) {
-    console.warn("[alchemy-viz] depictStyledSVG threw -", errText(e));
+    console.warn("[alchemy-viz] mol2dStyledSVG threw -", errText(e));
     return null;
   } finally {
     if (rdmol) {
@@ -596,7 +596,7 @@ function isFilled(el: Element): boolean {
  */
 function recolorMarked(
   svg: Element,
-  style: DepictStyle,
+  style: Mol2DStyle,
   atoms: ReadonlySet<number>,
   bonds: readonly number[],
   hex: string,
@@ -629,7 +629,7 @@ function recolorMarked(
  * smoothly at any angle. All the clones live in one group that carries the
  * opacity, which composites the union once so overlaps never darken.
  */
-function haloBonds(svg: Element, style: DepictStyle, bonds: readonly number[], hex: string): void {
+function haloBonds(svg: Element, style: Mol2DStyle, bonds: readonly number[], hex: string): void {
   const doc = svg.ownerDocument;
   if (!doc) return;
   const group = doc.createElementNS(SVG_NS, "g");
@@ -662,7 +662,7 @@ function haloBonds(svg: Element, style: DepictStyle, bonds: readonly number[], h
 /** RDKit only draws filled discs; turn them into rings. */
 function outlineCircles(
   svg: Element,
-  style: DepictStyle,
+  style: Mol2DStyle,
   atoms: ReadonlySet<number>,
   skip: ReadonlySet<number>,
   hex: string,
@@ -681,7 +681,7 @@ function outlineCircles(
 /** Keep the filled disc, and put a full-strength edge round it so a pale wash still reads. */
 function edgeCircles(
   svg: Element,
-  style: DepictStyle,
+  style: Mol2DStyle,
   atoms: ReadonlySet<number>,
   skip: ReadonlySet<number>,
   hex: string,
@@ -703,7 +703,7 @@ function edgeCircles(
  * classified set stays exactly as gufe wrote it. A hidden hydrogen keeps its
  * index number, because RDKit emits every annotation under one class.
  */
-function applyHydrogenMode(svg: Element, mol: Molecule, style: DepictStyle): void {
+function applyHydrogenMode(svg: Element, mol: Molecule, style: Mol2DStyle): void {
   if (style.hydrogens === "show") return;
   for (let i = 0; i < mol.symbols.length; i++) {
     if (mol.symbols[i] !== "H") continue;
@@ -725,7 +725,7 @@ function applyHydrogenMode(svg: Element, mol: Molecule, style: DepictStyle): voi
 export function postProcessDepiction(
   svg: Element,
   mol: Molecule,
-  style: DepictStyle,
+  style: Mol2DStyle,
   groups: readonly MarkGroup[],
   custom: ReadonlySet<number>,
   markStyle: MarkStyle,

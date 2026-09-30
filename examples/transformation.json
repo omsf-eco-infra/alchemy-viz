@@ -1,10 +1,10 @@
 {
   "type": "TransformationViz",
-  "gufe-key": "Transformation-ee737850aeaf38b08c56069c05cd04d1",
+  "gufe-key": "Transformation-686febc0cd769ae44198ca6afb353dc5",
   "name": "CCO to CC",
   "protocol": "DummyProtocol-e74b8a34526e7a7a5541d63e9ef511d5",
-  "stateA": "ChemicalSystem-66919f61482ed8c312888c2217c7bc8c",
-  "stateB": "ChemicalSystem-79153083a45837debd10ed134f53f94c",
+  "stateA": "ChemicalSystem-31137528944b7eff117e2f4e66db60a0",
+  "stateB": "ChemicalSystem-c8a87a600ab376782082359b9b952acb",
   "mappings": [
     {
       "type": "LigandAtomMappingViz",
@@ -32,8 +32,8 @@
   "registry": [
     {
       "type": "ChemicalSystemViz",
-      "gufe-key": "ChemicalSystem-66919f61482ed8c312888c2217c7bc8c",
-      "name": "CCO in water",
+      "gufe-key": "ChemicalSystem-31137528944b7eff117e2f4e66db60a0",
+      "name": "CCO",
       "components": {
         "ligand": "SmallMoleculeComponent-7c1e5909b9f7ed71b4397fca9fe93156",
         "solvent": "SolventComponent-26b4034ad9dbd9f908dfc298ea8d449f"
@@ -41,8 +41,8 @@
     },
     {
       "type": "ChemicalSystemViz",
-      "gufe-key": "ChemicalSystem-79153083a45837debd10ed134f53f94c",
-      "name": "CC in water",
+      "gufe-key": "ChemicalSystem-c8a87a600ab376782082359b9b952acb",
+      "name": "CC",
       "components": {
         "ligand": "SmallMoleculeComponent-87d2f93db01dd5b434213d78fa29d9d9",
         "solvent": "SolventComponent-26b4034ad9dbd9f908dfc298ea8d449f"
