@@ -1,7 +1,7 @@
 # Embedding the bundle
 
 The compiled JavaScript is one ES module. Importing it registers every element;
-setting `.payload` is the whole API.
+then setting `.payload` is the only step.
 
 ```html
 <script type="module" src="alchemy-viz.js"></script>
@@ -13,38 +13,32 @@ setting `.payload` is the whole API.
 
 `<alchemy-view>` reads the payload's `type`, picks the element for it and mounts
 that element inside itself. The nine concrete elements - `<gufe-ligand-network>`,
-`<gufe-protein>` and so on - can be used directly if you already know what you are
+`<gufe-protein>` can be used directly if you already know what you are
 drawing, and take a `.payload` the same way. [`views.md`](./views.md) is the table
 of which type reaches which element.
 
 Assigning `.payload` again redraws. There is no render call and no teardown to do.
 
-## Where to get the bundle
-
-Three places, all of them the same file.
+## The bundle
 
 ```python
 from alchemy_viz import bundle_source
 bundle_source()     # the module's text, as a string
 ```
 
-The wheel ships it at `alchemy_viz/_assets/alchemy-viz.js`, so an installed
-package is a copy you can serve. Or take it from jsDelivr, off the repository
-itself, which is what the framejs frames here do - pin a tag rather than `@main`
-for anything you want to keep working:
+The wheel ships the bundle at `alchemy_viz/_assets/alchemy-viz.js`, so an installed
+package is a copy you can serve from a website.
 
 ```
 https://cdn.jsdelivr.net/gh/omsf-eco-infra/alchemy-viz@main/python/alchemy_viz/_assets/alchemy-viz.js
 ```
 
-`to_html(obj)` is the other direction: it inlines the bundle and the payload into
-one self-contained page, which is what the CLI writes. Use that when the answer is
-a file rather than a page of your own.
+`to_html(obj)`: inlines the bundle and the payload into
+one self-contained page, which is what the CLI writes.
 
-## What the page has to provide
+## Self contained HTML
 
-Nothing. No stylesheet, no font, no import map, and no bundler step: the module is
-already built and has no imports to resolve. The elements build light DOM, so your
+The module is has no imports to resolve. The elements build light DOM, so your
 page's CSS *can* reach inside a view - which is usually what you want in a page you
 control, and is the reason the notebook layer puts views in an iframe instead.
 

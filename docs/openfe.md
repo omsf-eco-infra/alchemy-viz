@@ -20,8 +20,7 @@ In a notebook that draws in the cell; outside one it returns an object whose
 
 ## openfe's classes are gufe's classes
 
-This is the whole integration story, and it is why there is no openfe-specific
-API here. OpenFE defines no classes for any of this; `openfe/__init__.py`
+OpenFE defines no classes for any of this; `openfe/__init__.py`
 re-exports gufe's:
 
 ```python
@@ -32,22 +31,9 @@ from gufe import (
 )
 ```
 
-So `openfe.SmallMoleculeComponent` **is** `gufe.SmallMoleculeComponent` - the same
-class object, not a subclass of it - and `alchemy_viz.payload_for` dispatches on
-the gufe classes. `view()` takes an openfe object without alchemy-viz importing
-openfe or knowing that it exists. Nothing here patches gufe and nothing overrides
-a method on any gufe class; installing this package changes no behaviour in your
-environment.
-
-You can run the claim:
-
-```python
-import openfe, gufe
-assert openfe.SmallMoleculeComponent is gufe.SmallMoleculeComponent
-```
-
-Dispatch is `isinstance`, most-derived first, so a membrane system is not
-serialized as a plain protein.
+So `openfe.SmallMoleculeComponent` **is** `gufe.SmallMoleculeComponent`.
+`view()` takes an openfe object without alchemy-viz importing
+openfe or knowing that it exists.
 
 ## Reading what a planner wrote
 
@@ -65,13 +51,6 @@ view(LigandNetwork.from_graphml((setup / "ligand_network.graphml").read_text()))
 view(GufeTokenizable.from_json(setup / "network_setup.json"))
 view(GufeTokenizable.from_json(next((setup / "transformations").glob("*.json"))))
 ```
-
-`LigandNetwork.from_graphml` is gufe's reader and openfe's writer, so the first
-line reads the file the planner wrote rather than a copy of it.
-`GufeTokenizable.from_json` reads every form gufe writes: it tries the keyed
-chain first and falls back to the dict representation, so it does not matter
-which shape a given file is in. Everything the planner leaves behind is a keyed
-chain.
 
 The campaign's filename is the output directory's name, not
 `alchemical_network.json`. [`cli.md`](./cli.md#the-directory-a-planner-writes) has
@@ -127,20 +106,3 @@ environment. The requirement has moved to import time instead:
 `pip install "alchemy-viz[gufe]"` is the declarative form, for a resolver that
 can actually reach a modern gufe. `import alchemy_viz`, `to_html` on a payload
 dict and the whole of the CLI's payload path work with no gufe at all.
-
-## The dict in the middle
-
-`payload_for(obj)` is what both `view()` and `to_html()` call. It returns the
-schema-valid dict the browser draws, which is occasionally the thing you want
-directly - to cache it, to diff it, or to hand it to a page of your own:
-
-```python
-from alchemy_viz import payload_for
-payload = payload_for(network)
-```
-
-[`../schema/README.md`](../schema/README.md) is the contract that dict satisfies.
-`payload_for` raises `TypeError` for anything with no view, which is a mistake at
-the call site rather than something to draw a panel about. An unrecognized
-component found *inside* a chemical system is different: it becomes an
-`UnknownComponentViz` and the rest of the system still draws.

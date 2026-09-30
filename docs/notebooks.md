@@ -19,7 +19,7 @@ is every view as a screenshot, which is the one to open on GitHub.
 pip install "alchemy-viz[notebook]"   # the extra is anywidget, for the live layer
 ```
 
-## What a cell gets
+## Cells
 
 Two layers come out of one `view()` call, and your frontend picks between them.
 
@@ -55,11 +55,10 @@ view(obj, live=False)      # static page only, even with anywidget installed
 view(obj, static=False)    # live only; halves the cost, leaves an export blank
 ```
 
-`live=False` is the honest preview of an export: it is exactly what a reader with
+`live=False` is the preview of an export: it is exactly what a reader with
 no kernel sees.
 
-`static=False` drops the `text/html` layer. The cell costs half as much and an
-exported notebook has a hole where the view was.
+`static=False` drops the `text/html` layer.
 
 ## What a view costs
 
@@ -72,12 +71,6 @@ from alchemy_viz import bundle_source, shell_html, to_html
 len(bundle_source()), len(shell_html()), len(to_html(payload))
 ```
 
-On JupyterLab those messages share the kernel's iopub channel, which the server
-rate-limits by default. A notebook that creates many views in one burst can have
-messages **dropped** rather than delivered slowly, and the cells come up blank.
-`static=False` and `live=False` are the two knobs for that, and a blank cell after
-a burst is [this, not a bug in the
-view](./troubleshooting.md#a-burst-of-views-came-up-blank).
 
 ## Committing a notebook
 
@@ -89,13 +82,7 @@ notebook except the gallery, whose screenshots are the point of the file.
 
 ## Why an iframe, and not the cell's own DOM
 
-Two properties of the bundle, not caution.
-
-The `<gufe-*>` elements build light DOM, so a notebook's output-area CSS would
-reach inside every view. And the engine loaders append a `<script>` to
-`document.head` and read `window.$3Dmol` and `window.RDKit`, which on a notebook
-page are the globals py3Dmol and nglview are already using, possibly at another
-version. An iframe settles both for nothing.
+Keeping CSS and other elements isolated from each others interference eg with CSS
 
 ## marimo
 

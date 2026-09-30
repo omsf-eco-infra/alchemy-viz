@@ -1,6 +1,6 @@
 # Every view
 
-Twelve payload types, nine elements. The table is the whole of what alchemy-viz
+Twelve payload types. The table is the whole of what alchemy-viz
 can draw; the schema declares these types and nothing else, and
 `ts/tests/dispatch.test.ts` fails if this list and the browser's dispatch table
 disagree.
@@ -40,7 +40,7 @@ twice on purpose. Python's MRO walk gives a membrane system the protein
 type needs its own entry in the browser's dispatch table. Inheritance on one side
 of the contract is not inheritance on the other.
 
-## What a system draws
+## System draws
 
 A `ChemicalSystem` has no picture of its own: it is a chooser over the views
 above, its components down the left and the selected one drawn on the right in
@@ -52,7 +52,7 @@ protein it is docked into have a picture together that neither has alone, so a
 the whole protein. That pose is the point of a binding campaign, and drawing the
 components one at a time is the only way to lose it.
 
-## The two graph views
+## Two graph views
 
 A `LigandNetwork` and the `AlchemicalNetwork` planned from it are the same graph
 one layer apart, and they are drawn to look like it.
@@ -68,7 +68,7 @@ transformations with the others a tab away.
 Both views drop detail as the graph gets denser: depictions give way to dots and
 labels drop out, and zooming in brings them back.
 
-## The atom mapping
+## Atom mapping
 
 Six modes, in a switcher: `2D`, `3D`, `3D-Map`, `3D Overlay`, `Pairs` and
 `Info`. All three cards open on plain `3D`, which shows the two ligands and
