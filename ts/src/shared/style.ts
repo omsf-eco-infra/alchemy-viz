@@ -94,7 +94,7 @@ export const SURFACE = {
 } as const;
 
 // The 2D depiction ground is deliberately absent. It has to be decided with the
-// palette RDKit draws in, so it comes from `depictGround()` in `depict-theme.ts`
+// palette RDKit draws in, so it comes from `mol2dGround()` in `mol2d-theme.ts`
 // and is read when a view draws rather than when this module loads.
 
 // --- controls --------------------------------------------------------------

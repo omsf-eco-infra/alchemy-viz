@@ -13,21 +13,16 @@ atom mappings, ligand networks and alchemical campaigns.
 
 ## Install
 
-Install into the environment that already has openfe or gufe. The compiled
-JavaScript ships in the wheel, so there are no javascript related dependencies at runtime.
-
 ```bash
 conda activate my-openfe-env
 pip install "alchemy-viz[notebook]"   # the notebook extra is optional
 ```
 
-gufe is **not** declared as a dependency: the only gufe on PyPI is 0.4, which
-predates the 1.0 API, so a hard requirement would make `pip install` fail for
-everyone. The check is at import time instead, and points at conda-forge.
+`gufe` must be installed from conda-forge, not pip.
 
 ## Use
 
-From the shell, on anything `openfe plan-rbfe-network` wrote:
+From the shell, `alchemy-viz` accepts as inputs anything from `openfe plan-rbfe-network`:
 
 ```bash
 alchemy-viz network_setup/network_setup.json -o campaign.html
@@ -35,10 +30,7 @@ alchemy-viz network_setup/ligand_network.graphml     # writes <input>.html besid
 alchemy-viz ligand.json -o -                         # or stdout
 ```
 
-One self-contained HTML file per object, to open in a browser or mail to someone
-who will not install anything. If the page has a menu button in its top left, one
-of its entries turns what you are looking at into a link instead, via
-[framejs](https://framejs.app).
+One self-contained HTML file is created.
 
 From Python, on the object itself:
 
@@ -51,33 +43,26 @@ html = to_html(obj)  # the same page as a string; writes nothing
 ```
 
 `view()` takes a live gufe object or an alchemy-viz payload dict.
-`openfe.SmallMoleculeComponent` **is** `gufe.SmallMoleculeComponent`, so there is
-nothing openfe-specific to learn and no conversion step.
 
 ## Documentation
 
-[`docs/`](./docs/README.md) is the whole of it, six pages:
-
-| page | what it answers |
+| Doc | Description |
 |---|---|
-| [`cli.md`](./docs/cli.md) | `alchemy-viz object.json` - the three input formats, the options, the errors |
+| [`cli.md`](./docs/cli.md) | `alchemy-viz object.json` - input formats, options, errors |
 | [`openfe.md`](./docs/openfe.md) | `view()` on your own objects, a `network_setup/` directory, planning in Python |
-| [`notebooks.md`](./docs/notebooks.md) | the two output layers, updating in place, what a view costs |
-| [`views.md`](./docs/views.md) | every type that has a view, and what each one draws |
+| [`notebooks.md`](./docs/notebooks.md) | how the notebook integration works |
+| [`views.md`](./docs/views.md) |  |
 | [`embedding.md`](./docs/embedding.md) | mounting the bundle in a page of your own |
 | [`troubleshooting.md`](./docs/troubleshooting.md) | blank cells, missing depictions, payloads that will not draw |
 
-Two notebooks, for two different things. The
-[demo](./examples/notebooks/alchemy-viz-demo.ipynb) is ten cells on what a cell
-gets, and is the one to run. The
-[gallery](./examples/notebooks/alchemy-viz-gallery.ipynb) is every view as a
-screenshot, and is the one to open on GitHub, which strips the `<iframe>` and
-`<script>` that `view()` emits.
+Two notebooks. The
+[demo](./examples/notebooks/alchemy-viz-demo.ipynb) is basic usage
+while
+[gallery](./examples/notebooks/alchemy-viz-gallery.ipynb) shows the examples as images so you can see the outputs in github
 
 ## Development
 
-[pixi](https://pixi.sh) and git are the whole list of prerequisites; everything
-else - Python, Node, gufe, RDKit, pytest - comes from `pixi.toml`.
+Requires [pixi](https://pixi.sh).
 
 ```bash
 git clone https://github.com/omsf-eco-infra/alchemy-viz.git
@@ -88,97 +73,6 @@ pixi run test    # both suites
 pixi run ci      # what CI runs: lint, tests, generated-artifact freshness
 ```
 
-`pixi run --list` has every task with a description.
-
-### How it fits together
-
-Python serializes a gufe object into a flat payload; compiled TypeScript custom
-elements draw it. `schema/alchemy-viz.schema.json` is the contract between them
-and the source of truth - it is hand-written, and both sides validate against
-that one file.
-
-Only SDF, PDB and flat JSON cross the boundary. gufe's own `to_json` never does,
-including via GraphML, whose nodes *are* gufe moldicts - keeping deduplicated
-key-chains and `:custom:` codecs a Python problem.
-
-```mermaid
-flowchart LR
-  G["live gufe object<br/>LigandNetwork, ChemicalSystem, ..."]
-  J["serialized gufe<br/>to_json, to_dict, .graphml"]
-  V["alchemy-viz payload<br/>type: ...Viz, examples/*.json"]
-  E["&lt;alchemy-view&gt;<br/>TypeScript custom elements"]
-
-  J -- "GufeTokenizable.from_json<br/>LigandNetwork.from_graphml<br/>cli.py, needs gufe" --> G
-  G -- "payload_for()<br/>__init__.py, needs gufe" --> V
-  V -- "schema/alchemy-viz.schema.json" --> E
-
-  classDef py fill:#e8f0fe,stroke:#4a6fa5,color:#1a2b40
-  classDef ts fill:#fdf0e3,stroke:#b07a3a,color:#402b1a
-  class G,J,V py
-  class E ts
-```
-
-Which entry point accepts which is not symmetric:
-
-| | live gufe object | serialized gufe | alchemy-viz payload |
-|---|---|---|---|
-| `view()`, `to_html()` | yes | no | yes |
-| `alchemy-viz` CLI | n/a | yes | yes |
-
-`payload_for()` is the only converter, and it dispatches on `isinstance`, so the
-Python API needs a live object. Deserializing gufe's own JSON lives in the CLI
-alone; from a script, rehydrate it first:
-
-```python
-from gufe.tokenization import GufeTokenizable
-
-view(GufeTokenizable.from_json(content=Path("network_setup.json").read_text()))
-```
-
-A `dict` handed to `view()` or `to_html()` is taken as a payload and passed
-through unchecked, so a gufe `to_dict()` mapping reaches the browser and fails
-there rather than at the call site.
-
-A payload has no envelope: it is its `type`, its `gufe-key` and its own fields.
-References to other objects are by key, and the objects themselves are carried
-once in the root payload's `registry`.
-
-```json
-{
-  "type": "ChemicalSystemViz",
-  "gufe-key": "ChemicalSystem-b51f409f...",
-  "components": { "ligand": "SmallMoleculeComponent-ec3c7a92..." },
-  "registry": [
-    { "type": "SmallMoleculeComponentViz", "gufe-key": "SmallMoleculeComponent-ec3c7a92...", "sdf": "..." }
-  ]
-}
-```
-
-One schema object per gufe class, `additionalProperties: false` everywhere, and
-`type` as a closed discriminator. See [`schema/README.md`](./schema/README.md).
-
-Four artifacts are generated and committed - `ts/src/schema/types.ts`,
-`ts/src/shared/atom-colors.ts`, `python/alchemy_viz/_assets/alchemy-viz.js` and
-`examples/*.json`. Committing the bundle is what lets `pip install` work without
-Node. `pixi run check-generated` fails on any drift:
-
-```bash
-pixi run examples && pixi run types && pixi run atom-colors && pixi run build   # the fix, always
-```
-
-### Keeping the two sides in sync
-
-`examples/*.json` feeds pytest, vitest, the dropzone and the gallery.
-`python/tests/mutations.json` declares a mutation matrix once, as data, and both
-suites apply it against the same schema file: most rows must be rejected by both
-validators at the same JSON pointer, and a few must still be accepted - garbage
-chemistry inside a valid payload, an edge naming a missing ligand. Schema
-validity is not chemical validity.
-
-No test reaches the network: RDKit, 3Dmol and d3 are faked through
-`globalThis.__gufeEngines`, the same pre-seed hook a bundled-engines mode would
-use. The suites stop at that boundary, so use the dev server to check that
-anything actually draws.
 
 ### Adding a view
 
@@ -208,24 +102,6 @@ setuptools-scm derives the version from the git tag, so tagging is the release:
 ```bash
 git tag -a v0.1.0 -m "v0.1.0" && git push origin v0.1.0
 ```
-
-That fires `.github/workflows/release.yml`, which builds the sdist and wheel,
-installs the wheel into a clean environment with no Node and no gufe, renders a
-payload with it, and only then uploads via [PyPI Trusted
-Publishing](https://docs.pypi.org/trusted-publishers/). Rehearse first with
-*Actions -> Release -> Run workflow*, which uploads to TestPyPI instead; PyPI
-refuses to re-upload a filename, so a real release is one-shot.
-
-`pixi run dist` and `pixi run dist-check` do the same locally.
-
-## Status
-
-Every type the schema declares has a view, asserted by
-`ts/tests/dispatch.test.ts`. Not published to PyPI yet.
-
-Still to come: an `engines="bundled"` mode for zero-network pages (the
-`__gufeEngines` hook is in place, so today's pages fetch RDKit, 3Dmol and d3 from
-a CDN on demand), a conda-forge feedstock, and the transfer to the OpenFE org.
 
 ## Support
 

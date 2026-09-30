@@ -14,7 +14,7 @@ import { buildRegistry, lookupOfType, protocolLabel } from "../src/schema/regist
 import { T } from "../src/shared/theme.js";
 import { HIDE_NAME_ATTRIBUTE } from "../src/shared/panels.js";
 import { inFrameOf, mappingPayloadFor, openfeShift, pairColour, uniqueAtoms } from "../src/views/atom-mapping.js";
-import { DEPICT_STYLE, markGroups, threeDmolColor } from "../src/shared/depict-style.js";
+import { MOL2D_STYLE, markGroups, threeDmolColor } from "../src/shared/mol2d-style.js";
 import { diffStatus, transformationPayloadFor } from "../src/views/transformation.js";
 import { systemPayloadFor } from "../src/views/chemical-system.js";
 import { ZOOM_LEVELS, levelAt, type DetailLevel } from "../src/views/ligand-network.js";
@@ -1322,7 +1322,7 @@ describe("<gufe-atom-mapping>", () => {
     sides.forEach((side, index) => {
       // What 2D would paint, asked of the very function 2D asks.
       const wanted = new Map<number, string>();
-      for (const group of markGroups(DEPICT_STYLE, side.mol, side.uniques, side.side)) {
+      for (const group of markGroups(MOL2D_STYLE, side.mol, side.uniques, side.side)) {
         for (const atom of group.atoms) wanted.set(atom, threeDmolColor(group.color));
       }
 
@@ -1342,7 +1342,7 @@ describe("<gufe-atom-mapping>", () => {
     // Not a colour invented here: both are the style document's, and the two
     // meanings are not painted the same.
     expect(seen).toEqual(
-      new Set([threeDmolColor(DEPICT_STYLE.modifiedColor), threeDmolColor(DEPICT_STYLE.createdColor)]),
+      new Set([threeDmolColor(MOL2D_STYLE.modifiedColor), threeDmolColor(MOL2D_STYLE.createdColor)]),
     );
   });
 

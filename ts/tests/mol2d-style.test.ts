@@ -18,26 +18,26 @@
 import { describe, expect, it, beforeEach } from "vitest";
 import Ajv2020 from "ajv/dist/2020.js";
 
-import schema from "../../schema/depict-style.schema.json" with { type: "json" };
-import committed from "../src/shared/depict-style.json" with { type: "json" };
+import schema from "../../schema/mol2d-style.schema.json" with { type: "json" };
+import committed from "../src/shared/mol2d-style.json" with { type: "json" };
 import { MAPPING_BW_PALETTE, MAPPING_COLORS, MAPPING_DRAW_OPTIONS } from "../src/shared/atom-colors.js";
 import {
-  DEFAULT_DEPICT_STYLE,
-  DEPICT_STYLE,
-  DEPICT_STYLE_RANGES,
+  DEFAULT_MOL2D_STYLE,
+  MOL2D_STYLE,
+  MOL2D_STYLE_RANGES,
   _resetSvgClassProbeForTests,
   depictionDetails,
   effectiveMarkStyle,
   markGroups,
   markedBonds,
-  normaliseDepictStyle,
+  normaliseMol2DStyle,
   parseAtomSpec,
   postProcessDepiction,
   rgbTriple,
   svgClassesSupported,
   tint,
-  type DepictStyle,
-} from "../src/shared/depict-style.js";
+  type Mol2DStyle,
+} from "../src/shared/mol2d-style.js";
 import type { Molecule } from "../src/shared/sdf.js";
 import type { RDKitModule } from "../src/shared/engines.js";
 
@@ -54,26 +54,26 @@ describe("the contract", () => {
   });
 
   it("declares exactly the keys the runtime defaults carry", () => {
-    expect(SCHEMA_KEYS.slice().sort()).toEqual(Object.keys(DEFAULT_DEPICT_STYLE).sort());
+    expect(SCHEMA_KEYS.slice().sort()).toEqual(Object.keys(DEFAULT_MOL2D_STYLE).sort());
   });
 
   it("agrees with the runtime defaults, key by key", () => {
     for (const key of SCHEMA_KEYS) {
       const declared = (schema.properties as Record<string, { default?: unknown; const?: unknown }>)[key];
       const expected = "default" in declared ? declared.default : declared.const;
-      expect(DEFAULT_DEPICT_STYLE[key as keyof DepictStyle], `default for ${key}`).toEqual(expected);
+      expect(DEFAULT_MOL2D_STYLE[key as keyof Mol2DStyle], `default for ${key}`).toEqual(expected);
     }
   });
 
   it("agrees with the runtime ranges, key by key", () => {
-    for (const [key, [min, max]] of Object.entries(DEPICT_STYLE_RANGES)) {
+    for (const [key, [min, max]] of Object.entries(MOL2D_STYLE_RANGES)) {
       const declared = (schema.properties as Record<string, { minimum?: number; maximum?: number }>)[key];
       expect([declared.minimum, declared.maximum], `range for ${key}`).toEqual([min, max]);
     }
     // And nothing numeric is bounded in the schema without being clamped here.
     for (const key of SCHEMA_KEYS) {
       const declared = (schema.properties as Record<string, { minimum?: number }>)[key];
-      if (declared.minimum !== undefined) expect(DEPICT_STYLE_RANGES[key], `${key} is clamped`).toBeDefined();
+      if (declared.minimum !== undefined) expect(MOL2D_STYLE_RANGES[key], `${key} is clamped`).toBeDefined();
     }
   });
 
@@ -97,7 +97,7 @@ describe("the contract", () => {
 
 describe("the defaults", () => {
   it("are what the committed document says, so the build draws what the file shows", () => {
-    expect(DEPICT_STYLE).toEqual(normaliseDepictStyle(committed));
+    expect(MOL2D_STYLE).toEqual(normaliseMol2DStyle(committed));
   });
 
   /**
@@ -107,16 +107,16 @@ describe("the defaults", () => {
    * projection of a pose, and it is what this view used to do.
    */
   it("take gufe's two layout calls rather than the conformer", () => {
-    expect(DEFAULT_DEPICT_STYLE.layout).toBe("rdkit");
-    expect(DEFAULT_DEPICT_STYLE.alignPair).toBe(true);
-    expect(DEPICT_STYLE.layout).toBe("rdkit");
-    expect(DEPICT_STYLE.alignPair).toBe(true);
+    expect(DEFAULT_MOL2D_STYLE.layout).toBe("rdkit");
+    expect(DEFAULT_MOL2D_STYLE.alignPair).toBe(true);
+    expect(MOL2D_STYLE.layout).toBe("rdkit");
+    expect(MOL2D_STYLE.alignPair).toBe(true);
   });
 
   it("carry gufe's mapping colours", () => {
-    expect(DEFAULT_DEPICT_STYLE.destroyedColor).toBe(MAPPING_COLORS.uniqueAtom);
-    expect(DEFAULT_DEPICT_STYLE.createdColor).toBe(MAPPING_COLORS.uniqueAtom);
-    expect(DEFAULT_DEPICT_STYLE.modifiedColor).toBe(MAPPING_COLORS.elementChange);
+    expect(DEFAULT_MOL2D_STYLE.destroyedColor).toBe(MAPPING_COLORS.uniqueAtom);
+    expect(DEFAULT_MOL2D_STYLE.createdColor).toBe(MAPPING_COLORS.uniqueAtom);
+    expect(DEFAULT_MOL2D_STYLE.modifiedColor).toBe(MAPPING_COLORS.elementChange);
   });
 
   /**
@@ -125,7 +125,7 @@ describe("the defaults", () => {
    * from gufe itself, so this fails if a default drifts away from it.
    */
   it("still hand RDKit everything gufe sets", () => {
-    const details = depictionDetails(DEFAULT_DEPICT_STYLE, 420, [], new Set(), "rdkit", 10);
+    const details = depictionDetails(DEFAULT_MOL2D_STYLE, 420, [], new Set(), "rdkit", 10);
     expect(details.atomColourPalette).toBe(MAPPING_DRAW_OPTIONS.atomColourPalette);
     expect(details.atomColourPalette).toBe(MAPPING_BW_PALETTE);
     expect(details.addAtomIndices).toBe(MAPPING_DRAW_OPTIONS.addAtomIndices);
@@ -137,58 +137,58 @@ describe("the defaults", () => {
    * RDKit itself, so passing them explicitly cannot change the picture.
    */
   it("set every numeric option to the RDKit default it stands in for", () => {
-    const details = depictionDetails(DEFAULT_DEPICT_STYLE, 420, [], new Set(), "rdkit", 10);
+    const details = depictionDetails(DEFAULT_MOL2D_STYLE, 420, [], new Set(), "rdkit", 10);
     expect(details.annotationFontScale).toBe(0.5);
     expect(details.baseFontSize).toBe(0.6);
     expect(details.bondLineWidth).toBe(2);
     expect(details.scaleBondWidth).toBe(false);
-    expect(DEFAULT_DEPICT_STYLE.circleRadius).toBe(0.3);
+    expect(DEFAULT_MOL2D_STYLE.circleRadius).toBe(0.3);
   });
 
   it("ask for no highlight at all when nothing is marked", () => {
-    const details = depictionDetails(DEFAULT_DEPICT_STYLE, 420, [], new Set(), "rdkit", 10);
+    const details = depictionDetails(DEFAULT_MOL2D_STYLE, 420, [], new Set(), "rdkit", 10);
     expect(details.atoms).toBeUndefined();
     expect(details.highlightAtomColors).toBeUndefined();
   });
 });
 
-describe("normaliseDepictStyle", () => {
+describe("normaliseMol2DStyle", () => {
   it("fills in what a partial document leaves out", () => {
-    expect(normaliseDepictStyle({ version: 1, style: "halo" })).toEqual({
-      ...DEFAULT_DEPICT_STYLE,
+    expect(normaliseMol2DStyle({ version: 1, style: "halo" })).toEqual({
+      ...DEFAULT_MOL2D_STYLE,
       style: "halo",
     });
   });
 
   it("drops an unknown key and an unusable value", () => {
-    const out = normaliseDepictStyle({ optsOpen: true, style: "sparkles", bondWidth: "thick" });
-    expect(out).toEqual(DEFAULT_DEPICT_STYLE);
+    const out = normaliseMol2DStyle({ optsOpen: true, style: "sparkles", bondWidth: "thick" });
+    expect(out).toEqual(DEFAULT_MOL2D_STYLE);
     expect("optsOpen" in out).toBe(false);
   });
 
   it("clamps a number to the range the schema declares", () => {
-    expect(normaliseDepictStyle({ haloOpacity: 9 }).haloOpacity).toBe(1);
-    expect(normaliseDepictStyle({ haloOpacity: -9 }).haloOpacity).toBe(0.1);
-    expect(normaliseDepictStyle({ bondWidth: NaN }).bondWidth).toBe(DEFAULT_DEPICT_STYLE.bondWidth);
+    expect(normaliseMol2DStyle({ haloOpacity: 9 }).haloOpacity).toBe(1);
+    expect(normaliseMol2DStyle({ haloOpacity: -9 }).haloOpacity).toBe(0.1);
+    expect(normaliseMol2DStyle({ bondWidth: NaN }).bondWidth).toBe(DEFAULT_MOL2D_STYLE.bondWidth);
   });
 
   it("takes a layout only from the three that name a real RDKit call", () => {
-    expect(normaliseDepictStyle({ layout: "coordgen" }).layout).toBe("coordgen");
-    expect(normaliseDepictStyle({ layout: "conformer" }).layout).toBe("conformer");
-    expect(normaliseDepictStyle({ layout: "flat" }).layout).toBe(DEFAULT_DEPICT_STYLE.layout);
-    expect(normaliseDepictStyle({ alignPair: false }).alignPair).toBe(false);
-    expect(normaliseDepictStyle({ alignPair: "yes" }).alignPair).toBe(true);
+    expect(normaliseMol2DStyle({ layout: "coordgen" }).layout).toBe("coordgen");
+    expect(normaliseMol2DStyle({ layout: "conformer" }).layout).toBe("conformer");
+    expect(normaliseMol2DStyle({ layout: "flat" }).layout).toBe(DEFAULT_MOL2D_STYLE.layout);
+    expect(normaliseMol2DStyle({ alignPair: false }).alignPair).toBe(false);
+    expect(normaliseMol2DStyle({ alignPair: "yes" }).alignPair).toBe(true);
   });
 
   it("takes a colour only in the one spelling the editor writes", () => {
-    expect(normaliseDepictStyle({ createdColor: "#00FF00" }).createdColor).toBe("#00FF00");
-    expect(normaliseDepictStyle({ createdColor: "#0f0" }).createdColor).toBe(DEFAULT_DEPICT_STYLE.createdColor);
-    expect(normaliseDepictStyle({ createdColor: "green" }).createdColor).toBe(DEFAULT_DEPICT_STYLE.createdColor);
+    expect(normaliseMol2DStyle({ createdColor: "#00FF00" }).createdColor).toBe("#00FF00");
+    expect(normaliseMol2DStyle({ createdColor: "#0f0" }).createdColor).toBe(DEFAULT_MOL2D_STYLE.createdColor);
+    expect(normaliseMol2DStyle({ createdColor: "green" }).createdColor).toBe(DEFAULT_MOL2D_STYLE.createdColor);
   });
 
   it("survives being handed something that is not an object at all", () => {
-    expect(normaliseDepictStyle(null)).toEqual(DEFAULT_DEPICT_STYLE);
-    expect(normaliseDepictStyle("nope")).toEqual(DEFAULT_DEPICT_STYLE);
+    expect(normaliseMol2DStyle(null)).toEqual(DEFAULT_MOL2D_STYLE);
+    expect(normaliseMol2DStyle("nope")).toEqual(DEFAULT_MOL2D_STYLE);
   });
 });
 
@@ -240,34 +240,34 @@ describe("markGroups", () => {
   const uniques = { atoms: [1, 2], elements: [5] };
 
   it("names the left molecule's unique atoms destroyed and the right's created", () => {
-    const style = normaliseDepictStyle({ destroyedColor: "#111111", createdColor: "#222222" });
+    const style = normaliseMol2DStyle({ destroyedColor: "#111111", createdColor: "#222222" });
     expect(markGroups(style, CHAIN6, uniques, "left")[0].color).toBe("#111111");
     expect(markGroups(style, CHAIN6, uniques, "right")[0].color).toBe("#222222");
   });
 
   it("gives each group the bonds gufe gives it", () => {
-    const [unique, changed] = markGroups(DEFAULT_DEPICT_STYLE, CHAIN6, uniques, "left");
+    const [unique, changed] = markGroups(DEFAULT_MOL2D_STYLE, CHAIN6, uniques, "left");
     expect(unique.bonds).toEqual([0, 1, 2]);
     expect(changed.bonds).toEqual([4]);
   });
 
   it("lets the unique atom keep the bond an element change next to it would also claim", () => {
-    const [unique, changed] = markGroups(DEFAULT_DEPICT_STYLE, CHAIN6, { atoms: [1], elements: [2] }, "left");
+    const [unique, changed] = markGroups(DEFAULT_MOL2D_STYLE, CHAIN6, { atoms: [1], elements: [2] }, "left");
     expect(unique.bonds).toEqual([0, 1]);
     expect(changed.bonds).toEqual([2]);
   });
 
   it("keeps a deletion bond out of the element changes even with boundary off", () => {
-    const style = normaliseDepictStyle({ boundary: false });
+    const style = normaliseMol2DStyle({ boundary: false });
     const [unique, changed] = markGroups(style, CHAIN6, { atoms: [1], elements: [2, 3] }, "left");
     expect(unique.bonds).toEqual([]);
     expect(changed.bonds).toEqual([2]);
   });
 
   it("draws nothing for a group the document switches off, or an empty one", () => {
-    expect(markGroups(normaliseDepictStyle({ createdDestroyed: false }), CHAIN6, uniques, "left")).toHaveLength(1);
-    expect(markGroups(normaliseDepictStyle({ modified: false }), CHAIN6, uniques, "left")).toHaveLength(1);
-    expect(markGroups(DEFAULT_DEPICT_STYLE, CHAIN6, { atoms: [], elements: [] }, "left")).toHaveLength(0);
+    expect(markGroups(normaliseMol2DStyle({ createdDestroyed: false }), CHAIN6, uniques, "left")).toHaveLength(1);
+    expect(markGroups(normaliseMol2DStyle({ modified: false }), CHAIN6, uniques, "left")).toHaveLength(1);
+    expect(markGroups(DEFAULT_MOL2D_STYLE, CHAIN6, { atoms: [], elements: [] }, "left")).toHaveLength(0);
   });
 });
 
@@ -318,27 +318,27 @@ describe("colour helpers", () => {
 });
 
 describe("depictionDetails", () => {
-  const groups = markGroups(DEFAULT_DEPICT_STYLE, CHAIN6, { atoms: [1], elements: [4] }, "left");
+  const groups = markGroups(DEFAULT_MOL2D_STYLE, CHAIN6, { atoms: [1], elements: [4] }, "left");
 
   it("gives RDKit the atoms to highlight and a radius for each", () => {
-    const details = depictionDetails(DEFAULT_DEPICT_STYLE, 300, groups, new Set(), "rdkit", 10);
+    const details = depictionDetails(DEFAULT_MOL2D_STYLE, 300, groups, new Set(), "rdkit", 10);
     expect(details.atoms).toEqual([1, 4]);
     expect(details.highlightAtomRadii).toEqual({ 1: 0.3, 4: 0.3 });
     expect(details.width).toBe(300);
   });
 
   it("lets cpk keep RDKit's own element palette", () => {
-    const style = normaliseDepictStyle({ elementColors: "cpk" });
+    const style = normaliseMol2DStyle({ elementColors: "cpk" });
     expect(depictionDetails(style, 300, groups, new Set(), "rdkit", 10).atomColourPalette).toBeUndefined();
   });
 
   it("asks for no disc under an atom that recolour means to leave bare", () => {
-    const style = normaliseDepictStyle({ style: "recolor", circles: "off" });
+    const style = normaliseMol2DStyle({ style: "recolor", circles: "off" });
     expect(depictionDetails(style, 300, groups, new Set(), "recolor", 10).atoms).toBeUndefined();
   });
 
   it("washes the disc out under a filled ring, so the letter on top stays readable", () => {
-    const style = normaliseDepictStyle({ style: "recolor", circles: "filled", destroyedColor: "#000000" });
+    const style = normaliseMol2DStyle({ style: "recolor", circles: "filled", destroyedColor: "#000000" });
     const details = depictionDetails(
       style,
       300,
@@ -351,7 +351,7 @@ describe("depictionDetails", () => {
   });
 
   it("hands the marked bonds to RDKit in each group's colour, the way gufe does", () => {
-    const style = normaliseDepictStyle({ destroyedColor: "#FF0000", modifiedColor: "#0000FF" });
+    const style = normaliseMol2DStyle({ destroyedColor: "#FF0000", modifiedColor: "#0000FF" });
     const details = depictionDetails(style, 300, markGroups(style, CHAIN6, { atoms: [1], elements: [4] }, "left"), new Set(), "rdkit", 10);
     expect(details.bonds).toEqual([0, 1, 3, 4]);
     expect(details.highlightBondColors).toEqual({ 0: [1, 0, 0], 1: [1, 0, 0], 3: [0, 0, 1], 4: [0, 0, 1] });
@@ -359,19 +359,19 @@ describe("depictionDetails", () => {
 
   it("asks RDKit for no bond highlight where the SVG is repainted instead", () => {
     for (const markStyle of ["recolor", "halo"] as const) {
-      const details = depictionDetails(DEFAULT_DEPICT_STYLE, 300, groups, new Set(), markStyle, 10);
+      const details = depictionDetails(DEFAULT_MOL2D_STYLE, 300, groups, new Set(), markStyle, 10);
       expect(details.bonds, markStyle).toBeUndefined();
       expect(details.highlightBondColors, markStyle).toBeUndefined();
     }
   });
 
   it("sets continuousHighlight only where gufe's own drawing does", () => {
-    expect(depictionDetails(DEFAULT_DEPICT_STYLE, 300, groups, new Set(), "rdkit", 10).continuousHighlight).toBe(false);
-    expect(depictionDetails(DEFAULT_DEPICT_STYLE, 300, groups, new Set(), "halo", 10).continuousHighlight).toBeUndefined();
+    expect(depictionDetails(DEFAULT_MOL2D_STYLE, 300, groups, new Set(), "rdkit", 10).continuousHighlight).toBe(false);
+    expect(depictionDetails(DEFAULT_MOL2D_STYLE, 300, groups, new Set(), "halo", 10).continuousHighlight).toBeUndefined();
   });
 
   it("lets a custom atom win the colour, and drops one the molecule does not have", () => {
-    const style = normaliseDepictStyle({ customColor: "#FFFFFF" });
+    const style = normaliseMol2DStyle({ customColor: "#FFFFFF" });
     const details = depictionDetails(style, 300, groups, new Set([1, 99]), "rdkit", 10);
     expect((details.highlightAtomColors as Record<number, number[]>)[1]).toEqual([1, 1, 1]);
     expect(details.atoms).toEqual([1, 4]);
@@ -435,14 +435,14 @@ describe("postProcessDepiction", () => {
   it("touches nothing but the hydrogens under the rdkit style", () => {
     const svg = rdkitLikeSVG();
     const before = svg.outerHTML;
-    const groups = markGroups(DEFAULT_DEPICT_STYLE, CHAIN, { atoms: [2], elements: [] }, "left");
-    postProcessDepiction(svg, CHAIN, DEFAULT_DEPICT_STYLE, groups, new Set(), "rdkit");
+    const groups = markGroups(DEFAULT_MOL2D_STYLE, CHAIN, { atoms: [2], elements: [] }, "left");
+    postProcessDepiction(svg, CHAIN, DEFAULT_MOL2D_STYLE, groups, new Set(), "rdkit");
     expect(svg.outerHTML).toBe(before);
   });
 
   it("recolours the marked bonds and turns the disc into a ring", () => {
     const svg = rdkitLikeSVG();
-    const style = normaliseDepictStyle({ style: "recolor", destroyedColor: "#FF0000", markWidth: 3 });
+    const style = normaliseMol2DStyle({ style: "recolor", destroyedColor: "#FF0000", markWidth: 3 });
     const groups = markGroups(style, CHAIN, { atoms: [2], elements: [] }, "left");
     postProcessDepiction(svg, CHAIN, style, groups, new Set(), "recolor");
 
@@ -459,7 +459,7 @@ describe("postProcessDepiction", () => {
 
   it("leaves the core bond black when boundary is off", () => {
     const svg = rdkitLikeSVG();
-    const style = normaliseDepictStyle({ style: "recolor", boundary: false });
+    const style = normaliseMol2DStyle({ style: "recolor", boundary: false });
     const groups = markGroups(style, CHAIN, { atoms: [2], elements: [] }, "left");
     postProcessDepiction(svg, CHAIN, style, groups, new Set(), "recolor");
     expect(styleOf(svg.querySelector('[class~="bond-1"]')).stroke).toBe("#000000");
@@ -471,7 +471,7 @@ describe("postProcessDepiction", () => {
       ["outline", asCss("#FF0000")],
     ] as const) {
       const svg = rdkitLikeSVG();
-      const style = normaliseDepictStyle({ style: "recolor", circles, destroyedColor: "#FF0000" });
+      const style = normaliseMol2DStyle({ style: "recolor", circles, destroyedColor: "#FF0000" });
       const groups = markGroups(style, CHAIN, { atoms: [2], elements: [] }, "left");
       postProcessDepiction(svg, CHAIN, style, groups, new Set(), "recolor");
       expect(styleOf(letterOf(svg, 2)).fill, circles).toBe(expected);
@@ -480,7 +480,7 @@ describe("postProcessDepiction", () => {
 
   it("puts the halo band behind the molecule, in one group carrying the opacity", () => {
     const svg = rdkitLikeSVG();
-    const style = normaliseDepictStyle({ style: "halo", haloWidth: 12, haloOpacity: 0.5 });
+    const style = normaliseMol2DStyle({ style: "halo", haloWidth: 12, haloOpacity: 0.5 });
     const groups = markGroups(style, CHAIN, { atoms: [2], elements: [] }, "left");
     postProcessDepiction(svg, CHAIN, style, groups, new Set(), "halo");
 
@@ -502,7 +502,7 @@ describe("postProcessDepiction", () => {
       ["hide", (s: CSSStyleDeclaration) => expect(s.display).toBe("none")],
     ] as const) {
       const svg = rdkitLikeSVG();
-      const style = normaliseDepictStyle({ hydrogens: mode });
+      const style = normaliseMol2DStyle({ hydrogens: mode });
       postProcessDepiction(svg, CHAIN, style, [], new Set(), "rdkit");
       check(styleOf(svg.querySelector("ellipse")));
       // Atom 0 is a carbon: its bond is untouched.
@@ -512,7 +512,7 @@ describe("postProcessDepiction", () => {
 
   it("leaves a custom atom its filled disc rather than ringing it", () => {
     const svg = rdkitLikeSVG();
-    const style = normaliseDepictStyle({ style: "recolor", circles: "outline" });
+    const style = normaliseMol2DStyle({ style: "recolor", circles: "outline" });
     const groups = markGroups(style, CHAIN, { atoms: [2], elements: [] }, "left");
     postProcessDepiction(svg, CHAIN, style, groups, new Set([2]), "recolor");
     expect(styleOf(svg.querySelector("ellipse")).fill).toBe("#DC3220");
@@ -530,7 +530,7 @@ describe("effectiveMarkStyle", () => {
   it("keeps the asked-for style when RDKit tags its SVG", () => {
     const tagged = rdkitWith('<svg><path class="bond-0 atom-0 atom-1"/></svg>');
     expect(svgClassesSupported(tagged)).toBe(true);
-    expect(effectiveMarkStyle(normaliseDepictStyle({ style: "halo" }), tagged)).toBe("halo");
+    expect(effectiveMarkStyle(normaliseMol2DStyle({ style: "halo" }), tagged)).toBe("halo");
   });
 
   /**
@@ -540,14 +540,14 @@ describe("effectiveMarkStyle", () => {
    */
   it("falls back to rdkit when it does not, for either style", () => {
     const untagged = rdkitWith("<svg><path/></svg>");
-    expect(effectiveMarkStyle(normaliseDepictStyle({ style: "recolor" }), untagged)).toBe("rdkit");
-    expect(effectiveMarkStyle(normaliseDepictStyle({ style: "halo" }), untagged)).toBe("rdkit");
+    expect(effectiveMarkStyle(normaliseMol2DStyle({ style: "recolor" }), untagged)).toBe("rdkit");
+    expect(effectiveMarkStyle(normaliseMol2DStyle({ style: "halo" }), untagged)).toBe("rdkit");
   });
 
   it("never asks at all when the document did not want post-processing", () => {
     let asked = false;
     const counting = { get_mol: () => ((asked = true), null) } as unknown as RDKitModule;
-    expect(effectiveMarkStyle(DEFAULT_DEPICT_STYLE, counting)).toBe("rdkit");
+    expect(effectiveMarkStyle(DEFAULT_MOL2D_STYLE, counting)).toBe("rdkit");
     expect(asked).toBe(false);
   });
 });

@@ -17,7 +17,7 @@ import {
   layoutPair,
   withCoords,
   type Vec2,
-} from "../src/shared/depict-layout.js";
+} from "../src/shared/mol2d-layout.js";
 import { buildMolBlock, parseSDF, type Molecule } from "../src/shared/sdf.js";
 import type { RDKitModule } from "../src/shared/engines.js";
 

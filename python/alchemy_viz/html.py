@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import json
 import re
+from html import escape as escape_html
 from importlib import resources
 from pathlib import Path
 from string import Template
@@ -97,7 +98,7 @@ try {
 """
 
 _CDN_ENGINES_NOTE = (
-    "<!-- RDKit / 3Dmol / d3 are fetched from their CDNs on demand, and only by a\n"
+    "<!-- RDKit / 3Dmol / d3-force are fetched from their CDNs on demand, and only by a\n"
     '     view that needs them. A future engines="bundled" mode will inline\n'
     "     them and drops the network requirement entirely. -->"
 )
@@ -110,10 +111,6 @@ def _script_safe(text: str) -> str:
     regex literal, where ``<\/script`` is an identity escape meaning the same thing.
     """
     return re.sub(r"</(script)", r"<\\/\1", text, flags=re.IGNORECASE)
-
-
-def _escape_html(text: str) -> str:
-    return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
 
 def _as_payload_dict(obj: GufeTokenizable | dict[str, Any]) -> dict[str, Any]:
@@ -142,7 +139,7 @@ def to_html(obj: GufeTokenizable | dict[str, Any], *, title: str | None = None, 
     # `Template.substitute` scans the template once, so a placeholder appearing
     # inside a substituted value (e.g. the payload or bundle) is left alone.
     return _TEMPLATE.substitute(
-        title=_escape_html(title or payload.get("name") or payload.get("type") or "alchemy-viz"),
+        title=escape_html(title or payload.get("name") or payload.get("type") or "alchemy-viz", quote=False),
         payload=_PAYLOAD_BLOCK.substitute(
             # `</` cannot appear inside a <script> block, whatever the payload
             # holds; `\/` is a legal JSON escape, so this survives JSON.parse
@@ -170,7 +167,7 @@ def shell_html(*, title: str = "alchemy-viz") -> str:
     assigning to an un-upgraded element, shadowing the class's accessor.
     """
     return _TEMPLATE.substitute(
-        title=_escape_html(title),
+        title=escape_html(title, quote=False),
         payload="",
         engines=_CDN_ENGINES_NOTE,
         code=_script_safe(bundle_source()),

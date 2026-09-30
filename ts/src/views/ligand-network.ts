@@ -41,11 +41,11 @@ import {
   visibleAt,
   type DetailPane,
 } from "../shared/network/canvas.js";
-import { DEPICT_STYLE, rgbTriple } from "../shared/depict-style.js";
-import { depictSVG } from "../shared/sdf.js";
+import { MOL2D_STYLE, rgbTriple } from "../shared/mol2d-style.js";
+import { mol2dSVG } from "../shared/sdf.js";
 import { chargeChange, chargeLabel } from "../shared/charge.js";
-import { depictThemeOptions, nodeCardCaption, nodeCardGround } from "../shared/depict-theme.js";
-import { mountDepiction } from "../shared/depict-node.js";
+import { mol2dThemeOptions, nodeCardCaption, nodeCardGround } from "../shared/mol2d-theme.js";
+import { mountDepiction } from "../shared/mol2d-node.js";
 import { createMatcher, type MatchOutcome } from "../shared/smarts.js";
 import { FONT, SPACE, TOOLTIP, WEIGHT } from "../shared/style.js";
 import { T, V } from "../shared/theme.js";
@@ -244,10 +244,10 @@ const CHARGE_BADGE = {
   bigFontSize: 30,
 };
 const CHARGE_DASH = "6 4";
-const DEPICT_SIZE = 200;
+const MOL2D_SIZE = 200;
 
 /** How much clear ground is left between the structure's square and the ring. */
-const DEPICT_PADDING = 2;
+const MOL2D_PADDING = 2;
 
 /**
  * The square a structure is drawn in, inside a round node.
@@ -260,9 +260,9 @@ const DEPICT_PADDING = 2;
  * long one only reaches the sides, where the circle is widest.
  *
  * RDKit's own margin inside the box is on top of this, so the clearance a reader
- * sees is a little more than `DEPICT_PADDING` rather than exactly it.
+ * sees is a little more than `MOL2D_PADDING` rather than exactly it.
  */
-const DEPICT_FIT = Math.SQRT2 * (NODE_RADIUS - DEPICT_PADDING);
+const MOL2D_FIT = Math.SQRT2 * (NODE_RADIUS - MOL2D_PADDING);
 const LABEL_MAX_CHARS = 14;
 const INITIALS_SIZE = 18;
 
@@ -290,7 +290,7 @@ const CAPTION = {
  * crossing the threshold changes what is inside a node and not how big it is.
  * What it is for is clearing the way: without it a structure is drawn over the
  * styled disc and has the network's own edges running through it. Which colour
- * that is comes from `depict-theme.ts`, along with the palette the structure on
+ * that is comes from `mol2d-theme.ts`, along with the palette the structure on
  * it is drawn in, because a plate and its ink are one decision.
  *
  * It carries the node's ring too, in `NODE_STROKE`, which is the styled disc's
@@ -665,7 +665,7 @@ function levelOfDetail(parts: DetailParts): {
    * element colours are what a reader picks a ligand out by. On a dark page
    * these are the dark ones, which is the page on which `PLATE` is dark.
    */
-  const depictOptions = depictThemeOptions("cpk");
+  const mol2dOptions = mol2dThemeOptions("cpk");
   const matchColor = matchRgb();
 
   /** The match a structure was drawn against, so a new one knows what to redraw. */
@@ -677,13 +677,13 @@ function levelOfDetail(parts: DetailParts): {
     const atoms = parts.matched().get(index);
     const drawn =
       node.sdf &&
-      depictSVG(
+      mol2dSVG(
         RDKit,
         node.sdf,
-        DEPICT_SIZE,
-        DEPICT_STYLE.layout,
+        MOL2D_SIZE,
+        MOL2D_STYLE.layout,
         atoms && { atoms, color: matchColor, radius: MATCH_ATOM_RADIUS },
-        depictOptions,
+        mol2dOptions,
       );
     if (!drawn) {
       depictions.refused(index);
@@ -692,7 +692,7 @@ function levelOfDetail(parts: DetailParts): {
     // The ground RDKit draws behind a structure is dropped on the way in, and
     // `PLATE`'s disc is what this view puts there instead: round, and exactly
     // the size of the node rather than of the square the depiction was drawn in.
-    if (!mountDepiction(parts.depictionGroups[index], drawn, DEPICT_SIZE, DEPICT_FIT)) {
+    if (!mountDepiction(parts.depictionGroups[index], drawn, MOL2D_SIZE, MOL2D_FIT)) {
       depictions.refused(index);
       return;
     }

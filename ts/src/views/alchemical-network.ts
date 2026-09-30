@@ -69,11 +69,11 @@ import { floatingReset } from "../shared/interact.js";
 import { flag, num } from "../shared/settings.js";
 import { createMatcher, type MatchOutcome } from "../shared/smarts.js";
 import { svg, titled } from "../shared/svg.js";
-import { depictSVG } from "../shared/sdf.js";
-import { depictThemeOptions, nodeCardGround } from "../shared/depict-theme.js";
+import { mol2dSVG } from "../shared/sdf.js";
+import { mol2dThemeOptions, nodeCardGround } from "../shared/mol2d-theme.js";
 import { chargeLabel } from "../shared/charge.js";
-import { DEPICT_STYLE } from "../shared/depict-style.js";
-import { mountDepiction } from "../shared/depict-node.js";
+import { MOL2D_STYLE } from "../shared/mol2d-style.js";
+import { mountDepiction } from "../shared/mol2d-node.js";
 import { CHIP, FONT, SPACE, TEXT, TOOLBAR, WEIGHT } from "../shared/style.js";
 import { T, V } from "../shared/theme.js";
 import {
@@ -216,7 +216,7 @@ const boxHeightOf = (sdf: string | null | undefined): number => (sdf ? NODE.depi
  * A plate at all because a structure drawn straight onto the box's own ground is
  * a structure nobody can read: whichever palette RDKit is using, it was picked
  * against a plain ground and not against whatever a box is filled with.
- * `depict-theme.ts` says which plain ground, so that the plate and the ink on it
+ * `mol2d-theme.ts` says which plain ground, so that the plate and the ink on it
  * move together. The plate is square and inset rather than filling the box,
  * which leaves the box showing as a frame on all four sides: the picture is the
  * ligand and the frame around it is the box holding it, which is what keeps a
@@ -227,7 +227,7 @@ const boxHeightOf = (sdf: string | null | undefined): number => (sdf ? NODE.depi
 const PLATE = { pad: 6, size: 122, radius: 6, inset: 4 };
 
 /** The square RDKit is asked to draw in, in its own units. */
-const DEPICT_SIZE = 200;
+const MOL2D_SIZE = 200;
 
 /**
  * The formal charge of the ligand in a box, and the mark on a transformation
@@ -1988,18 +1988,18 @@ export class GufeAlchemicalNetwork extends AlchemyElement<AlchemicalNetworkViz> 
      * are what a reader recognises it by. On a dark page they are the dark ones,
      * which is the page on which `PLATE` is dark.
      */
-    const depictOptions = depictThemeOptions("cpk");
+    const mol2dOptions = mol2dThemeOptions("cpk");
 
     const inject = (RDKit: RDKitModule, index: number): void => {
       if (!depictions.wants(index)) return;
       const target = depictionGroups[index];
       const sdf = faces[index].sdf;
       if (!target || !sdf) return;
-      const markup = depictSVG(RDKit, sdf, DEPICT_SIZE, DEPICT_STYLE.layout, undefined, depictOptions);
+      const markup = mol2dSVG(RDKit, sdf, MOL2D_SIZE, MOL2D_STYLE.layout, undefined, mol2dOptions);
       // Marked failed rather than left to be tried again: a molecule RDKit
       // cannot draw now will not draw on the next pan either, and a node that
       // keeps asking pays for the attempt every time the view moves.
-      if (!markup || !mountDepiction(target, markup, DEPICT_SIZE, PLATE.size - PLATE.inset * 2)) {
+      if (!markup || !mountDepiction(target, markup, MOL2D_SIZE, PLATE.size - PLATE.inset * 2)) {
         depictions.refused(index);
         return;
       }

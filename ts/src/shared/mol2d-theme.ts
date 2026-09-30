@@ -21,7 +21,7 @@
  * `setDarkDepictions` exists for the two callers that need the answer to be
  * something other than the page's: the parity page, which puts our drawing
  * beside gufe's own white one and has to compare like with like, and the tests.
- * It is not a user setting. If it becomes one it belongs in `DepictStyle` with
+ * It is not a user setting. If it becomes one it belongs in `Mol2DStyle` with
  * the rest of the taste, not here.
  *
  * ## Two grounds, one switch
@@ -34,7 +34,7 @@
  * node with nothing drawn in it.
  */
 
-import type { ElementColors } from "./depict-style.js";
+import type { ElementColors } from "./mol2d-style.js";
 import { DARK_ATOM_PALETTE, DARK_DRAW_OPTIONS, DARK_MONO_PALETTE, MAPPING_BW_PALETTE } from "./atom-colors.js";
 import { currentTheme, THEMES } from "./theme.js";
 
@@ -64,7 +64,7 @@ export function setDarkDepictions(on: boolean): void {
  * ground with it. A caller told to draw for paper has to be given paper to draw
  * it on whatever the page theme is, and the other way round.
  */
-export function depictGround(): string {
+export function mol2dGround(): string {
   return THEMES[darkDepictions() ? "dark" : "light"].canvas2DBg;
 }
 
@@ -74,11 +74,11 @@ export function depictGround(): string {
  * cover the styled disc and whatever edge passes beneath.
  */
 export function nodeCardGround(): string {
-  return THEMES[darkDepictions() ? "dark" : "light"].netDepictBg;
+  return THEMES[darkDepictions() ? "dark" : "light"].netMol2dBg;
 }
 
 export function nodeCardCaption(): string {
-  return THEMES[darkDepictions() ? "dark" : "light"].netDepictCaption;
+  return THEMES[darkDepictions() ? "dark" : "light"].netMol2dCaption;
 }
 
 /**
@@ -89,7 +89,7 @@ export function nodeCardCaption(): string {
  * RDKit. Both have a dark form and the light form is what this project has
  * always drawn, which is why light `cpk` is empty rather than explicit.
  */
-export function depictThemeOptions(elementColors: ElementColors): Record<string, unknown> {
+export function mol2dThemeOptions(elementColors: ElementColors): Record<string, unknown> {
   if (!darkDepictions()) return elementColors === "mono" ? { atomColourPalette: MAPPING_BW_PALETTE } : {};
   return {
     ...DARK_DRAW_OPTIONS,

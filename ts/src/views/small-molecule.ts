@@ -33,9 +33,9 @@ import { choice, flag } from "../shared/settings.js";
 import { load3Dmol, loadRDKit, releaseViewer, ThreeDmol, type ThreeDmolViewer } from "../shared/engines.js";
 import { viewerInteraction, type BoundedZoom, type Interaction } from "../shared/interact.js";
 import { rememberLigandPose, restoreLigandPose } from "../shared/ligand-camera.js";
-import { DEPICT_STYLE } from "../shared/depict-style.js";
-import { depictSVG, ensureSDFTerminator, parseCounts, placeDepiction } from "../shared/sdf.js";
-import { depictGround, depictThemeOptions } from "../shared/depict-theme.js";
+import { MOL2D_STYLE } from "../shared/mol2d-style.js";
+import { mol2dSVG, ensureSDFTerminator, parseCounts, placeDepiction } from "../shared/sdf.js";
+import { mol2dGround, mol2dThemeOptions } from "../shared/mol2d-theme.js";
 import { FONT, OVERLAY_CONTROLS, PANE_LABEL_OVERLAY, SPACE, SURFACE } from "../shared/style.js";
 import { V } from "../shared/theme.js";
 import type { SmallMoleculeComponentViz } from "../schema/types.js";
@@ -59,7 +59,7 @@ const SMALL_MOL_SPECS: Record<string, object> = {
 
 const is3D = (mode: Mode): boolean => mode in SMALL_MOL_SPECS;
 
-const DEPICT_SIZE = 400;
+const MOL2D_SIZE = 400;
 
 /** A pane of the stage: the whole of it, and invisible until it is the one in force. */
 const PANE = "position:absolute;inset:0;min-width:0;min-height:0;";
@@ -80,12 +80,12 @@ export class GufeSmallMolecule extends AlchemyElement<SmallMoleculeComponentViz>
 
     // --- the panes ---
 
-    const depictBox = el(
+    const mol2dBox = el(
       "div",
       `${PANE}display:flex;align-items:center;justify-content:center;overflow:hidden;padding:8px;` +
-        `background:${depictGround()};`,
+        `background:${mol2dGround()};`,
     );
-    stage.appendChild(depictBox);
+    stage.appendChild(mol2dBox);
 
     const host3D = viewerHost();
     host3D.wrap.style.cssText = PANE;
@@ -160,7 +160,7 @@ export class GufeSmallMolecule extends AlchemyElement<SmallMoleculeComponentViz>
 
     const show = (next: Mode): void => {
       mode = next;
-      depictBox.style.visibility = mode === "2d" ? "visible" : "hidden";
+      mol2dBox.style.visibility = mode === "2d" ? "visible" : "hidden";
       host3D.wrap.style.visibility = is3D(mode) ? "visible" : "hidden";
       infoPane.style.visibility = mode === "info" ? "visible" : "hidden";
       paneLabel.style.display = mode === "info" || !named ? "none" : "block";
@@ -214,27 +214,27 @@ export class GufeSmallMolecule extends AlchemyElement<SmallMoleculeComponentViz>
     // A schema-valid payload can still carry an empty or unusable SDF; that is a
     // render-degraded state, not an error. Info still has everything it had.
     if (!sdf || !sdf.trim()) {
-      depictBox.appendChild(centredMessage("No molecule provided"));
+      mol2dBox.appendChild(centredMessage("No molecule provided"));
       host3D.container.appendChild(centredMessage("No molecule provided"));
       return { cleanup: () => modes.cleanup() };
     }
 
     // --- 2D ---
-    depictBox.appendChild(centredMessage("Loading 2D depiction..."));
+    mol2dBox.appendChild(centredMessage("Loading 2D depiction..."));
     loadRDKit()
       .then((RDKit) => {
         // `cpk`: a single molecule is drawn in RDKit's element colours. `mono` is
         // gufe's mapping palette and belongs to the mapping view, not here.
-        const options = depictThemeOptions("cpk");
-        const svg = depictSVG(RDKit, sdf, DEPICT_SIZE, DEPICT_STYLE.layout, undefined, options);
+        const options = mol2dThemeOptions("cpk");
+        const svg = mol2dSVG(RDKit, sdf, MOL2D_SIZE, MOL2D_STYLE.layout, undefined, options);
         if (svg) {
-          placeDepiction(depictBox, svg, DEPICT_SIZE);
+          placeDepiction(mol2dBox, svg, MOL2D_SIZE);
         } else {
-          depictBox.replaceChildren(centredMessage("Failed to parse molecule", true));
+          mol2dBox.replaceChildren(centredMessage("Failed to parse molecule", true));
         }
       })
       .catch((err: unknown) => {
-        depictBox.replaceChildren(centredMessage(`RDKit failed to load: ${errText(err)}`, true));
+        mol2dBox.replaceChildren(centredMessage(`RDKit failed to load: ${errText(err)}`, true));
       });
 
     // --- 3D ---
