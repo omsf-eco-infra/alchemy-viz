@@ -219,3 +219,21 @@ description = "Install the built wheel into a throwaway venv with no gufe, and u
 # package has to import and render payloads there.
 cmd = "bash scripts/check_wheel.sh"
 depends-on = ["dist"]
+
+[tasks.npm-dist]
+description = "Fill npm/dist/, leaving npm/ ready for npm publish."
+# `npm/` is the package: `package.json` and `README.md` are checked in and
+# published as-is, so this task only fills `dist/`. We have a second package.json
+# because tree-shaking would remove the functionality
+#
+# `build` first: a stale bundle is a stale package. The version stays 0.0.0
+# here; `publish-npm.yaml` sets it from the tag, which keeps npm and PyPI in step.
+cmd = "npm run build:npm"
+depends-on = ["build"]
+
+[tasks.npm-dist-check]
+description = "Install the packed npm tarball into a throwaway project and compile against it."
+# What `npm install alchemy-viz` actually lands in: no repository, no tsconfig
+# of ours, no ambient type packages. See the header of the script.
+cmd = "bash scripts/check_npm.sh"
+depends-on = ["npm-dist"]

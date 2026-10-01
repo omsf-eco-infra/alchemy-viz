@@ -116,3 +116,21 @@ jobs:
               raise SystemExit("expected ImportError when gufe is not installed")
           PY
         working-directory: ${{ runner.temp }}
+
+  # The other half of `pip-install`, for the other registry. A package that
+  # assembles cleanly can still be unusable from outside the tree that
+  # assembled it, and an npm upload cannot be taken back - so this runs on
+  # every pull request, not only at a tag.
+  npm-package:
+    name: npm install (from outside the repository)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: prefix-dev/setup-pixi@v0.8.1
+        with:
+          cache: true
+
+      - run: pixi run npm-dist-check

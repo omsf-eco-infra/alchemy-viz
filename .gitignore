@@ -12,6 +12,10 @@ python/alchemy_viz/_version.py
 node_modules/
 ts/dist/
 .vite/
+# What `pixi run npm-dist` puts in npm/; package.json and README.md are source.
+npm/dist/
+npm/LICENSE
+npm/*.tgz
 
 # pixi
 .pixi/

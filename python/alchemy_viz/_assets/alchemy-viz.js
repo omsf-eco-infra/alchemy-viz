@@ -1,574 +1,9 @@
-function N(e, t, n) {
-  const r = document.createElement(e);
-  return t && (r.style.cssText = t), n != null && (r.textContent = n), r;
-}
-function Ie(e) {
-  return String(e ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
-}
-function ve(e) {
-  if (e == null) return "unknown error";
-  const t = e.message;
-  if (typeof t == "string" && t) return t;
-  const n = String(e);
-  return n === "[object Object]" ? e.name || "unknown error" : n;
-}
-const Pt = (e) => e.toLocaleString("en-US"), Qe = "-", Kn = (e, t) => e.length > t ? `${e.slice(0, t - 1)}...` : e;
-function ra(e, t) {
-  if (t(e.clientWidth), typeof ResizeObserver > "u") return () => {
-  };
-  const n = new ResizeObserver(() => t(e.clientWidth));
-  return n.observe(e), () => n.disconnect();
-}
-const Cc = 460;
-function to(e, t, n = Cc) {
-  let r = null;
-  return ra(e, (s) => {
-    const o = s > 0 && s < n;
-    o !== r && (r = o, t(o));
-  });
-}
-const Je = {
-  dark: {
-    appBg: "#2b2b40",
-    panelBg: "#33334d",
-    cardBg: "#33334d",
-    cardBgHover: "#3d3d5c",
-    cardBgActive: "#1f3a63",
-    cardBorder: "#45455e",
-    cardBorderActive: "#4182e4",
-    splitBorder: "#45455e",
-    toolbarBg: "#33334d",
-    toolbarBorder: "#45455e",
-    tooltipBg: "#33334d",
-    tooltipBorder: "#45455e",
-    titleColor: "#51cbee",
-    textPrimary: "#f2f3f7",
-    textMuted: "#b9bccb",
-    textMuted2: "#8f93a6",
-    selectBg: "#2b2b40",
-    selectBorder: "#45455e",
-    labelBg: "#33334d",
-    labelFg: "#51cbee",
-    badgeBg: "#1f3a63",
-    badgeFg: "#51cbee",
-    switcherBg: "rgba(43,43,64,0.94)",
-    btnBg: "#33334d",
-    btnBgHover: "#3d3d5c",
-    btnBgActive: "#4182e4",
-    btnFg: "#f2f3f7",
-    btnBorder: "#45455e",
-    okBg: "#14532d",
-    okFg: "#86efac",
-    warnBg: "#3b1d1d",
-    warnFg: "#ffb4b4",
-    warnBorder: "#7f2a2a",
-    errorFg: "#ff8080",
-    viewerBg: "0x2b2b40",
-    canvas2DBg: "#2b2b40",
-    diffUnchanged: "#64748b",
-    diffChanged: "#d9a300",
-    diffAdded: "#2a9d4a",
-    diffRemoved: "#d62828",
-    netCanvasBg: "#2b2b40",
-    netNodeFill: "#33334d",
-    netNodeStroke: "#6a6c82",
-    netNodeLabel: "#f2f3f7",
-    netMol2dBg: "#2b2b40",
-    netNodeCaption: "#b9bccb",
-    netMol2dCaption: "#b9bccb",
-    netInitials: "#51cbee",
-    netMatchFill: "#4a3c22",
-    netMatchStroke: "#e69f00",
-    netMatchAtom: "#e69f00",
-    netEdgeRamp: ["#45455e", "#51cbee"],
-    netEdgeLine: "#8f93a6",
-    netEdgeLabel: "#f2f3f7",
-    netHaloColor: "#51cbee",
-    netEdgeSelect: "#e0457e",
-    netGroupFill: ["#1f3a63", "#12403c", "#3a1f37", "#4a3c22", "#243a5e"],
-    netGroupStroke: ["#4182e4", "#00bdaa", "#c060b8", "#e69f00", "#8f93a6"],
-    netProtocolStroke: [
-      "#4182e4",
-      "#00bdaa",
-      "#c060b8",
-      "#e69f00",
-      "#5ec26a",
-      "#f4714e",
-      "#9d8df1",
-      "#ef6f9b",
-      "#b5c94a",
-      "#c7cbdd"
-    ]
-  },
-  light: {
-    appBg: "#ffffff",
-    panelBg: "#f7f8fa",
-    cardBg: "#ffffff",
-    cardBgHover: "#f0f4fb",
-    cardBgActive: "#e6effc",
-    cardBorder: "#eeeeee",
-    cardBorderActive: "#4182e4",
-    splitBorder: "#eeeeee",
-    toolbarBg: "#f7f8fa",
-    toolbarBorder: "#eeeeee",
-    tooltipBg: "#ffffff",
-    tooltipBorder: "#cccccc",
-    titleColor: "#4182e4",
-    textPrimary: "#333333",
-    textMuted: "#666666",
-    textMuted2: "#999999",
-    selectBg: "#ffffff",
-    selectBorder: "#cccccc",
-    labelBg: "#f7f8fa",
-    labelFg: "#4182e4",
-    badgeBg: "#e6effc",
-    badgeFg: "#4182e4",
-    switcherBg: "rgba(255,255,255,0.94)",
-    btnBg: "#ffffff",
-    btnBgHover: "#f0f4fb",
-    btnBgActive: "#4182e4",
-    btnFg: "#333333",
-    btnBorder: "#cccccc",
-    okBg: "#dcfce7",
-    okFg: "#166534",
-    warnBg: "#fee2e2",
-    warnFg: "#991b1b",
-    warnBorder: "#fecaca",
-    errorFg: "#c33",
-    viewerBg: "0xffffff",
-    canvas2DBg: "#ffffff",
-    diffUnchanged: "#94a3b8",
-    diffChanged: "#b45309",
-    diffAdded: "#2a9d4a",
-    diffRemoved: "#d62828",
-    netCanvasBg: "#ffffff",
-    netNodeFill: "#ffffff",
-    netNodeStroke: "#cccccc",
-    netNodeLabel: "#333333",
-    netMol2dBg: "#ffffff",
-    netNodeCaption: "#666666",
-    netMol2dCaption: "#666666",
-    netInitials: "#4182e4",
-    netMatchFill: "#fdf1d8",
-    netMatchStroke: "#e69f00",
-    netMatchAtom: "#c07d00",
-    netEdgeRamp: ["#e8eaef", "#4182e4"],
-    netEdgeLine: "#999999",
-    netEdgeLabel: "#333333",
-    netHaloColor: "#51cbee",
-    netEdgeSelect: "#c2185b",
-    netGroupFill: ["#e6effc", "#d9f5f2", "#f6e7f4", "#fdf1d8", "#eef0f4"],
-    netGroupStroke: ["#4182e4", "#009e8f", "#8a2283", "#c07d00", "#666666"],
-    netProtocolStroke: [
-      "#2f6fd0",
-      "#009e8f",
-      "#8a2283",
-      "#c07d00",
-      "#2e8b3d",
-      "#d1441c",
-      "#6a4fd0",
-      "#b3306a",
-      "#6f7d1c",
-      "#4a5160"
-    ]
-  }
-};
-function Ec() {
-  try {
-    return globalThis.matchMedia?.("(prefers-color-scheme: dark)").matches ?? !1;
-  } catch {
-    return !1;
-  }
-}
-const Fo = "data-gufe-theme";
-function no() {
-  return Ec() ? "dark" : "light";
-}
-let ue = Je[no()];
-const oa = "--gufe-", sa = Object.keys(Je.light).filter(
-  (e) => e !== "viewerBg" && typeof Je.light[e] == "string"
-), j = Object.fromEntries(sa.map((e) => [e, `var(${oa}${e})`])), gr = (e) => sa.map((t) => `${oa}${t}:${e[t]};`).join("");
-function xc() {
-  return [
-    `:root{color-scheme:light dark;${gr(Je.light)}}`,
-    `@media (prefers-color-scheme:dark){:root:not([${Fo}="light"]){${gr(Je.dark)}}}`,
-    `:root[${Fo}="dark"]{${gr(Je.dark)}}`,
-    // A button's three states, in one place. Every button in the codebase is
-    // built from `BUTTON.base`, which deliberately sets no background: these do,
-    // so that hovering is a stylesheet rule rather than a pair of handlers on
-    // every button, written slightly differently each time.
-    `.gufe-btn{background:${j.btnBg};}`,
-    `.gufe-btn:hover:not(:disabled){background:${j.btnBgHover};}`,
-    `.gufe-btn[aria-pressed="true"],.gufe-btn[aria-expanded="true"],.gufe-btn[data-gufe-on="1"]{background:${j.btnBgActive};}`,
-    ".gufe-btn:disabled{opacity:.5;cursor:default;}",
-    // The same for a pickable card or row, whose selected state is `aria-pressed`
-    // for the same reason: it is the accessible fact, so styling from it cannot
-    // drift out of step with what a screen reader is told.
-    `.gufe-pick{background:${j.cardBg};border-color:${j.cardBorder};}`,
-    `.gufe-pick:hover{background:${j.cardBgHover};}`,
-    `.gufe-pick[aria-pressed="true"]{background:${j.cardBgActive};border-color:${j.cardBorderActive};}`,
-    // A chip that selects what it counts. Its resting state is no background at
-    // all - it is a count in a row of counts, not a control asking to be pressed
-    // - so it is its own rule rather than a `gufe-pick` with the ground removed.
-    ".gufe-chip{background:none;}",
-    `.gufe-chip:hover{background:${j.cardBgHover};}`,
-    `.gufe-chip[aria-pressed="true"]{background:${j.cardBgActive};color:${j.textPrimary};}`
-  ].join(`
-`);
-}
-const zo = "alchemy-viz-theme";
-function ia() {
-  if (typeof document > "u" || document.getElementById(zo)) return;
-  const e = document.createElement("style");
-  e.id = zo, e.textContent = xc(), document.head.appendChild(e);
-}
-const ee = {
-  family: "'Inter',system-ui,sans-serif",
-  mono: "ui-monospace,SFMono-Regular,Menlo,monospace",
-  /** Label captions and dense readouts. */
-  tiny: "10px",
-  /** The default for chrome: chips, legends, list rows. */
-  small: "11px",
-  /** Body text, toolbars, form controls. */
-  body: "12px",
-  /** Pane labels and anything heading a section of a view. */
-  heading: "13px",
-  /** A view's title. */
-  title: "15px",
-  /**
-   * The one value a card is built around: a formula, a concentration. Large
-   * enough that a reader takes it from the shape of the card rather than from
-   * reading a row, which is the only reason to use it - a card with two of
-   * these has no hierarchy left.
-   */
-  display: "26px"
-}, ge = {
-  normal: "400",
-  bold: "700"
-}, X = {
-  xs: "2px",
-  sm: "4px",
-  md: "6px",
-  lg: "8px",
-  xl: "10px",
-  xxl: "14px"
-}, Ee = {
-  sm: "3px",
-  md: "6px",
-  lg: "8px",
-  xl: "10px",
-  pill: "999px"
-}, ke = {
-  title: j.titleColor,
-  primary: j.textPrimary,
-  muted: j.textMuted,
-  faint: j.textMuted2,
-  error: j.errorFg
-}, Lt = {
-  card: j.cardBg,
-  /**
-   * Where a 3D engine draws. Interface, not chemistry: it is the paper.
-   *
-   * The one literal here, and a function so it is read when a viewer is built
-   * rather than when this module loads. 3Dmol wants `0x2b2b40`, which is not a
-   * colour CSS has ever heard of, so this is the one surface a custom property
-   * cannot carry.
-   */
-  viewer: () => ue.viewerBg
-}, jo = {
-  // `max-width` and `box-sizing` are what keep a button inside whatever holds
-  // it. A label wider than the menu column would otherwise run out over the
-  // picture, and `width:100%` on a padded, bordered button means 100% plus the
-  // padding and the border - twenty pixels past the edge of the panel.
-  base: `color:${j.btnFg};border:1px solid ${j.btnBorder};padding:${X.sm} 9px;font-size:${ee.small};font-weight:${ge.bold};border-radius:${Ee.sm};cursor:pointer;font-family:inherit;max-width:100%;box-sizing:border-box;`,
-  /** What the stylesheet in `theme.ts` paints. */
-  className: "gufe-btn"
-}, aa = `background:${j.selectBg};color:${j.textPrimary};border:1px solid ${j.selectBorder};border-radius:${Ee.md};padding:${X.sm} ${X.lg};font-size:${ee.body};cursor:pointer;font-family:inherit;`, ca = `${aa}width:100%;box-sizing:border-box;cursor:text;`, la = "24px", Ac = `display:flex;align-items:flex-start;gap:12px;padding:9px ${X.xxl};flex-shrink:0;line-height:${la};background:${j.toolbarBg};border-bottom:1px solid ${j.toolbarBorder};`, Jn = { min: "236px", max: "340px" }, et = {
-  min: "--gufe-menu-min",
-  max: "--gufe-menu-max",
-  ruleX: "--gufe-menu-rule-x",
-  ruleY: "--gufe-menu-rule-y"
-}, da = `display:flex;flex-direction:column;gap:${X.lg};flex:1;min-width:var(${et.min},${Jn.min});max-width:var(${et.max},${Jn.max});box-sizing:border-box;padding:${X.xl};min-height:0;overflow-y:auto;background:${j.panelBg};border:0 solid ${j.splitBorder};border-right-width:var(${et.ruleX},1px);border-bottom-width:var(${et.ruleY},0);`, Pc = "45%", Rc = "flex:1 1 auto;min-height:84px;overflow:auto;display:flex;flex-direction:column;gap:3px;", Io = `display:flex;align-items:center;gap:${X.xl};flex-wrap:wrap;padding:${X.lg} ${X.xxl};flex-shrink:0;background:${j.toolbarBg};border-top:1px solid ${j.toolbarBorder};`, Mc = `flex-shrink:0;padding:${X.sm} ${X.xl};font-size:${ee.heading};font-weight:${ge.bold};color:${j.labelFg};background:${j.labelBg};`, ro = `position:absolute;top:${X.md};left:${X.md};z-index:10;pointer-events:none;max-width:calc(100% - ${X.xxl} - ${X.xxl});white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:${X.xs} ${X.lg};border-radius:${Ee.md};font-size:${ee.heading};font-weight:${ge.bold};color:${j.labelFg};background:${j.labelBg};`, Nc = `padding:${X.xs} ${X.lg};border-radius:${Ee.md};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:${j.labelFg};background:${j.labelBg};`, Oc = `position:absolute;top:${X.lg};left:${X.lg};z-index:15;display:flex;align-items:center;gap:${X.md};min-width:0;max-width:calc(100% - ${X.xxl} - ${X.xxl});`, Tc = "42px", Fc = `display:flex;flex-direction:column;gap:${X.xs};padding:${X.xxl} 18px;border-radius:${Ee.xl};background:${j.cardBg};border:1px solid ${j.cardBorder};`, oo = {
-  card: `display:flex;flex-direction:column;align-items:flex-start;gap:${X.sm};padding:${X.lg} ${X.xl};text-align:left;border-radius:${Ee.lg};border:1px solid;cursor:pointer;font-family:inherit;font-size:${ee.body};width:100%;`,
-  /** The compact form: one line in a network menu's list rather than a card. */
-  row: `display:flex;align-items:center;gap:${X.md};padding:5px ${X.lg};border:1px solid;border-radius:${X.md};text-align:left;font-family:inherit;font-size:${ee.small};cursor:pointer;width:100%;min-width:0;color:${j.textPrimary};`,
-  className: "gufe-pick"
-}, zc = `position:absolute;z-index:30;pointer-events:none;opacity:0;transition:opacity .12s ease;padding:7px ${X.xl};border-radius:${Ee.md};font-size:${ee.small};line-height:1.5;max-width:260px;background:${j.tooltipBg};border:1px solid ${j.tooltipBorder};color:${j.textPrimary};box-shadow:0 4px 14px rgba(0,0,0,0.28);`, ua = `position:absolute;bottom:${X.xl};right:${X.xl};display:flex;gap:${X.sm};padding:${X.sm};border-radius:${Ee.md};z-index:10;background:${j.switcherBg};box-shadow:0 2px 8px rgba(0,0,0,0.25);`, jc = `font-family:${ee.mono};font-size:${ee.small};line-height:1.7;color:${j.textMuted};`, qr = `font-size:${ee.small};font-weight:${ge.bold};letter-spacing:.08em;text-transform:uppercase;color:${j.textMuted2};`, Pe = {
-  row: `display:flex;flex-wrap:wrap;align-items:center;gap:${X.xs} ${X.sm};font-size:${ee.small};`,
-  plain: `display:inline-flex;align-items:center;padding:${X.xs} ${X.md};border:1px solid transparent;border-radius:${Ee.pill};font-family:inherit;font-size:${ee.small};color:${j.textMuted};`,
-  /**
-   * A chip that selects what it counts.
-   *
-   * Deliberately sets no `background`: like `BUTTON` and `PICK`, resting, hover
-   * and picked are one stylesheet rule keyed off `aria-pressed`, and an inline
-   * background would beat it. Pair it with `CHIP.className`.
-   */
-  button: `cursor:pointer;border-color:${j.btnBorder};`,
-  /**
-   * A chip that is read rather than clicked: a value the card is quoting, in a
-   * box that says so. Drawn like a button and deliberately not one, so it does
-   * not invite the click a `button` chip answers.
-   */
-  outline: `background:${j.btnBg};border-color:${j.btnBorder};color:${j.textPrimary};`,
-  /**
-   * What a `button` chip's border goes back to.
-   *
-   * The same value `button` sets, named so that a chip which overrides its
-   * border to say something - the alchemical network's protocol chips, where the
-   * picked one takes the colour its lines are drawn in - has a resting value to
-   * put back without reaching into the palette for it.
-   */
-  restBorder: j.btnBorder,
-  className: "gufe-chip"
-}, Ic = `font-size:${ee.small};line-height:1.6;color:${j.textMuted2};`;
-function Ve(e, t, n) {
-  const r = N("span", "display:inline-flex;align-items:center;gap:5px;white-space:nowrap;");
-  n && r.appendChild(
-    N("span", `width:8px;height:8px;border-radius:50%;background:${n};display:inline-block;`)
-  );
-  const s = N("span");
-  return s.innerHTML = `${Ie(e)} <b style="color:${ke.primary};">${Ie(t)}</b>`, r.appendChild(s), r;
-}
-function lt(e, t) {
-  const n = N("div", "", `⚠ ${t}`);
-  return n.style.cssText = `position:absolute;top:${X.xl};left:50%;transform:translateX(-50%);max-width:90%;z-index:20;padding:${X.md} ${X.xxl};border-radius:${Ee.md};font-size:${ee.body};background:${j.warnBg};color:${j.warnFg};border:1px solid ${j.warnBorder};`, e.appendChild(n), n;
-}
-function $e(e, t = !1) {
-  return N(
-    "div",
-    `flex:1;display:flex;align-items:center;justify-content:center;text-align:center;padding:24px;font-size:${ee.heading};color:${t ? ke.error : ke.faint};`,
-    e
-  );
-}
-function er(e, t = "") {
-  const n = N("div", Ac);
-  return n.className = "gufe-header", n.titleEl = N(
-    "span",
-    `font-weight:${ge.bold};font-size:${ee.title};color:${ke.title};letter-spacing:.02em;`,
-    e
-  ), n.statsEl = N(
-    "div",
-    `display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-left:auto;font-size:${ee.small};color:${ke.muted};`
-  ), n.textEl = N("div", "display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;flex:1;min-width:0;"), n.toggleEl = N("div", `display:flex;align-items:center;height:${la};flex-shrink:0;`), n.appendChild(n.toggleEl), n.textEl.appendChild(n.titleEl), t && (n.sourceEl = N(
-    "span",
-    `font-family:${ee.mono};font-size:${ee.small};color:${ke.faint};min-width:0;overflow-wrap:anywhere;`,
-    t
-  ), n.sourceEl.className = "gufe-header-source", n.sourceEl.title = `Generated from ${t}`, n.textEl.appendChild(n.sourceEl)), n.textEl.appendChild(n.statsEl), n.appendChild(n.textEl), n;
-}
-function Yn(e, t, n = !1) {
-  const r = N("div", "display:flex;gap:12px;align-items:baseline;padding:5px 0;min-width:0;");
-  r.appendChild(
-    N(
-      "span",
-      `flex:0 0 128px;font-size:${ee.tiny};font-weight:${ge.bold};letter-spacing:.08em;text-transform:uppercase;color:${ke.faint};`,
-      e
-    )
-  );
-  const s = N(
-    "span",
-    `flex:1;min-width:0;user-select:text;cursor:text;overflow-wrap:anywhere;color:${ke.primary};` + (n ? `font-family:${ee.mono};font-size:${ee.small};` : `font-size:${ee.body};`),
-    t
-  );
-  return s.title = t, r.appendChild(s), r;
-}
-function tr(e) {
-  return N(
-    "span",
-    `padding:1px 7px;border-radius:${Ee.xl};font-size:${ee.tiny};font-weight:${ge.bold};letter-spacing:.04em;white-space:nowrap;background:${j.badgeBg};color:${j.badgeFg};`,
-    e
-  );
-}
-function so() {
-  return N("div", Fc);
-}
-function fa() {
-  const e = N("div", "flex:1;position:relative;min-height:0;min-width:0;"), t = N("div", "position:absolute;inset:0;");
-  return t.dataset.gufeViewer = "", e.appendChild(t), { wrap: e, container: t };
-}
-const Vr = "data-gufe-hide-name";
-function io(e) {
-  return !e.closest(`[${Vr}]`);
-}
-const Dc = ["debug", "gufe-debug"], Lc = "debug", Bc = "ALCHEMY_VIZ_DEBUG";
-function qc() {
-  return !!globalThis[Bc];
-}
-function Vc() {
-  try {
-    const e = globalThis.location?.search;
-    if (!e) return !1;
-    const t = new URLSearchParams(e);
-    return Dc.some((n) => t.has(n));
-  } catch {
-    return !1;
-  }
-}
-function Uc(e) {
-  return e?.hasAttribute?.(Lc) ? !0 : qc() || Vc();
-}
-function Hc(e) {
-  try {
-    return JSON.stringify(e, null, 2) ?? String(e);
-  } catch (t) {
-    return `<could not be stringified: ${ve(t)}>`;
-  }
-}
-function Kc(e, t, n) {
-  if (!Uc(n)) return;
-  const r = Hc(t), s = t?.type, o = `[alchemy-viz] ${e}${typeof s == "string" ? ` ${s}` : ""} (${r.length} chars)`, i = typeof console.groupCollapsed == "function";
-  i ? console.groupCollapsed(o) : console.log(o), console.log(r), console.log(t), i && console.groupEnd?.();
-}
-const pa = "source", Gc = "ALCHEMY_VIZ_SOURCE";
-function Bt(e) {
-  const t = e?.getAttribute?.(pa);
-  if (t && t.trim()) return t.trim();
-  const n = globalThis[Gc];
-  return typeof n == "string" ? n.trim() : "";
-}
-const ha = "ALCHEMY_VIZ_VIEW_STATE";
-function ma(e) {
-  const t = globalThis[ha];
-  if (!t || typeof t != "object") return null;
-  const n = t, r = n[e];
-  return delete n[e], r ?? null;
-}
-function ao() {
-  let e = 0, t = !0;
-  return {
-    start() {
-      const n = ++e;
-      return () => t && n === e;
-    },
-    stop() {
-      t = !1, e++;
-    }
-  };
-}
-const Wc = 150, Do = "data-gufe-shell";
-class Fe extends HTMLElement {
-  #e = null;
-  #t = null;
-  #n = null;
-  #r = null;
-  #o = null;
-  /**
-   * Bumped by every teardown. A render captures it and refuses to adopt its
-   * handle if it has moved on - which is what stops a slow view (3Dmol behind a
-   * CDN fetch) from installing itself into an element that has since been given
-   * a different payload, or removed from the document entirely.
-   */
-  #s = 0;
-  /** The message shown before any payload arrives. */
-  placeholder() {
-    return "Waiting for data...";
-  }
-  set payload(t) {
-    this.#e = t, this.isConnected && this.#a();
-  }
-  get payload() {
-    return this.#e;
-  }
-  connectedCallback() {
-    ia(), this.style.display = "flex", this.style.flexDirection = "column", this.style.width = this.style.width || "100%";
-    const t = this.style.height;
-    this.style.height = t || "100%", !t && !this.parentElement?.closest(`[${Do}]`) && this.#d() && (this.style.maxHeight = "100vh"), this.style.background = j.appBg, this.style.color = j.textPrimary, this.style.fontFamily = ee.family, typeof ResizeObserver < "u" && !this.#r && (this.#r = new ResizeObserver(() => {
-      this.#o && clearTimeout(this.#o), this.#o = setTimeout(() => this.#t?.onResize?.(), Wc);
-    }), this.#r.observe(this)), this.#a();
-  }
-  disconnectedCallback() {
-    this.#i(), this.#r?.disconnect(), this.#r = null;
-  }
-  /** Release whatever the mounted view owns and empty the element. */
-  #i() {
-    if (this.#s++, this.#o && (clearTimeout(this.#o), this.#o = null), this.#t?.cleanup)
-      try {
-        this.#t.cleanup();
-      } catch (t) {
-        console.warn("[alchemy-viz] cleanup failed:", t);
-      }
-    this.#t = null, this.replaceChildren(), this.#n = null;
-  }
-  /**
-   * Whether nothing has given this element a `max-height` already - inline, or
-   * in a stylesheet, which is how a page raises the ceiling above.
-   */
-  #d() {
-    if (typeof getComputedStyle != "function") return !0;
-    const t = getComputedStyle(this).maxHeight;
-    return !t || t === "none";
-  }
-  /** Tear the mounted view down and hand back a fresh, empty shell. */
-  #u() {
-    return this.#i(), this.#n = N(
-      "div",
-      // `flex:1;min-height:0` and not height alone: inside a host clamped by the
-      // ceiling above, the shell has to be shrinkable or it overflows it.
-      `width:100%;height:100%;flex:1 1 auto;min-height:0;display:flex;flex-direction:column;overflow:hidden;background:${j.appBg};`
-    ), this.#n.setAttribute(Do, ""), this.appendChild(this.#n), this.#n;
-  }
-  /**
-   * Build the view for the current payload.
-   *
-   * Deliberately *not* an `async` method. A synchronous `renderView` - which is
-   * what the current views are - must install its handle before this returns,
-   * or two `payload` assignments in a row would tear down nothing the first
-   * time and leak the first view's viewer. An `await` here would defer that
-   * assignment by a microtask and do exactly that.
-   */
-  #a() {
-    const t = this.#u(), n = this.#s;
-    if (this.#e == null) {
-      t.appendChild($e(this.placeholder()));
-      return;
-    }
-    let r;
-    try {
-      r = this.renderView(t, this.#e);
-    } catch (s) {
-      this.#l(t, n, s);
-      return;
-    }
-    r instanceof Promise ? r.then(
-      (s) => this.#c(s, n),
-      (s) => this.#l(t, n, s)
-    ) : this.#c(r, n);
-  }
-  /** Take ownership of a view's handle, unless it belongs to a dead render. */
-  #c(t, n) {
-    if (n !== this.#s || !this.isConnected) {
-      try {
-        t?.cleanup?.();
-      } catch (r) {
-        console.warn("[alchemy-viz] cleanup of a superseded view failed:", r);
-      }
-      return;
-    }
-    this.#t = t || null;
-  }
-  #l(t, n, r) {
-    n === this.#s && (console.warn("[alchemy-viz] render failed:", r), t.replaceChildren($e(`Failed to render: ${ve(r)}`, !0)));
-  }
-  /** Force a resize pass - for hosts that know they resized us. */
-  resize() {
-    this.#t?.onResize?.();
-  }
-  /**
-   * What the mounted view would need to be restored as it is now, or null when
-   * it has nothing to say. See `ViewHandle.viewState`.
-   */
-  viewState() {
-    return this.#t?.viewState?.() ?? null;
-  }
-}
-function ze(e, t) {
-  typeof customElements > "u" || customElements.get(e) || customElements.define(e, t);
-}
-function Jc(e) {
+function Cc(e) {
   return e && e.__esModule && Object.prototype.hasOwnProperty.call(e, "default") ? e.default : e;
 }
-var Vt = { exports: {} }, yr = {}, Ue = {}, rt = {}, $r = {}, br = {}, vr = {}, Lo;
-function Xn() {
-  return Lo || (Lo = 1, (function(e) {
+var Vt = { exports: {} }, gr = {}, Ue = {}, rt = {}, yr = {}, $r = {}, br = {}, Fo;
+function Jn() {
+  return Fo || (Fo = 1, (function(e) {
     Object.defineProperty(e, "__esModule", { value: !0 }), e.regexpCode = e.getEsmExportName = e.getProperty = e.safeStringify = e.stringify = e.strConcat = e.addCodeArg = e.str = e._ = e.nil = e._Code = e.Name = e.IDENTIFIER = e._CodeOrName = void 0;
     class t {
     }
@@ -687,13 +122,13 @@ function Xn() {
       return new r(g.toString());
     }
     e.regexpCode = u;
-  })(vr)), vr;
+  })(br)), br;
 }
-var wr = {}, Bo;
-function qo() {
-  return Bo || (Bo = 1, (function(e) {
+var vr = {}, zo;
+function jo() {
+  return zo || (zo = 1, (function(e) {
     Object.defineProperty(e, "__esModule", { value: !0 }), e.ValueScope = e.ValueScopeName = e.Scope = e.varKinds = e.UsedValueState = void 0;
-    const t = /* @__PURE__ */ Xn();
+    const t = /* @__PURE__ */ Jn();
     class n extends Error {
       constructor(l) {
         super(`CodeGen: "code" for ${l} not defined`), this.value = l.value;
@@ -810,14 +245,14 @@ function qo() {
       }
     }
     e.ValueScope = a;
-  })(wr)), wr;
+  })(vr)), vr;
 }
-var Vo;
+var Io;
 function ie() {
-  return Vo || (Vo = 1, (function(e) {
+  return Io || (Io = 1, (function(e) {
     Object.defineProperty(e, "__esModule", { value: !0 }), e.or = e.and = e.not = e.CodeGen = e.operators = e.varKinds = e.ValueScopeName = e.ValueScope = e.Scope = e.Name = e.regexpCode = e.stringify = e.getProperty = e.nil = e.strConcat = e.str = e._ = void 0;
-    const t = /* @__PURE__ */ Xn(), n = /* @__PURE__ */ qo();
-    var r = /* @__PURE__ */ Xn();
+    const t = /* @__PURE__ */ Jn(), n = /* @__PURE__ */ jo();
+    var r = /* @__PURE__ */ Jn();
     Object.defineProperty(e, "_", { enumerable: !0, get: function() {
       return r._;
     } }), Object.defineProperty(e, "str", { enumerable: !0, get: function() {
@@ -835,7 +270,7 @@ function ie() {
     } }), Object.defineProperty(e, "Name", { enumerable: !0, get: function() {
       return r.Name;
     } });
-    var s = /* @__PURE__ */ qo();
+    var s = /* @__PURE__ */ jo();
     Object.defineProperty(e, "Scope", { enumerable: !0, get: function() {
       return s.Scope;
     } }), Object.defineProperty(e, "ValueScope", { enumerable: !0, get: function() {
@@ -1372,13 +807,13 @@ function ie() {
     function H(z) {
       return z instanceof t.Name ? z : (0, t._)`(${z})`;
     }
-  })(br)), br;
+  })($r)), $r;
 }
-var ce = {}, Uo;
+var ce = {}, Do;
 function de() {
-  if (Uo) return ce;
-  Uo = 1, Object.defineProperty(ce, "__esModule", { value: !0 }), ce.checkStrictMode = ce.getErrorPath = ce.Type = ce.useFunc = ce.setEvaluated = ce.evaluatedPropsToName = ce.mergeEvaluated = ce.eachItem = ce.unescapeJsonPointer = ce.escapeJsonPointer = ce.escapeFragment = ce.unescapeFragment = ce.schemaRefOrVal = ce.schemaHasRulesButRef = ce.schemaHasRules = ce.checkUnknownRules = ce.alwaysValidSchema = ce.toHash = void 0;
-  const e = /* @__PURE__ */ ie(), t = /* @__PURE__ */ Xn();
+  if (Do) return ce;
+  Do = 1, Object.defineProperty(ce, "__esModule", { value: !0 }), ce.checkStrictMode = ce.getErrorPath = ce.Type = ce.useFunc = ce.setEvaluated = ce.evaluatedPropsToName = ce.mergeEvaluated = ce.eachItem = ce.unescapeJsonPointer = ce.escapeJsonPointer = ce.escapeFragment = ce.unescapeFragment = ce.schemaRefOrVal = ce.schemaHasRulesButRef = ce.schemaHasRules = ce.checkUnknownRules = ce.alwaysValidSchema = ce.toHash = void 0;
+  const e = /* @__PURE__ */ ie(), t = /* @__PURE__ */ Jn();
   function n(f) {
     const p = {};
     for (const y of f)
@@ -1515,10 +950,10 @@ function de() {
   }
   return ce.checkStrictMode = S, ce;
 }
-var Ut = {}, Ho;
+var Ut = {}, Lo;
 function De() {
-  if (Ho) return Ut;
-  Ho = 1, Object.defineProperty(Ut, "__esModule", { value: !0 });
+  if (Lo) return Ut;
+  Lo = 1, Object.defineProperty(Ut, "__esModule", { value: !0 });
   const e = /* @__PURE__ */ ie(), t = {
     // validation function arguments
     data: new e.Name("data"),
@@ -1550,9 +985,9 @@ function De() {
   };
   return Ut.default = t, Ut;
 }
-var Ko;
-function nr() {
-  return Ko || (Ko = 1, (function(e) {
+var Bo;
+function er() {
+  return Bo || (Bo = 1, (function(e) {
     Object.defineProperty(e, "__esModule", { value: !0 }), e.extendErrors = e.resetErrorsCount = e.reportExtraError = e.reportError = e.keyword$DataError = e.keywordError = void 0;
     const t = /* @__PURE__ */ ie(), n = /* @__PURE__ */ de(), r = /* @__PURE__ */ De();
     e.keywordError = {
@@ -1624,13 +1059,13 @@ function nr() {
       const { keyword: S, data: f, schemaValue: p, it: y } = u, { opts: C, propertyName: A, topSchemaRef: P, schemaPath: T } = y;
       _.push([d.keyword, S], [d.params, typeof g == "function" ? g(u) : g || (0, t._)`{}`]), C.messages && _.push([d.message, typeof h == "function" ? h(u) : h]), C.verbose && _.push([d.schema, p], [d.parentSchema, (0, t._)`${P}${T}`], [r.default.data, f]), A && _.push([d.propertyName, A]);
     }
-  })($r)), $r;
+  })(yr)), yr;
 }
-var Go;
-function Yc() {
-  if (Go) return rt;
-  Go = 1, Object.defineProperty(rt, "__esModule", { value: !0 }), rt.boolOrEmptySchema = rt.topBoolOrEmptySchema = void 0;
-  const e = /* @__PURE__ */ nr(), t = /* @__PURE__ */ ie(), n = /* @__PURE__ */ De(), r = {
+var qo;
+function Ec() {
+  if (qo) return rt;
+  qo = 1, Object.defineProperty(rt, "__esModule", { value: !0 }), rt.boolOrEmptySchema = rt.topBoolOrEmptySchema = void 0;
+  const e = /* @__PURE__ */ er(), t = /* @__PURE__ */ ie(), n = /* @__PURE__ */ De(), r = {
     message: "boolean schema is false"
   };
   function s(a) {
@@ -1658,10 +1093,10 @@ function Yc() {
   }
   return rt;
 }
-var we = {}, ot = {}, Wo;
-function ga() {
-  if (Wo) return ot;
-  Wo = 1, Object.defineProperty(ot, "__esModule", { value: !0 }), ot.getRules = ot.isJSONType = void 0;
+var we = {}, ot = {}, Vo;
+function ra() {
+  if (Vo) return ot;
+  Vo = 1, Object.defineProperty(ot, "__esModule", { value: !0 }), ot.getRules = ot.isJSONType = void 0;
   const e = ["string", "number", "integer", "boolean", "null", "object", "array"], t = new Set(e);
   function n(s) {
     return typeof s == "string" && t.has(s);
@@ -1684,10 +1119,10 @@ function ga() {
   }
   return ot.getRules = r, ot;
 }
-var He = {}, Jo;
-function ya() {
-  if (Jo) return He;
-  Jo = 1, Object.defineProperty(He, "__esModule", { value: !0 }), He.shouldUseRule = He.shouldUseGroup = He.schemaHasRulesForType = void 0;
+var He = {}, Uo;
+function oa() {
+  if (Uo) return He;
+  Uo = 1, Object.defineProperty(He, "__esModule", { value: !0 }), He.shouldUseRule = He.shouldUseGroup = He.schemaHasRulesForType = void 0;
   function e({ schema: r, self: s }, o) {
     const i = s.RULES.types[o];
     return i && i !== !0 && t(r, i);
@@ -1703,11 +1138,11 @@ function ya() {
   }
   return He.shouldUseRule = n, He;
 }
-var Yo;
-function Zn() {
-  if (Yo) return we;
-  Yo = 1, Object.defineProperty(we, "__esModule", { value: !0 }), we.reportTypeError = we.checkDataTypes = we.checkDataType = we.coerceAndCheckDataType = we.getJSONTypes = we.getSchemaTypes = we.DataType = void 0;
-  const e = /* @__PURE__ */ ga(), t = /* @__PURE__ */ ya(), n = /* @__PURE__ */ nr(), r = /* @__PURE__ */ ie(), s = /* @__PURE__ */ de();
+var Ho;
+function Yn() {
+  if (Ho) return we;
+  Ho = 1, Object.defineProperty(we, "__esModule", { value: !0 }), we.reportTypeError = we.checkDataTypes = we.checkDataType = we.coerceAndCheckDataType = we.getJSONTypes = we.getSchemaTypes = we.DataType = void 0;
+  const e = /* @__PURE__ */ ra(), t = /* @__PURE__ */ oa(), n = /* @__PURE__ */ er(), r = /* @__PURE__ */ ie(), s = /* @__PURE__ */ de();
   var o;
   (function(h) {
     h[h.Correct = 0] = "Correct", h[h.Wrong = 1] = "Wrong";
@@ -1851,10 +1286,10 @@ function Zn() {
   }
   return we;
 }
-var Rt = {}, Xo;
-function Xc() {
-  if (Xo) return Rt;
-  Xo = 1, Object.defineProperty(Rt, "__esModule", { value: !0 }), Rt.assignDefaults = void 0;
+var Pt = {}, Ko;
+function xc() {
+  if (Ko) return Pt;
+  Ko = 1, Object.defineProperty(Pt, "__esModule", { value: !0 }), Pt.assignDefaults = void 0;
   const e = /* @__PURE__ */ ie(), t = /* @__PURE__ */ de();
   function n(s, o) {
     const { properties: i, items: a } = s.schema;
@@ -1863,7 +1298,7 @@ function Xc() {
         r(s, c, i[c].default);
     else o === "array" && Array.isArray(a) && a.forEach((c, l) => r(s, l, c.default));
   }
-  Rt.assignDefaults = n;
+  Pt.assignDefaults = n;
   function r(s, o, i) {
     const { gen: a, compositeRule: c, data: l, opts: d } = s;
     if (i === void 0)
@@ -1876,12 +1311,12 @@ function Xc() {
     let b = (0, e._)`${m} === undefined`;
     d.useDefaults === "empty" && (b = (0, e._)`${b} || ${m} === null || ${m} === ""`), a.if(b, (0, e._)`${m} = ${(0, e.stringify)(i)}`);
   }
-  return Rt;
+  return Pt;
 }
-var je = {}, he = {}, Zo;
+var je = {}, he = {}, Go;
 function Le() {
-  if (Zo) return he;
-  Zo = 1, Object.defineProperty(he, "__esModule", { value: !0 }), he.validateUnion = he.validateArray = he.usePattern = he.callValidateCode = he.schemaProperties = he.allSchemaProperties = he.noPropertyInData = he.propertyInData = he.isOwnProperty = he.hasPropFunc = he.reportMissingProp = he.checkMissingProp = he.checkReportMissingProp = void 0;
+  if (Go) return he;
+  Go = 1, Object.defineProperty(he, "__esModule", { value: !0 }), he.validateUnion = he.validateArray = he.usePattern = he.callValidateCode = he.schemaProperties = he.allSchemaProperties = he.noPropertyInData = he.propertyInData = he.isOwnProperty = he.hasPropFunc = he.reportMissingProp = he.checkMissingProp = he.checkReportMissingProp = void 0;
   const e = /* @__PURE__ */ ie(), t = /* @__PURE__ */ de(), n = /* @__PURE__ */ De(), r = /* @__PURE__ */ de();
   function s(h, _) {
     const { gen: S, data: f, it: p } = h;
@@ -1987,11 +1422,11 @@ function Le() {
   }
   return he.validateUnion = g, he;
 }
-var Qo;
-function Zc() {
-  if (Qo) return je;
-  Qo = 1, Object.defineProperty(je, "__esModule", { value: !0 }), je.validateKeywordUsage = je.validSchemaType = je.funcKeywordCode = je.macroKeywordCode = void 0;
-  const e = /* @__PURE__ */ ie(), t = /* @__PURE__ */ De(), n = /* @__PURE__ */ Le(), r = /* @__PURE__ */ nr();
+var Wo;
+function Ac() {
+  if (Wo) return je;
+  Wo = 1, Object.defineProperty(je, "__esModule", { value: !0 }), je.validateKeywordUsage = je.validSchemaType = je.funcKeywordCode = je.macroKeywordCode = void 0;
+  const e = /* @__PURE__ */ ie(), t = /* @__PURE__ */ De(), n = /* @__PURE__ */ Le(), r = /* @__PURE__ */ er();
   function s(b, v) {
     const { gen: $, keyword: w, schema: u, parentSchema: g, it: h } = b, _ = v.macro.call(h.self, u, g, h), S = l($, w, _);
     h.opts.validateSchema !== !1 && h.self.validateSchema(_, !0);
@@ -2076,10 +1511,10 @@ function Zc() {
   }
   return je.validateKeywordUsage = m, je;
 }
-var Ke = {}, es;
-function Qc() {
-  if (es) return Ke;
-  es = 1, Object.defineProperty(Ke, "__esModule", { value: !0 }), Ke.extendSubschemaMode = Ke.extendSubschemaData = Ke.getSubschema = void 0;
+var Ke = {}, Jo;
+function Pc() {
+  if (Jo) return Ke;
+  Jo = 1, Object.defineProperty(Ke, "__esModule", { value: !0 }), Ke.extendSubschemaMode = Ke.extendSubschemaData = Ke.getSubschema = void 0;
   const e = /* @__PURE__ */ ie(), t = /* @__PURE__ */ de();
   function n(o, { keyword: i, schemaProp: a, schema: c, schemaPath: l, errSchemaPath: d, topSchemaRef: m }) {
     if (i !== void 0 && c !== void 0)
@@ -2132,9 +1567,9 @@ function Qc() {
   }
   return Ke.extendSubschemaMode = s, Ke;
 }
-var Se = {}, _r, ts;
-function $a() {
-  return ts || (ts = 1, _r = function e(t, n) {
+var Se = {}, wr, Yo;
+function sa() {
+  return Yo || (Yo = 1, wr = function e(t, n) {
     if (t === n) return !0;
     if (t && n && typeof t == "object" && typeof n == "object") {
       if (t.constructor !== n.constructor) return !1;
@@ -2158,13 +1593,13 @@ function $a() {
       return !0;
     }
     return t !== t && n !== n;
-  }), _r;
+  }), wr;
 }
-var Sr = { exports: {} }, ns;
-function el() {
-  if (ns) return Sr.exports;
-  ns = 1;
-  var e = Sr.exports = function(r, s, o) {
+var _r = { exports: {} }, Xo;
+function Rc() {
+  if (Xo) return _r.exports;
+  Xo = 1;
+  var e = _r.exports = function(r, s, o) {
     typeof s == "function" && (o = s, s = {}), o = s.cb || o;
     var i = typeof o == "function" ? o : o.pre || function() {
     }, a = o.post || function() {
@@ -2233,13 +1668,13 @@ function el() {
   function n(r) {
     return r.replace(/~/g, "~0").replace(/\//g, "~1");
   }
-  return Sr.exports;
+  return _r.exports;
 }
-var rs;
-function rr() {
-  if (rs) return Se;
-  rs = 1, Object.defineProperty(Se, "__esModule", { value: !0 }), Se.getSchemaRefs = Se.resolveUrl = Se.normalizeId = Se._getFullPath = Se.getFullPath = Se.inlineRef = void 0;
-  const e = /* @__PURE__ */ de(), t = $a(), n = el(), r = /* @__PURE__ */ new Set([
+var Zo;
+function tr() {
+  if (Zo) return Se;
+  Zo = 1, Object.defineProperty(Se, "__esModule", { value: !0 }), Se.getSchemaRefs = Se.resolveUrl = Se.normalizeId = Se._getFullPath = Se.getFullPath = Se.inlineRef = void 0;
+  const e = /* @__PURE__ */ de(), t = sa(), n = Rc(), r = /* @__PURE__ */ new Set([
     "type",
     "format",
     "pattern",
@@ -2344,11 +1779,11 @@ function rr() {
   }
   return Se.getSchemaRefs = $, Se;
 }
-var os;
-function or() {
-  if (os) return Ue;
-  os = 1, Object.defineProperty(Ue, "__esModule", { value: !0 }), Ue.getData = Ue.KeywordCxt = Ue.validateFunctionCode = void 0;
-  const e = /* @__PURE__ */ Yc(), t = /* @__PURE__ */ Zn(), n = /* @__PURE__ */ ya(), r = /* @__PURE__ */ Zn(), s = /* @__PURE__ */ Xc(), o = /* @__PURE__ */ Zc(), i = /* @__PURE__ */ Qc(), a = /* @__PURE__ */ ie(), c = /* @__PURE__ */ De(), l = /* @__PURE__ */ rr(), d = /* @__PURE__ */ de(), m = /* @__PURE__ */ nr();
+var Qo;
+function nr() {
+  if (Qo) return Ue;
+  Qo = 1, Object.defineProperty(Ue, "__esModule", { value: !0 }), Ue.getData = Ue.KeywordCxt = Ue.validateFunctionCode = void 0;
+  const e = /* @__PURE__ */ Ec(), t = /* @__PURE__ */ Yn(), n = /* @__PURE__ */ oa(), r = /* @__PURE__ */ Yn(), s = /* @__PURE__ */ xc(), o = /* @__PURE__ */ Ac(), i = /* @__PURE__ */ Pc(), a = /* @__PURE__ */ ie(), c = /* @__PURE__ */ De(), l = /* @__PURE__ */ tr(), d = /* @__PURE__ */ de(), m = /* @__PURE__ */ er();
   function b(M) {
     if (f(M) && (y(M), S(M))) {
       u(M);
@@ -2657,10 +2092,10 @@ function or() {
   }
   return Ue.getData = W, Ue;
 }
-var Ht = {}, ss;
-function co() {
-  if (ss) return Ht;
-  ss = 1, Object.defineProperty(Ht, "__esModule", { value: !0 });
+var Ht = {}, es;
+function to() {
+  if (es) return Ht;
+  es = 1, Object.defineProperty(Ht, "__esModule", { value: !0 });
   class e extends Error {
     constructor(n) {
       super("validation failed"), this.errors = n, this.ajv = this.validation = !0;
@@ -2668,11 +2103,11 @@ function co() {
   }
   return Ht.default = e, Ht;
 }
-var Kt = {}, is;
-function sr() {
-  if (is) return Kt;
-  is = 1, Object.defineProperty(Kt, "__esModule", { value: !0 });
-  const e = /* @__PURE__ */ rr();
+var Kt = {}, ts;
+function rr() {
+  if (ts) return Kt;
+  ts = 1, Object.defineProperty(Kt, "__esModule", { value: !0 });
+  const e = /* @__PURE__ */ tr();
   class t extends Error {
     constructor(r, s, o, i) {
       super(i || `can't resolve reference ${o} from id ${s}`), this.missingRef = (0, e.resolveUrl)(r, s, o), this.missingSchema = (0, e.normalizeId)((0, e.getFullPath)(r, this.missingRef));
@@ -2680,11 +2115,11 @@ function sr() {
   }
   return Kt.default = t, Kt;
 }
-var xe = {}, as;
-function ir() {
-  if (as) return xe;
-  as = 1, Object.defineProperty(xe, "__esModule", { value: !0 }), xe.resolveSchema = xe.getCompilingSchema = xe.resolveRef = xe.compileSchema = xe.SchemaEnv = void 0;
-  const e = /* @__PURE__ */ ie(), t = /* @__PURE__ */ co(), n = /* @__PURE__ */ De(), r = /* @__PURE__ */ rr(), s = /* @__PURE__ */ de(), o = /* @__PURE__ */ or();
+var xe = {}, ns;
+function or() {
+  if (ns) return xe;
+  ns = 1, Object.defineProperty(xe, "__esModule", { value: !0 }), xe.resolveSchema = xe.getCompilingSchema = xe.resolveRef = xe.compileSchema = xe.SchemaEnv = void 0;
+  const e = /* @__PURE__ */ ie(), t = /* @__PURE__ */ to(), n = /* @__PURE__ */ De(), r = /* @__PURE__ */ tr(), s = /* @__PURE__ */ de(), o = /* @__PURE__ */ nr();
   class i {
     constructor(g) {
       var h;
@@ -2838,18 +2273,18 @@ function ir() {
   }
   return xe;
 }
-const tl = "https://raw.githubusercontent.com/ajv-validator/ajv/master/lib/refs/data.json#", nl = "Meta-schema for $data reference (JSON AnySchema extension proposal)", rl = "object", ol = ["$data"], sl = { $data: { type: "string", anyOf: [{ format: "relative-json-pointer" }, { format: "json-pointer" }] } }, il = !1, al = {
-  $id: tl,
-  description: nl,
-  type: rl,
-  required: ol,
-  properties: sl,
-  additionalProperties: il
+const Mc = "https://raw.githubusercontent.com/ajv-validator/ajv/master/lib/refs/data.json#", Nc = "Meta-schema for $data reference (JSON AnySchema extension proposal)", Oc = "object", Tc = ["$data"], Fc = { $data: { type: "string", anyOf: [{ format: "relative-json-pointer" }, { format: "json-pointer" }] } }, zc = !1, jc = {
+  $id: Mc,
+  description: Nc,
+  type: Oc,
+  required: Tc,
+  properties: Fc,
+  additionalProperties: zc
 };
-var Gt = {}, Mt = { exports: {} }, kr, cs;
-function ba() {
-  if (cs) return kr;
-  cs = 1;
+var Gt = {}, Rt = { exports: {} }, Sr, rs;
+function ia() {
+  if (rs) return Sr;
+  rs = 1;
   const e = RegExp.prototype.test.bind(/^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/iu), t = RegExp.prototype.test.bind(/^(?:(?:25[0-5]|2[0-4]\d|1\d{2}|[1-9]\d|\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d{2}|[1-9]\d|\d)$/u), n = RegExp.prototype.test.bind(/^[\da-f]{2}$/iu), r = RegExp.prototype.test.bind(/^[\da-z\-._~]$/iu), s = RegExp.prototype.test.bind(/^[\da-z\-._~!$&'()*+,;=:@/]$/iu);
   function o(f) {
     let p = "", y = 0, C = 0;
@@ -3047,7 +2482,7 @@ function ba() {
     }
     return (typeof f.port == "number" || typeof f.port == "string") && (p.push(":"), p.push(String(f.port))), p.length ? p.join("") : void 0;
   }
-  return kr = {
+  return Sr = {
     nonSimpleDomain: i,
     recomposeAuthority: S,
     reescapeHostDelimiters: u,
@@ -3059,13 +2494,13 @@ function ba() {
     isUUID: e,
     normalizeIPv6: d,
     stringArrayToHexStripped: o
-  }, kr;
+  }, Sr;
 }
-var Cr, ls;
-function cl() {
-  if (ls) return Cr;
-  ls = 1;
-  const { isUUID: e } = ba(), t = /([\da-z][\d\-a-z]{0,31}):((?:[\w!$'()*+,\-.:;=@]|%[\da-f]{2})+)/iu, n = (
+var kr, os;
+function Ic() {
+  if (os) return kr;
+  os = 1;
+  const { isUUID: e } = ia(), t = /([\da-z][\d\-a-z]{0,31}):((?:[\w!$'()*+,\-.:;=@]|%[\da-f]{2})+)/iu, n = (
     /** @type {const} */
     [
       "http",
@@ -3200,18 +2635,18 @@ function cl() {
       f.toLowerCase()
     ]) || void 0;
   }
-  return Cr = {
+  return kr = {
     wsIsSecure: s,
     SCHEMES: _,
     isValidSchemeName: r,
     getSchemeHandler: S
-  }, Cr;
+  }, kr;
 }
-var ds;
-function ll() {
-  if (ds) return Mt.exports;
-  ds = 1;
-  const { normalizeIPv6: e, removeDotSegments: t, recomposeAuthority: n, normalizePercentEncoding: r, normalizePathEncoding: s, escapePreservingEscapes: o, reescapeHostDelimiters: i, isIPv4: a, nonSimpleDomain: c } = ba(), { SCHEMES: l, getSchemeHandler: d } = cl();
+var ss;
+function Dc() {
+  if (ss) return Rt.exports;
+  ss = 1;
+  const { normalizeIPv6: e, removeDotSegments: t, recomposeAuthority: n, normalizePercentEncoding: r, normalizePathEncoding: s, escapePreservingEscapes: o, reescapeHostDelimiters: i, isIPv4: a, nonSimpleDomain: c } = ia(), { SCHEMES: l, getSchemeHandler: d } = Ic();
   function m(A, P) {
     return typeof A == "string" ? A = /** @type {T} */
     f(A, P) : typeof A == "object" && (A = /** @type {T} */
@@ -3334,20 +2769,20 @@ function ll() {
     serialize: w,
     parse: S
   };
-  return Mt.exports = C, Mt.exports.default = C, Mt.exports.fastUri = C, Mt.exports;
+  return Rt.exports = C, Rt.exports.default = C, Rt.exports.fastUri = C, Rt.exports;
 }
-var us;
-function dl() {
-  if (us) return Gt;
-  us = 1, Object.defineProperty(Gt, "__esModule", { value: !0 });
-  const e = ll();
+var is;
+function Lc() {
+  if (is) return Gt;
+  is = 1, Object.defineProperty(Gt, "__esModule", { value: !0 });
+  const e = Dc();
   return e.code = 'require("ajv/dist/runtime/uri").default', Gt.default = e, Gt;
 }
-var fs;
-function ul() {
-  return fs || (fs = 1, (function(e) {
+var as;
+function Bc() {
+  return as || (as = 1, (function(e) {
     Object.defineProperty(e, "__esModule", { value: !0 }), e.CodeGen = e.Name = e.nil = e.stringify = e.str = e._ = e.KeywordCxt = void 0;
-    var t = /* @__PURE__ */ or();
+    var t = /* @__PURE__ */ nr();
     Object.defineProperty(e, "KeywordCxt", { enumerable: !0, get: function() {
       return t.KeywordCxt;
     } });
@@ -3365,7 +2800,7 @@ function ul() {
     } }), Object.defineProperty(e, "CodeGen", { enumerable: !0, get: function() {
       return n.CodeGen;
     } });
-    const r = /* @__PURE__ */ co(), s = /* @__PURE__ */ sr(), o = /* @__PURE__ */ ga(), i = /* @__PURE__ */ ir(), a = /* @__PURE__ */ ie(), c = /* @__PURE__ */ rr(), l = /* @__PURE__ */ Zn(), d = /* @__PURE__ */ de(), m = al, b = /* @__PURE__ */ dl(), v = (U, O) => new RegExp(U, O);
+    const r = /* @__PURE__ */ to(), s = /* @__PURE__ */ rr(), o = /* @__PURE__ */ ra(), i = /* @__PURE__ */ or(), a = /* @__PURE__ */ ie(), c = /* @__PURE__ */ tr(), l = /* @__PURE__ */ Yn(), d = /* @__PURE__ */ de(), m = jc, b = /* @__PURE__ */ Lc(), v = (U, O) => new RegExp(U, O);
     v.code = "new RegExp";
     const $ = ["removeAdditional", "useDefaults", "coerceTypes"], w = /* @__PURE__ */ new Set([
       "validate",
@@ -3784,12 +3219,12 @@ function ul() {
     function re(U) {
       return { anyOf: [U, Y] };
     }
-  })(yr)), yr;
+  })(gr)), gr;
 }
-var Wt = {}, Jt = {}, Yt = {}, ps;
-function fl() {
-  if (ps) return Yt;
-  ps = 1, Object.defineProperty(Yt, "__esModule", { value: !0 });
+var Wt = {}, Jt = {}, Yt = {}, cs;
+function qc() {
+  if (cs) return Yt;
+  cs = 1, Object.defineProperty(Yt, "__esModule", { value: !0 });
   const e = {
     keyword: "id",
     code() {
@@ -3798,11 +3233,11 @@ function fl() {
   };
   return Yt.default = e, Yt;
 }
-var Xe = {}, hs;
-function lo() {
-  if (hs) return Xe;
-  hs = 1, Object.defineProperty(Xe, "__esModule", { value: !0 }), Xe.callRef = Xe.getValidate = void 0;
-  const e = /* @__PURE__ */ sr(), t = /* @__PURE__ */ Le(), n = /* @__PURE__ */ ie(), r = /* @__PURE__ */ De(), s = /* @__PURE__ */ ir(), o = /* @__PURE__ */ de(), i = {
+var Xe = {}, ls;
+function no() {
+  if (ls) return Xe;
+  ls = 1, Object.defineProperty(Xe, "__esModule", { value: !0 }), Xe.callRef = Xe.getValidate = void 0;
+  const e = /* @__PURE__ */ rr(), t = /* @__PURE__ */ Le(), n = /* @__PURE__ */ ie(), r = /* @__PURE__ */ De(), s = /* @__PURE__ */ or(), o = /* @__PURE__ */ de(), i = {
     keyword: "$ref",
     schemaType: "string",
     code(l) {
@@ -3885,11 +3320,11 @@ function lo() {
   }
   return Xe.callRef = c, Xe.default = i, Xe;
 }
-var ms;
-function pl() {
-  if (ms) return Jt;
-  ms = 1, Object.defineProperty(Jt, "__esModule", { value: !0 });
-  const e = /* @__PURE__ */ fl(), t = /* @__PURE__ */ lo(), n = [
+var ds;
+function Vc() {
+  if (ds) return Jt;
+  ds = 1, Object.defineProperty(Jt, "__esModule", { value: !0 });
+  const e = /* @__PURE__ */ qc(), t = /* @__PURE__ */ no(), n = [
     "$schema",
     "$id",
     "$defs",
@@ -3901,10 +3336,10 @@ function pl() {
   ];
   return Jt.default = n, Jt;
 }
-var Xt = {}, Zt = {}, gs;
-function hl() {
-  if (gs) return Zt;
-  gs = 1, Object.defineProperty(Zt, "__esModule", { value: !0 });
+var Xt = {}, Zt = {}, us;
+function Uc() {
+  if (us) return Zt;
+  us = 1, Object.defineProperty(Zt, "__esModule", { value: !0 });
   const e = /* @__PURE__ */ ie(), t = e.operators, n = {
     maximum: { okStr: "<=", ok: t.LTE, fail: t.GT },
     minimum: { okStr: ">=", ok: t.GTE, fail: t.LT },
@@ -3926,10 +3361,10 @@ function hl() {
   };
   return Zt.default = s, Zt;
 }
-var Qt = {}, ys;
-function ml() {
-  if (ys) return Qt;
-  ys = 1, Object.defineProperty(Qt, "__esModule", { value: !0 });
+var Qt = {}, fs;
+function Hc() {
+  if (fs) return Qt;
+  fs = 1, Object.defineProperty(Qt, "__esModule", { value: !0 });
   const e = /* @__PURE__ */ ie(), n = {
     keyword: "multipleOf",
     type: "number",
@@ -3946,10 +3381,10 @@ function ml() {
   };
   return Qt.default = n, Qt;
 }
-var en = {}, tn = {}, $s;
-function gl() {
-  if ($s) return tn;
-  $s = 1, Object.defineProperty(tn, "__esModule", { value: !0 });
+var en = {}, tn = {}, ps;
+function Kc() {
+  if (ps) return tn;
+  ps = 1, Object.defineProperty(tn, "__esModule", { value: !0 });
   function e(t) {
     const n = t.length;
     let r = 0, s = 0, o;
@@ -3959,11 +3394,11 @@ function gl() {
   }
   return tn.default = e, e.code = 'require("ajv/dist/runtime/ucs2length").default', tn;
 }
-var bs;
-function yl() {
-  if (bs) return en;
-  bs = 1, Object.defineProperty(en, "__esModule", { value: !0 });
-  const e = /* @__PURE__ */ ie(), t = /* @__PURE__ */ de(), n = /* @__PURE__ */ gl(), s = {
+var hs;
+function Gc() {
+  if (hs) return en;
+  hs = 1, Object.defineProperty(en, "__esModule", { value: !0 });
+  const e = /* @__PURE__ */ ie(), t = /* @__PURE__ */ de(), n = /* @__PURE__ */ Kc(), s = {
     keyword: ["maxLength", "minLength"],
     type: "string",
     schemaType: "number",
@@ -3982,10 +3417,10 @@ function yl() {
   };
   return en.default = s, en;
 }
-var nn = {}, vs;
-function $l() {
-  if (vs) return nn;
-  vs = 1, Object.defineProperty(nn, "__esModule", { value: !0 });
+var nn = {}, ms;
+function Wc() {
+  if (ms) return nn;
+  ms = 1, Object.defineProperty(nn, "__esModule", { value: !0 });
   const e = /* @__PURE__ */ Le(), t = /* @__PURE__ */ de(), n = /* @__PURE__ */ ie(), s = {
     keyword: "pattern",
     type: "string",
@@ -4008,10 +3443,10 @@ function $l() {
   };
   return nn.default = s, nn;
 }
-var rn = {}, ws;
-function bl() {
-  if (ws) return rn;
-  ws = 1, Object.defineProperty(rn, "__esModule", { value: !0 });
+var rn = {}, gs;
+function Jc() {
+  if (gs) return rn;
+  gs = 1, Object.defineProperty(rn, "__esModule", { value: !0 });
   const e = /* @__PURE__ */ ie(), n = {
     keyword: ["maxProperties", "minProperties"],
     type: "object",
@@ -4031,10 +3466,10 @@ function bl() {
   };
   return rn.default = n, rn;
 }
-var on = {}, _s;
-function vl() {
-  if (_s) return on;
-  _s = 1, Object.defineProperty(on, "__esModule", { value: !0 });
+var on = {}, ys;
+function Yc() {
+  if (ys) return on;
+  ys = 1, Object.defineProperty(on, "__esModule", { value: !0 });
   const e = /* @__PURE__ */ Le(), t = /* @__PURE__ */ ie(), n = /* @__PURE__ */ de(), s = {
     keyword: "required",
     type: "object",
@@ -4088,10 +3523,10 @@ function vl() {
   };
   return on.default = s, on;
 }
-var sn = {}, Ss;
-function wl() {
-  if (Ss) return sn;
-  Ss = 1, Object.defineProperty(sn, "__esModule", { value: !0 });
+var sn = {}, $s;
+function Xc() {
+  if ($s) return sn;
+  $s = 1, Object.defineProperty(sn, "__esModule", { value: !0 });
   const e = /* @__PURE__ */ ie(), n = {
     keyword: ["maxItems", "minItems"],
     type: "array",
@@ -4111,18 +3546,18 @@ function wl() {
   };
   return sn.default = n, sn;
 }
-var an = {}, cn = {}, ks;
-function uo() {
-  if (ks) return cn;
-  ks = 1, Object.defineProperty(cn, "__esModule", { value: !0 });
-  const e = $a();
+var an = {}, cn = {}, bs;
+function ro() {
+  if (bs) return cn;
+  bs = 1, Object.defineProperty(cn, "__esModule", { value: !0 });
+  const e = sa();
   return e.code = 'require("ajv/dist/runtime/equal").default', cn.default = e, cn;
 }
-var Cs;
-function _l() {
-  if (Cs) return an;
-  Cs = 1, Object.defineProperty(an, "__esModule", { value: !0 });
-  const e = /* @__PURE__ */ Zn(), t = /* @__PURE__ */ ie(), n = /* @__PURE__ */ de(), r = /* @__PURE__ */ uo(), o = {
+var vs;
+function Zc() {
+  if (vs) return an;
+  vs = 1, Object.defineProperty(an, "__esModule", { value: !0 });
+  const e = /* @__PURE__ */ Yn(), t = /* @__PURE__ */ ie(), n = /* @__PURE__ */ de(), r = /* @__PURE__ */ ro(), o = {
     keyword: "uniqueItems",
     type: "array",
     schemaType: "boolean",
@@ -4162,11 +3597,11 @@ function _l() {
   };
   return an.default = o, an;
 }
-var ln = {}, Es;
-function Sl() {
-  if (Es) return ln;
-  Es = 1, Object.defineProperty(ln, "__esModule", { value: !0 });
-  const e = /* @__PURE__ */ ie(), t = /* @__PURE__ */ de(), n = /* @__PURE__ */ uo(), s = {
+var ln = {}, ws;
+function Qc() {
+  if (ws) return ln;
+  ws = 1, Object.defineProperty(ln, "__esModule", { value: !0 });
+  const e = /* @__PURE__ */ ie(), t = /* @__PURE__ */ de(), n = /* @__PURE__ */ ro(), s = {
     keyword: "const",
     $data: !0,
     error: {
@@ -4180,11 +3615,11 @@ function Sl() {
   };
   return ln.default = s, ln;
 }
-var dn = {}, xs;
-function kl() {
-  if (xs) return dn;
-  xs = 1, Object.defineProperty(dn, "__esModule", { value: !0 });
-  const e = /* @__PURE__ */ ie(), t = /* @__PURE__ */ de(), n = /* @__PURE__ */ uo(), s = {
+var dn = {}, _s;
+function el() {
+  if (_s) return dn;
+  _s = 1, Object.defineProperty(dn, "__esModule", { value: !0 });
+  const e = /* @__PURE__ */ ie(), t = /* @__PURE__ */ de(), n = /* @__PURE__ */ ro(), s = {
     keyword: "enum",
     schemaType: "array",
     $data: !0,
@@ -4220,11 +3655,11 @@ function kl() {
   };
   return dn.default = s, dn;
 }
-var As;
-function Cl() {
-  if (As) return Xt;
-  As = 1, Object.defineProperty(Xt, "__esModule", { value: !0 });
-  const e = /* @__PURE__ */ hl(), t = /* @__PURE__ */ ml(), n = /* @__PURE__ */ yl(), r = /* @__PURE__ */ $l(), s = /* @__PURE__ */ bl(), o = /* @__PURE__ */ vl(), i = /* @__PURE__ */ wl(), a = /* @__PURE__ */ _l(), c = /* @__PURE__ */ Sl(), l = /* @__PURE__ */ kl(), d = [
+var Ss;
+function tl() {
+  if (Ss) return Xt;
+  Ss = 1, Object.defineProperty(Xt, "__esModule", { value: !0 });
+  const e = /* @__PURE__ */ Uc(), t = /* @__PURE__ */ Hc(), n = /* @__PURE__ */ Gc(), r = /* @__PURE__ */ Wc(), s = /* @__PURE__ */ Jc(), o = /* @__PURE__ */ Yc(), i = /* @__PURE__ */ Xc(), a = /* @__PURE__ */ Zc(), c = /* @__PURE__ */ Qc(), l = /* @__PURE__ */ el(), d = [
     // number
     e.default,
     t.default,
@@ -4245,10 +3680,10 @@ function Cl() {
   ];
   return Xt.default = d, Xt;
 }
-var un = {}, pt = {}, Ps;
-function va() {
-  if (Ps) return pt;
-  Ps = 1, Object.defineProperty(pt, "__esModule", { value: !0 }), pt.validateAdditionalItems = void 0;
+var un = {}, pt = {}, ks;
+function aa() {
+  if (ks) return pt;
+  ks = 1, Object.defineProperty(pt, "__esModule", { value: !0 }), pt.validateAdditionalItems = void 0;
   const e = /* @__PURE__ */ ie(), t = /* @__PURE__ */ de(), r = {
     keyword: "additionalItems",
     type: "array",
@@ -4285,10 +3720,10 @@ function va() {
   }
   return pt.validateAdditionalItems = s, pt.default = r, pt;
 }
-var fn = {}, ht = {}, Rs;
-function wa() {
-  if (Rs) return ht;
-  Rs = 1, Object.defineProperty(ht, "__esModule", { value: !0 }), ht.validateTuple = void 0;
+var fn = {}, ht = {}, Cs;
+function ca() {
+  if (Cs) return ht;
+  Cs = 1, Object.defineProperty(ht, "__esModule", { value: !0 }), ht.validateTuple = void 0;
   const e = /* @__PURE__ */ ie(), t = /* @__PURE__ */ de(), n = /* @__PURE__ */ Le(), r = {
     keyword: "items",
     type: "array",
@@ -4322,11 +3757,11 @@ function wa() {
   }
   return ht.validateTuple = s, ht.default = r, ht;
 }
-var Ms;
-function El() {
-  if (Ms) return fn;
-  Ms = 1, Object.defineProperty(fn, "__esModule", { value: !0 });
-  const e = /* @__PURE__ */ wa(), t = {
+var Es;
+function nl() {
+  if (Es) return fn;
+  Es = 1, Object.defineProperty(fn, "__esModule", { value: !0 });
+  const e = /* @__PURE__ */ ca(), t = {
     keyword: "prefixItems",
     type: "array",
     schemaType: ["array"],
@@ -4335,11 +3770,11 @@ function El() {
   };
   return fn.default = t, fn;
 }
-var pn = {}, Ns;
-function xl() {
-  if (Ns) return pn;
-  Ns = 1, Object.defineProperty(pn, "__esModule", { value: !0 });
-  const e = /* @__PURE__ */ ie(), t = /* @__PURE__ */ de(), n = /* @__PURE__ */ Le(), r = /* @__PURE__ */ va(), o = {
+var pn = {}, xs;
+function rl() {
+  if (xs) return pn;
+  xs = 1, Object.defineProperty(pn, "__esModule", { value: !0 });
+  const e = /* @__PURE__ */ ie(), t = /* @__PURE__ */ de(), n = /* @__PURE__ */ Le(), r = /* @__PURE__ */ aa(), o = {
     keyword: "items",
     type: "array",
     schemaType: ["object", "boolean"],
@@ -4355,10 +3790,10 @@ function xl() {
   };
   return pn.default = o, pn;
 }
-var hn = {}, Os;
-function Al() {
-  if (Os) return hn;
-  Os = 1, Object.defineProperty(hn, "__esModule", { value: !0 });
+var hn = {}, As;
+function ol() {
+  if (As) return hn;
+  As = 1, Object.defineProperty(hn, "__esModule", { value: !0 });
   const e = /* @__PURE__ */ ie(), t = /* @__PURE__ */ de(), r = {
     keyword: "contains",
     type: "array",
@@ -4412,9 +3847,9 @@ function Al() {
   };
   return hn.default = r, hn;
 }
-var Er = {}, Ts;
-function fo() {
-  return Ts || (Ts = 1, (function(e) {
+var Cr = {}, Ps;
+function oo() {
+  return Ps || (Ps = 1, (function(e) {
     Object.defineProperty(e, "__esModule", { value: !0 }), e.validateSchemaDeps = e.validatePropertyDeps = e.error = void 0;
     const t = /* @__PURE__ */ ie(), n = /* @__PURE__ */ de(), r = /* @__PURE__ */ Le();
     e.error = {
@@ -4483,12 +3918,12 @@ function fo() {
         ), c.ok($));
     }
     e.validateSchemaDeps = a, e.default = s;
-  })(Er)), Er;
+  })(Cr)), Cr;
 }
-var mn = {}, Fs;
-function Pl() {
-  if (Fs) return mn;
-  Fs = 1, Object.defineProperty(mn, "__esModule", { value: !0 });
+var mn = {}, Rs;
+function sl() {
+  if (Rs) return mn;
+  Rs = 1, Object.defineProperty(mn, "__esModule", { value: !0 });
   const e = /* @__PURE__ */ ie(), t = /* @__PURE__ */ de(), r = {
     keyword: "propertyNames",
     type: "object",
@@ -4517,10 +3952,10 @@ function Pl() {
   };
   return mn.default = r, mn;
 }
-var gn = {}, zs;
-function _a() {
-  if (zs) return gn;
-  zs = 1, Object.defineProperty(gn, "__esModule", { value: !0 });
+var gn = {}, Ms;
+function la() {
+  if (Ms) return gn;
+  Ms = 1, Object.defineProperty(gn, "__esModule", { value: !0 });
   const e = /* @__PURE__ */ Le(), t = /* @__PURE__ */ ie(), n = /* @__PURE__ */ De(), r = /* @__PURE__ */ de(), o = {
     keyword: "additionalProperties",
     type: ["object"],
@@ -4588,11 +4023,11 @@ function _a() {
   };
   return gn.default = o, gn;
 }
-var yn = {}, js;
-function Rl() {
-  if (js) return yn;
-  js = 1, Object.defineProperty(yn, "__esModule", { value: !0 });
-  const e = /* @__PURE__ */ or(), t = /* @__PURE__ */ Le(), n = /* @__PURE__ */ de(), r = /* @__PURE__ */ _a(), s = {
+var yn = {}, Ns;
+function il() {
+  if (Ns) return yn;
+  Ns = 1, Object.defineProperty(yn, "__esModule", { value: !0 });
+  const e = /* @__PURE__ */ nr(), t = /* @__PURE__ */ Le(), n = /* @__PURE__ */ de(), r = /* @__PURE__ */ la(), s = {
     keyword: "properties",
     type: "object",
     schemaType: "object",
@@ -4623,10 +4058,10 @@ function Rl() {
   };
   return yn.default = s, yn;
 }
-var $n = {}, Is;
-function Ml() {
-  if (Is) return $n;
-  Is = 1, Object.defineProperty($n, "__esModule", { value: !0 });
+var $n = {}, Os;
+function al() {
+  if (Os) return $n;
+  Os = 1, Object.defineProperty($n, "__esModule", { value: !0 });
   const e = /* @__PURE__ */ Le(), t = /* @__PURE__ */ ie(), n = /* @__PURE__ */ de(), r = /* @__PURE__ */ de(), s = {
     keyword: "patternProperties",
     type: "object",
@@ -4664,10 +4099,10 @@ function Ml() {
   };
   return $n.default = s, $n;
 }
-var bn = {}, Ds;
-function Nl() {
-  if (Ds) return bn;
-  Ds = 1, Object.defineProperty(bn, "__esModule", { value: !0 });
+var bn = {}, Ts;
+function cl() {
+  if (Ts) return bn;
+  Ts = 1, Object.defineProperty(bn, "__esModule", { value: !0 });
   const e = /* @__PURE__ */ de(), t = {
     keyword: "not",
     schemaType: ["object", "boolean"],
@@ -4690,10 +4125,10 @@ function Nl() {
   };
   return bn.default = t, bn;
 }
-var vn = {}, Ls;
-function Ol() {
-  if (Ls) return vn;
-  Ls = 1, Object.defineProperty(vn, "__esModule", { value: !0 });
+var vn = {}, Fs;
+function ll() {
+  if (Fs) return vn;
+  Fs = 1, Object.defineProperty(vn, "__esModule", { value: !0 });
   const t = {
     keyword: "anyOf",
     schemaType: "array",
@@ -4703,10 +4138,10 @@ function Ol() {
   };
   return vn.default = t, vn;
 }
-var wn = {}, Bs;
-function Tl() {
-  if (Bs) return wn;
-  Bs = 1, Object.defineProperty(wn, "__esModule", { value: !0 });
+var wn = {}, zs;
+function dl() {
+  if (zs) return wn;
+  zs = 1, Object.defineProperty(wn, "__esModule", { value: !0 });
   const e = /* @__PURE__ */ ie(), t = /* @__PURE__ */ de(), r = {
     keyword: "oneOf",
     schemaType: "array",
@@ -4739,10 +4174,10 @@ function Tl() {
   };
   return wn.default = r, wn;
 }
-var _n = {}, qs;
-function Fl() {
-  if (qs) return _n;
-  qs = 1, Object.defineProperty(_n, "__esModule", { value: !0 });
+var _n = {}, js;
+function ul() {
+  if (js) return _n;
+  js = 1, Object.defineProperty(_n, "__esModule", { value: !0 });
   const e = /* @__PURE__ */ de(), t = {
     keyword: "allOf",
     schemaType: "array",
@@ -4761,10 +4196,10 @@ function Fl() {
   };
   return _n.default = t, _n;
 }
-var Sn = {}, Vs;
-function zl() {
-  if (Vs) return Sn;
-  Vs = 1, Object.defineProperty(Sn, "__esModule", { value: !0 });
+var Sn = {}, Is;
+function fl() {
+  if (Is) return Sn;
+  Is = 1, Object.defineProperty(Sn, "__esModule", { value: !0 });
   const e = /* @__PURE__ */ ie(), t = /* @__PURE__ */ de(), r = {
     keyword: "if",
     schemaType: ["object", "boolean"],
@@ -4808,10 +4243,10 @@ function zl() {
   }
   return Sn.default = r, Sn;
 }
-var kn = {}, Us;
-function jl() {
-  if (Us) return kn;
-  Us = 1, Object.defineProperty(kn, "__esModule", { value: !0 });
+var kn = {}, Ds;
+function pl() {
+  if (Ds) return kn;
+  Ds = 1, Object.defineProperty(kn, "__esModule", { value: !0 });
   const e = /* @__PURE__ */ de(), t = {
     keyword: ["then", "else"],
     schemaType: ["object", "boolean"],
@@ -4821,11 +4256,11 @@ function jl() {
   };
   return kn.default = t, kn;
 }
-var Hs;
-function Il() {
-  if (Hs) return un;
-  Hs = 1, Object.defineProperty(un, "__esModule", { value: !0 });
-  const e = /* @__PURE__ */ va(), t = /* @__PURE__ */ El(), n = /* @__PURE__ */ wa(), r = /* @__PURE__ */ xl(), s = /* @__PURE__ */ Al(), o = /* @__PURE__ */ fo(), i = /* @__PURE__ */ Pl(), a = /* @__PURE__ */ _a(), c = /* @__PURE__ */ Rl(), l = /* @__PURE__ */ Ml(), d = /* @__PURE__ */ Nl(), m = /* @__PURE__ */ Ol(), b = /* @__PURE__ */ Tl(), v = /* @__PURE__ */ Fl(), $ = /* @__PURE__ */ zl(), w = /* @__PURE__ */ jl();
+var Ls;
+function hl() {
+  if (Ls) return un;
+  Ls = 1, Object.defineProperty(un, "__esModule", { value: !0 });
+  const e = /* @__PURE__ */ aa(), t = /* @__PURE__ */ nl(), n = /* @__PURE__ */ ca(), r = /* @__PURE__ */ rl(), s = /* @__PURE__ */ ol(), o = /* @__PURE__ */ oo(), i = /* @__PURE__ */ sl(), a = /* @__PURE__ */ la(), c = /* @__PURE__ */ il(), l = /* @__PURE__ */ al(), d = /* @__PURE__ */ cl(), m = /* @__PURE__ */ ll(), b = /* @__PURE__ */ dl(), v = /* @__PURE__ */ ul(), $ = /* @__PURE__ */ fl(), w = /* @__PURE__ */ pl();
   function u(g = !1) {
     const h = [
       // any
@@ -4846,11 +4281,11 @@ function Il() {
   }
   return un.default = u, un;
 }
-var Cn = {}, mt = {}, Ks;
-function Sa() {
-  if (Ks) return mt;
-  Ks = 1, Object.defineProperty(mt, "__esModule", { value: !0 }), mt.dynamicAnchor = void 0;
-  const e = /* @__PURE__ */ ie(), t = /* @__PURE__ */ De(), n = /* @__PURE__ */ ir(), r = /* @__PURE__ */ lo(), s = {
+var Cn = {}, mt = {}, Bs;
+function da() {
+  if (Bs) return mt;
+  Bs = 1, Object.defineProperty(mt, "__esModule", { value: !0 }), mt.dynamicAnchor = void 0;
+  const e = /* @__PURE__ */ ie(), t = /* @__PURE__ */ De(), n = /* @__PURE__ */ or(), r = /* @__PURE__ */ no(), s = {
     keyword: "$dynamicAnchor",
     schemaType: "string",
     code: (a) => o(a, a.schema)
@@ -4868,11 +4303,11 @@ function Sa() {
   }
   return mt.default = s, mt;
 }
-var gt = {}, Gs;
-function ka() {
-  if (Gs) return gt;
-  Gs = 1, Object.defineProperty(gt, "__esModule", { value: !0 }), gt.dynamicRef = void 0;
-  const e = /* @__PURE__ */ ie(), t = /* @__PURE__ */ De(), n = /* @__PURE__ */ lo(), r = {
+var gt = {}, qs;
+function ua() {
+  if (qs) return gt;
+  qs = 1, Object.defineProperty(gt, "__esModule", { value: !0 }), gt.dynamicRef = void 0;
+  const e = /* @__PURE__ */ ie(), t = /* @__PURE__ */ De(), n = /* @__PURE__ */ no(), r = {
     keyword: "$dynamicRef",
     schemaType: "string",
     code: (o) => s(o, o.schema)
@@ -4903,11 +4338,11 @@ function ka() {
   }
   return gt.dynamicRef = s, gt.default = r, gt;
 }
-var En = {}, Ws;
-function Dl() {
-  if (Ws) return En;
-  Ws = 1, Object.defineProperty(En, "__esModule", { value: !0 });
-  const e = /* @__PURE__ */ Sa(), t = /* @__PURE__ */ de(), n = {
+var En = {}, Vs;
+function ml() {
+  if (Vs) return En;
+  Vs = 1, Object.defineProperty(En, "__esModule", { value: !0 });
+  const e = /* @__PURE__ */ da(), t = /* @__PURE__ */ de(), n = {
     keyword: "$recursiveAnchor",
     schemaType: "boolean",
     code(r) {
@@ -4916,29 +4351,29 @@ function Dl() {
   };
   return En.default = n, En;
 }
-var xn = {}, Js;
-function Ll() {
-  if (Js) return xn;
-  Js = 1, Object.defineProperty(xn, "__esModule", { value: !0 });
-  const e = /* @__PURE__ */ ka(), t = {
+var xn = {}, Us;
+function gl() {
+  if (Us) return xn;
+  Us = 1, Object.defineProperty(xn, "__esModule", { value: !0 });
+  const e = /* @__PURE__ */ ua(), t = {
     keyword: "$recursiveRef",
     schemaType: "string",
     code: (n) => (0, e.dynamicRef)(n, n.schema)
   };
   return xn.default = t, xn;
 }
-var Ys;
-function Bl() {
-  if (Ys) return Cn;
-  Ys = 1, Object.defineProperty(Cn, "__esModule", { value: !0 });
-  const e = /* @__PURE__ */ Sa(), t = /* @__PURE__ */ ka(), n = /* @__PURE__ */ Dl(), r = /* @__PURE__ */ Ll(), s = [e.default, t.default, n.default, r.default];
+var Hs;
+function yl() {
+  if (Hs) return Cn;
+  Hs = 1, Object.defineProperty(Cn, "__esModule", { value: !0 });
+  const e = /* @__PURE__ */ da(), t = /* @__PURE__ */ ua(), n = /* @__PURE__ */ ml(), r = /* @__PURE__ */ gl(), s = [e.default, t.default, n.default, r.default];
   return Cn.default = s, Cn;
 }
-var An = {}, Pn = {}, Xs;
-function ql() {
-  if (Xs) return Pn;
-  Xs = 1, Object.defineProperty(Pn, "__esModule", { value: !0 });
-  const e = /* @__PURE__ */ fo(), t = {
+var An = {}, Pn = {}, Ks;
+function $l() {
+  if (Ks) return Pn;
+  Ks = 1, Object.defineProperty(Pn, "__esModule", { value: !0 });
+  const e = /* @__PURE__ */ oo(), t = {
     keyword: "dependentRequired",
     type: "object",
     schemaType: "object",
@@ -4947,11 +4382,11 @@ function ql() {
   };
   return Pn.default = t, Pn;
 }
-var Rn = {}, Zs;
-function Vl() {
-  if (Zs) return Rn;
-  Zs = 1, Object.defineProperty(Rn, "__esModule", { value: !0 });
-  const e = /* @__PURE__ */ fo(), t = {
+var Rn = {}, Gs;
+function bl() {
+  if (Gs) return Rn;
+  Gs = 1, Object.defineProperty(Rn, "__esModule", { value: !0 });
+  const e = /* @__PURE__ */ oo(), t = {
     keyword: "dependentSchemas",
     type: "object",
     schemaType: "object",
@@ -4959,10 +4394,10 @@ function Vl() {
   };
   return Rn.default = t, Rn;
 }
-var Mn = {}, Qs;
-function Ul() {
-  if (Qs) return Mn;
-  Qs = 1, Object.defineProperty(Mn, "__esModule", { value: !0 });
+var Mn = {}, Ws;
+function vl() {
+  if (Ws) return Mn;
+  Ws = 1, Object.defineProperty(Mn, "__esModule", { value: !0 });
   const e = /* @__PURE__ */ de(), t = {
     keyword: ["maxContains", "minContains"],
     type: "array",
@@ -4973,17 +4408,17 @@ function Ul() {
   };
   return Mn.default = t, Mn;
 }
-var ei;
-function Hl() {
-  if (ei) return An;
-  ei = 1, Object.defineProperty(An, "__esModule", { value: !0 });
-  const e = /* @__PURE__ */ ql(), t = /* @__PURE__ */ Vl(), n = /* @__PURE__ */ Ul(), r = [e.default, t.default, n.default];
+var Js;
+function wl() {
+  if (Js) return An;
+  Js = 1, Object.defineProperty(An, "__esModule", { value: !0 });
+  const e = /* @__PURE__ */ $l(), t = /* @__PURE__ */ bl(), n = /* @__PURE__ */ vl(), r = [e.default, t.default, n.default];
   return An.default = r, An;
 }
-var Nn = {}, On = {}, ti;
-function Kl() {
-  if (ti) return On;
-  ti = 1, Object.defineProperty(On, "__esModule", { value: !0 });
+var Nn = {}, On = {}, Ys;
+function _l() {
+  if (Ys) return On;
+  Ys = 1, Object.defineProperty(On, "__esModule", { value: !0 });
   const e = /* @__PURE__ */ ie(), t = /* @__PURE__ */ de(), n = /* @__PURE__ */ De(), s = {
     keyword: "unevaluatedProperties",
     type: "object",
@@ -5026,10 +4461,10 @@ function Kl() {
   };
   return On.default = s, On;
 }
-var Tn = {}, ni;
-function Gl() {
-  if (ni) return Tn;
-  ni = 1, Object.defineProperty(Tn, "__esModule", { value: !0 });
+var Tn = {}, Xs;
+function Sl() {
+  if (Xs) return Tn;
+  Xs = 1, Object.defineProperty(Tn, "__esModule", { value: !0 });
   const e = /* @__PURE__ */ ie(), t = /* @__PURE__ */ de(), r = {
     keyword: "unevaluatedItems",
     type: "array",
@@ -5059,17 +4494,17 @@ function Gl() {
   };
   return Tn.default = r, Tn;
 }
-var ri;
-function Wl() {
-  if (ri) return Nn;
-  ri = 1, Object.defineProperty(Nn, "__esModule", { value: !0 });
-  const e = /* @__PURE__ */ Kl(), t = /* @__PURE__ */ Gl(), n = [e.default, t.default];
+var Zs;
+function kl() {
+  if (Zs) return Nn;
+  Zs = 1, Object.defineProperty(Nn, "__esModule", { value: !0 });
+  const e = /* @__PURE__ */ _l(), t = /* @__PURE__ */ Sl(), n = [e.default, t.default];
   return Nn.default = n, Nn;
 }
-var Fn = {}, zn = {}, oi;
-function Jl() {
-  if (oi) return zn;
-  oi = 1, Object.defineProperty(zn, "__esModule", { value: !0 });
+var Fn = {}, zn = {}, Qs;
+function Cl() {
+  if (Qs) return zn;
+  Qs = 1, Object.defineProperty(zn, "__esModule", { value: !0 });
   const e = /* @__PURE__ */ ie(), n = {
     keyword: "format",
     type: ["number", "string"],
@@ -5135,16 +4570,16 @@ function Jl() {
   };
   return zn.default = n, zn;
 }
-var si;
-function Yl() {
-  if (si) return Fn;
-  si = 1, Object.defineProperty(Fn, "__esModule", { value: !0 });
-  const t = [(/* @__PURE__ */ Jl()).default];
+var ei;
+function El() {
+  if (ei) return Fn;
+  ei = 1, Object.defineProperty(Fn, "__esModule", { value: !0 });
+  const t = [(/* @__PURE__ */ Cl()).default];
   return Fn.default = t, Fn;
 }
-var st = {}, ii;
-function Xl() {
-  return ii || (ii = 1, Object.defineProperty(st, "__esModule", { value: !0 }), st.contentVocabulary = st.metadataVocabulary = void 0, st.metadataVocabulary = [
+var st = {}, ti;
+function xl() {
+  return ti || (ti = 1, Object.defineProperty(st, "__esModule", { value: !0 }), st.contentVocabulary = st.metadataVocabulary = void 0, st.metadataVocabulary = [
     "title",
     "description",
     "default",
@@ -5158,11 +4593,11 @@ function Xl() {
     "contentSchema"
   ]), st;
 }
-var ai;
-function Zl() {
-  if (ai) return Wt;
-  ai = 1, Object.defineProperty(Wt, "__esModule", { value: !0 });
-  const e = /* @__PURE__ */ pl(), t = /* @__PURE__ */ Cl(), n = /* @__PURE__ */ Il(), r = /* @__PURE__ */ Bl(), s = /* @__PURE__ */ Hl(), o = /* @__PURE__ */ Wl(), i = /* @__PURE__ */ Yl(), a = /* @__PURE__ */ Xl(), c = [
+var ni;
+function Al() {
+  if (ni) return Wt;
+  ni = 1, Object.defineProperty(Wt, "__esModule", { value: !0 });
+  const e = /* @__PURE__ */ Vc(), t = /* @__PURE__ */ tl(), n = /* @__PURE__ */ hl(), r = /* @__PURE__ */ yl(), s = /* @__PURE__ */ wl(), o = /* @__PURE__ */ kl(), i = /* @__PURE__ */ El(), a = /* @__PURE__ */ xl(), c = [
     r.default,
     e.default,
     t.default,
@@ -5175,20 +4610,20 @@ function Zl() {
   ];
   return Wt.default = c, Wt;
 }
-var jn = {}, Nt = {}, ci;
-function Ql() {
-  if (ci) return Nt;
-  ci = 1, Object.defineProperty(Nt, "__esModule", { value: !0 }), Nt.DiscrError = void 0;
+var jn = {}, Mt = {}, ri;
+function Pl() {
+  if (ri) return Mt;
+  ri = 1, Object.defineProperty(Mt, "__esModule", { value: !0 }), Mt.DiscrError = void 0;
   var e;
   return (function(t) {
     t.Tag = "tag", t.Mapping = "mapping";
-  })(e || (Nt.DiscrError = e = {})), Nt;
+  })(e || (Mt.DiscrError = e = {})), Mt;
 }
-var li;
-function ed() {
-  if (li) return jn;
-  li = 1, Object.defineProperty(jn, "__esModule", { value: !0 });
-  const e = /* @__PURE__ */ ie(), t = /* @__PURE__ */ Ql(), n = /* @__PURE__ */ ir(), r = /* @__PURE__ */ sr(), s = /* @__PURE__ */ de(), i = {
+var oi;
+function Rl() {
+  if (oi) return jn;
+  oi = 1, Object.defineProperty(jn, "__esModule", { value: !0 });
+  const e = /* @__PURE__ */ ie(), t = /* @__PURE__ */ Pl(), n = /* @__PURE__ */ or(), r = /* @__PURE__ */ rr(), s = /* @__PURE__ */ de(), i = {
     keyword: "discriminator",
     type: "object",
     schemaType: "object",
@@ -5262,81 +4697,81 @@ function ed() {
   return jn.default = i, jn;
 }
 var In = {};
-const td = "https://json-schema.org/draft/2020-12/schema", nd = "https://json-schema.org/draft/2020-12/schema", rd = { "https://json-schema.org/draft/2020-12/vocab/core": !0, "https://json-schema.org/draft/2020-12/vocab/applicator": !0, "https://json-schema.org/draft/2020-12/vocab/unevaluated": !0, "https://json-schema.org/draft/2020-12/vocab/validation": !0, "https://json-schema.org/draft/2020-12/vocab/meta-data": !0, "https://json-schema.org/draft/2020-12/vocab/format-annotation": !0, "https://json-schema.org/draft/2020-12/vocab/content": !0 }, od = "meta", sd = "Core and Validation specifications meta-schema", id = [{ $ref: "meta/core" }, { $ref: "meta/applicator" }, { $ref: "meta/unevaluated" }, { $ref: "meta/validation" }, { $ref: "meta/meta-data" }, { $ref: "meta/format-annotation" }, { $ref: "meta/content" }], ad = ["object", "boolean"], cd = "This meta-schema also defines keywords that have appeared in previous drafts in order to prevent incompatible extensions as they remain in common use.", ld = { definitions: { $comment: '"definitions" has been replaced by "$defs".', type: "object", additionalProperties: { $dynamicRef: "#meta" }, deprecated: !0, default: {} }, dependencies: { $comment: '"dependencies" has been split and replaced by "dependentSchemas" and "dependentRequired" in order to serve their differing semantics.', type: "object", additionalProperties: { anyOf: [{ $dynamicRef: "#meta" }, { $ref: "meta/validation#/$defs/stringArray" }] }, deprecated: !0, default: {} }, $recursiveAnchor: { $comment: '"$recursiveAnchor" has been replaced by "$dynamicAnchor".', $ref: "meta/core#/$defs/anchorString", deprecated: !0 }, $recursiveRef: { $comment: '"$recursiveRef" has been replaced by "$dynamicRef".', $ref: "meta/core#/$defs/uriReferenceString", deprecated: !0 } }, dd = {
-  $schema: td,
-  $id: nd,
-  $vocabulary: rd,
-  $dynamicAnchor: od,
-  title: sd,
-  allOf: id,
-  type: ad,
-  $comment: cd,
-  properties: ld
-}, ud = "https://json-schema.org/draft/2020-12/schema", fd = "https://json-schema.org/draft/2020-12/meta/applicator", pd = { "https://json-schema.org/draft/2020-12/vocab/applicator": !0 }, hd = "meta", md = "Applicator vocabulary meta-schema", gd = ["object", "boolean"], yd = { prefixItems: { $ref: "#/$defs/schemaArray" }, items: { $dynamicRef: "#meta" }, contains: { $dynamicRef: "#meta" }, additionalProperties: { $dynamicRef: "#meta" }, properties: { type: "object", additionalProperties: { $dynamicRef: "#meta" }, default: {} }, patternProperties: { type: "object", additionalProperties: { $dynamicRef: "#meta" }, propertyNames: { format: "regex" }, default: {} }, dependentSchemas: { type: "object", additionalProperties: { $dynamicRef: "#meta" }, default: {} }, propertyNames: { $dynamicRef: "#meta" }, if: { $dynamicRef: "#meta" }, then: { $dynamicRef: "#meta" }, else: { $dynamicRef: "#meta" }, allOf: { $ref: "#/$defs/schemaArray" }, anyOf: { $ref: "#/$defs/schemaArray" }, oneOf: { $ref: "#/$defs/schemaArray" }, not: { $dynamicRef: "#meta" } }, $d = { schemaArray: { type: "array", minItems: 1, items: { $dynamicRef: "#meta" } } }, bd = {
-  $schema: ud,
-  $id: fd,
-  $vocabulary: pd,
-  $dynamicAnchor: hd,
-  title: md,
-  type: gd,
-  properties: yd,
-  $defs: $d
-}, vd = "https://json-schema.org/draft/2020-12/schema", wd = "https://json-schema.org/draft/2020-12/meta/unevaluated", _d = { "https://json-schema.org/draft/2020-12/vocab/unevaluated": !0 }, Sd = "meta", kd = "Unevaluated applicator vocabulary meta-schema", Cd = ["object", "boolean"], Ed = { unevaluatedItems: { $dynamicRef: "#meta" }, unevaluatedProperties: { $dynamicRef: "#meta" } }, xd = {
-  $schema: vd,
-  $id: wd,
-  $vocabulary: _d,
-  $dynamicAnchor: Sd,
-  title: kd,
-  type: Cd,
-  properties: Ed
-}, Ad = "https://json-schema.org/draft/2020-12/schema", Pd = "https://json-schema.org/draft/2020-12/meta/content", Rd = { "https://json-schema.org/draft/2020-12/vocab/content": !0 }, Md = "meta", Nd = "Content vocabulary meta-schema", Od = ["object", "boolean"], Td = { contentEncoding: { type: "string" }, contentMediaType: { type: "string" }, contentSchema: { $dynamicRef: "#meta" } }, Fd = {
-  $schema: Ad,
-  $id: Pd,
-  $vocabulary: Rd,
-  $dynamicAnchor: Md,
-  title: Nd,
-  type: Od,
-  properties: Td
-}, zd = "https://json-schema.org/draft/2020-12/schema", jd = "https://json-schema.org/draft/2020-12/meta/core", Id = { "https://json-schema.org/draft/2020-12/vocab/core": !0 }, Dd = "meta", Ld = "Core vocabulary meta-schema", Bd = ["object", "boolean"], qd = { $id: { $ref: "#/$defs/uriReferenceString", $comment: "Non-empty fragments not allowed.", pattern: "^[^#]*#?$" }, $schema: { $ref: "#/$defs/uriString" }, $ref: { $ref: "#/$defs/uriReferenceString" }, $anchor: { $ref: "#/$defs/anchorString" }, $dynamicRef: { $ref: "#/$defs/uriReferenceString" }, $dynamicAnchor: { $ref: "#/$defs/anchorString" }, $vocabulary: { type: "object", propertyNames: { $ref: "#/$defs/uriString" }, additionalProperties: { type: "boolean" } }, $comment: { type: "string" }, $defs: { type: "object", additionalProperties: { $dynamicRef: "#meta" } } }, Vd = { anchorString: { type: "string", pattern: "^[A-Za-z_][-A-Za-z0-9._]*$" }, uriString: { type: "string", format: "uri" }, uriReferenceString: { type: "string", format: "uri-reference" } }, Ud = {
-  $schema: zd,
-  $id: jd,
-  $vocabulary: Id,
-  $dynamicAnchor: Dd,
-  title: Ld,
-  type: Bd,
-  properties: qd,
-  $defs: Vd
-}, Hd = "https://json-schema.org/draft/2020-12/schema", Kd = "https://json-schema.org/draft/2020-12/meta/format-annotation", Gd = { "https://json-schema.org/draft/2020-12/vocab/format-annotation": !0 }, Wd = "meta", Jd = "Format vocabulary meta-schema for annotation results", Yd = ["object", "boolean"], Xd = { format: { type: "string" } }, Zd = {
-  $schema: Hd,
-  $id: Kd,
-  $vocabulary: Gd,
-  $dynamicAnchor: Wd,
-  title: Jd,
-  type: Yd,
-  properties: Xd
-}, Qd = "https://json-schema.org/draft/2020-12/schema", eu = "https://json-schema.org/draft/2020-12/meta/meta-data", tu = { "https://json-schema.org/draft/2020-12/vocab/meta-data": !0 }, nu = "meta", ru = "Meta-data vocabulary meta-schema", ou = ["object", "boolean"], su = { title: { type: "string" }, description: { type: "string" }, default: !0, deprecated: { type: "boolean", default: !1 }, readOnly: { type: "boolean", default: !1 }, writeOnly: { type: "boolean", default: !1 }, examples: { type: "array", items: !0 } }, iu = {
-  $schema: Qd,
-  $id: eu,
-  $vocabulary: tu,
-  $dynamicAnchor: nu,
-  title: ru,
-  type: ou,
-  properties: su
-}, au = "https://json-schema.org/draft/2020-12/schema", cu = "https://json-schema.org/draft/2020-12/meta/validation", lu = { "https://json-schema.org/draft/2020-12/vocab/validation": !0 }, du = "meta", uu = "Validation vocabulary meta-schema", fu = ["object", "boolean"], pu = { type: { anyOf: [{ $ref: "#/$defs/simpleTypes" }, { type: "array", items: { $ref: "#/$defs/simpleTypes" }, minItems: 1, uniqueItems: !0 }] }, const: !0, enum: { type: "array", items: !0 }, multipleOf: { type: "number", exclusiveMinimum: 0 }, maximum: { type: "number" }, exclusiveMaximum: { type: "number" }, minimum: { type: "number" }, exclusiveMinimum: { type: "number" }, maxLength: { $ref: "#/$defs/nonNegativeInteger" }, minLength: { $ref: "#/$defs/nonNegativeIntegerDefault0" }, pattern: { type: "string", format: "regex" }, maxItems: { $ref: "#/$defs/nonNegativeInteger" }, minItems: { $ref: "#/$defs/nonNegativeIntegerDefault0" }, uniqueItems: { type: "boolean", default: !1 }, maxContains: { $ref: "#/$defs/nonNegativeInteger" }, minContains: { $ref: "#/$defs/nonNegativeInteger", default: 1 }, maxProperties: { $ref: "#/$defs/nonNegativeInteger" }, minProperties: { $ref: "#/$defs/nonNegativeIntegerDefault0" }, required: { $ref: "#/$defs/stringArray" }, dependentRequired: { type: "object", additionalProperties: { $ref: "#/$defs/stringArray" } } }, hu = { nonNegativeInteger: { type: "integer", minimum: 0 }, nonNegativeIntegerDefault0: { $ref: "#/$defs/nonNegativeInteger", default: 0 }, simpleTypes: { enum: ["array", "boolean", "integer", "null", "number", "object", "string"] }, stringArray: { type: "array", items: { type: "string" }, uniqueItems: !0, default: [] } }, mu = {
-  $schema: au,
-  $id: cu,
-  $vocabulary: lu,
-  $dynamicAnchor: du,
-  title: uu,
-  type: fu,
-  properties: pu,
-  $defs: hu
+const Ml = "https://json-schema.org/draft/2020-12/schema", Nl = "https://json-schema.org/draft/2020-12/schema", Ol = { "https://json-schema.org/draft/2020-12/vocab/core": !0, "https://json-schema.org/draft/2020-12/vocab/applicator": !0, "https://json-schema.org/draft/2020-12/vocab/unevaluated": !0, "https://json-schema.org/draft/2020-12/vocab/validation": !0, "https://json-schema.org/draft/2020-12/vocab/meta-data": !0, "https://json-schema.org/draft/2020-12/vocab/format-annotation": !0, "https://json-schema.org/draft/2020-12/vocab/content": !0 }, Tl = "meta", Fl = "Core and Validation specifications meta-schema", zl = [{ $ref: "meta/core" }, { $ref: "meta/applicator" }, { $ref: "meta/unevaluated" }, { $ref: "meta/validation" }, { $ref: "meta/meta-data" }, { $ref: "meta/format-annotation" }, { $ref: "meta/content" }], jl = ["object", "boolean"], Il = "This meta-schema also defines keywords that have appeared in previous drafts in order to prevent incompatible extensions as they remain in common use.", Dl = { definitions: { $comment: '"definitions" has been replaced by "$defs".', type: "object", additionalProperties: { $dynamicRef: "#meta" }, deprecated: !0, default: {} }, dependencies: { $comment: '"dependencies" has been split and replaced by "dependentSchemas" and "dependentRequired" in order to serve their differing semantics.', type: "object", additionalProperties: { anyOf: [{ $dynamicRef: "#meta" }, { $ref: "meta/validation#/$defs/stringArray" }] }, deprecated: !0, default: {} }, $recursiveAnchor: { $comment: '"$recursiveAnchor" has been replaced by "$dynamicAnchor".', $ref: "meta/core#/$defs/anchorString", deprecated: !0 }, $recursiveRef: { $comment: '"$recursiveRef" has been replaced by "$dynamicRef".', $ref: "meta/core#/$defs/uriReferenceString", deprecated: !0 } }, Ll = {
+  $schema: Ml,
+  $id: Nl,
+  $vocabulary: Ol,
+  $dynamicAnchor: Tl,
+  title: Fl,
+  allOf: zl,
+  type: jl,
+  $comment: Il,
+  properties: Dl
+}, Bl = "https://json-schema.org/draft/2020-12/schema", ql = "https://json-schema.org/draft/2020-12/meta/applicator", Vl = { "https://json-schema.org/draft/2020-12/vocab/applicator": !0 }, Ul = "meta", Hl = "Applicator vocabulary meta-schema", Kl = ["object", "boolean"], Gl = { prefixItems: { $ref: "#/$defs/schemaArray" }, items: { $dynamicRef: "#meta" }, contains: { $dynamicRef: "#meta" }, additionalProperties: { $dynamicRef: "#meta" }, properties: { type: "object", additionalProperties: { $dynamicRef: "#meta" }, default: {} }, patternProperties: { type: "object", additionalProperties: { $dynamicRef: "#meta" }, propertyNames: { format: "regex" }, default: {} }, dependentSchemas: { type: "object", additionalProperties: { $dynamicRef: "#meta" }, default: {} }, propertyNames: { $dynamicRef: "#meta" }, if: { $dynamicRef: "#meta" }, then: { $dynamicRef: "#meta" }, else: { $dynamicRef: "#meta" }, allOf: { $ref: "#/$defs/schemaArray" }, anyOf: { $ref: "#/$defs/schemaArray" }, oneOf: { $ref: "#/$defs/schemaArray" }, not: { $dynamicRef: "#meta" } }, Wl = { schemaArray: { type: "array", minItems: 1, items: { $dynamicRef: "#meta" } } }, Jl = {
+  $schema: Bl,
+  $id: ql,
+  $vocabulary: Vl,
+  $dynamicAnchor: Ul,
+  title: Hl,
+  type: Kl,
+  properties: Gl,
+  $defs: Wl
+}, Yl = "https://json-schema.org/draft/2020-12/schema", Xl = "https://json-schema.org/draft/2020-12/meta/unevaluated", Zl = { "https://json-schema.org/draft/2020-12/vocab/unevaluated": !0 }, Ql = "meta", ed = "Unevaluated applicator vocabulary meta-schema", td = ["object", "boolean"], nd = { unevaluatedItems: { $dynamicRef: "#meta" }, unevaluatedProperties: { $dynamicRef: "#meta" } }, rd = {
+  $schema: Yl,
+  $id: Xl,
+  $vocabulary: Zl,
+  $dynamicAnchor: Ql,
+  title: ed,
+  type: td,
+  properties: nd
+}, od = "https://json-schema.org/draft/2020-12/schema", sd = "https://json-schema.org/draft/2020-12/meta/content", id = { "https://json-schema.org/draft/2020-12/vocab/content": !0 }, ad = "meta", cd = "Content vocabulary meta-schema", ld = ["object", "boolean"], dd = { contentEncoding: { type: "string" }, contentMediaType: { type: "string" }, contentSchema: { $dynamicRef: "#meta" } }, ud = {
+  $schema: od,
+  $id: sd,
+  $vocabulary: id,
+  $dynamicAnchor: ad,
+  title: cd,
+  type: ld,
+  properties: dd
+}, fd = "https://json-schema.org/draft/2020-12/schema", pd = "https://json-schema.org/draft/2020-12/meta/core", hd = { "https://json-schema.org/draft/2020-12/vocab/core": !0 }, md = "meta", gd = "Core vocabulary meta-schema", yd = ["object", "boolean"], $d = { $id: { $ref: "#/$defs/uriReferenceString", $comment: "Non-empty fragments not allowed.", pattern: "^[^#]*#?$" }, $schema: { $ref: "#/$defs/uriString" }, $ref: { $ref: "#/$defs/uriReferenceString" }, $anchor: { $ref: "#/$defs/anchorString" }, $dynamicRef: { $ref: "#/$defs/uriReferenceString" }, $dynamicAnchor: { $ref: "#/$defs/anchorString" }, $vocabulary: { type: "object", propertyNames: { $ref: "#/$defs/uriString" }, additionalProperties: { type: "boolean" } }, $comment: { type: "string" }, $defs: { type: "object", additionalProperties: { $dynamicRef: "#meta" } } }, bd = { anchorString: { type: "string", pattern: "^[A-Za-z_][-A-Za-z0-9._]*$" }, uriString: { type: "string", format: "uri" }, uriReferenceString: { type: "string", format: "uri-reference" } }, vd = {
+  $schema: fd,
+  $id: pd,
+  $vocabulary: hd,
+  $dynamicAnchor: md,
+  title: gd,
+  type: yd,
+  properties: $d,
+  $defs: bd
+}, wd = "https://json-schema.org/draft/2020-12/schema", _d = "https://json-schema.org/draft/2020-12/meta/format-annotation", Sd = { "https://json-schema.org/draft/2020-12/vocab/format-annotation": !0 }, kd = "meta", Cd = "Format vocabulary meta-schema for annotation results", Ed = ["object", "boolean"], xd = { format: { type: "string" } }, Ad = {
+  $schema: wd,
+  $id: _d,
+  $vocabulary: Sd,
+  $dynamicAnchor: kd,
+  title: Cd,
+  type: Ed,
+  properties: xd
+}, Pd = "https://json-schema.org/draft/2020-12/schema", Rd = "https://json-schema.org/draft/2020-12/meta/meta-data", Md = { "https://json-schema.org/draft/2020-12/vocab/meta-data": !0 }, Nd = "meta", Od = "Meta-data vocabulary meta-schema", Td = ["object", "boolean"], Fd = { title: { type: "string" }, description: { type: "string" }, default: !0, deprecated: { type: "boolean", default: !1 }, readOnly: { type: "boolean", default: !1 }, writeOnly: { type: "boolean", default: !1 }, examples: { type: "array", items: !0 } }, zd = {
+  $schema: Pd,
+  $id: Rd,
+  $vocabulary: Md,
+  $dynamicAnchor: Nd,
+  title: Od,
+  type: Td,
+  properties: Fd
+}, jd = "https://json-schema.org/draft/2020-12/schema", Id = "https://json-schema.org/draft/2020-12/meta/validation", Dd = { "https://json-schema.org/draft/2020-12/vocab/validation": !0 }, Ld = "meta", Bd = "Validation vocabulary meta-schema", qd = ["object", "boolean"], Vd = { type: { anyOf: [{ $ref: "#/$defs/simpleTypes" }, { type: "array", items: { $ref: "#/$defs/simpleTypes" }, minItems: 1, uniqueItems: !0 }] }, const: !0, enum: { type: "array", items: !0 }, multipleOf: { type: "number", exclusiveMinimum: 0 }, maximum: { type: "number" }, exclusiveMaximum: { type: "number" }, minimum: { type: "number" }, exclusiveMinimum: { type: "number" }, maxLength: { $ref: "#/$defs/nonNegativeInteger" }, minLength: { $ref: "#/$defs/nonNegativeIntegerDefault0" }, pattern: { type: "string", format: "regex" }, maxItems: { $ref: "#/$defs/nonNegativeInteger" }, minItems: { $ref: "#/$defs/nonNegativeIntegerDefault0" }, uniqueItems: { type: "boolean", default: !1 }, maxContains: { $ref: "#/$defs/nonNegativeInteger" }, minContains: { $ref: "#/$defs/nonNegativeInteger", default: 1 }, maxProperties: { $ref: "#/$defs/nonNegativeInteger" }, minProperties: { $ref: "#/$defs/nonNegativeIntegerDefault0" }, required: { $ref: "#/$defs/stringArray" }, dependentRequired: { type: "object", additionalProperties: { $ref: "#/$defs/stringArray" } } }, Ud = { nonNegativeInteger: { type: "integer", minimum: 0 }, nonNegativeIntegerDefault0: { $ref: "#/$defs/nonNegativeInteger", default: 0 }, simpleTypes: { enum: ["array", "boolean", "integer", "null", "number", "object", "string"] }, stringArray: { type: "array", items: { type: "string" }, uniqueItems: !0, default: [] } }, Hd = {
+  $schema: jd,
+  $id: Id,
+  $vocabulary: Dd,
+  $dynamicAnchor: Ld,
+  title: Bd,
+  type: qd,
+  properties: Vd,
+  $defs: Ud
 };
-var di;
-function gu() {
-  if (di) return In;
-  di = 1, Object.defineProperty(In, "__esModule", { value: !0 });
-  const e = dd, t = bd, n = xd, r = Fd, s = Ud, o = Zd, i = iu, a = mu, c = ["/properties"];
+var si;
+function Kd() {
+  if (si) return In;
+  si = 1, Object.defineProperty(In, "__esModule", { value: !0 });
+  const e = Ll, t = Jl, n = rd, r = ud, s = vd, o = Ad, i = zd, a = Hd, c = ["/properties"];
   function l(d) {
     return [
       e,
@@ -5354,11 +4789,11 @@ function gu() {
   }
   return In.default = l, In;
 }
-var ui;
-function yu() {
-  return ui || (ui = 1, (function(e, t) {
+var ii;
+function Gd() {
+  return ii || (ii = 1, (function(e, t) {
     Object.defineProperty(t, "__esModule", { value: !0 }), t.MissingRefError = t.ValidationError = t.CodeGen = t.Name = t.nil = t.stringify = t.str = t._ = t.KeywordCxt = t.Ajv2020 = void 0;
-    const n = /* @__PURE__ */ ul(), r = /* @__PURE__ */ Zl(), s = /* @__PURE__ */ ed(), o = /* @__PURE__ */ gu(), i = "https://json-schema.org/draft/2020-12/schema";
+    const n = /* @__PURE__ */ Bc(), r = /* @__PURE__ */ Al(), s = /* @__PURE__ */ Rl(), o = /* @__PURE__ */ Kd(), i = "https://json-schema.org/draft/2020-12/schema";
     class a extends n.default {
       constructor(v = {}) {
         super({
@@ -5381,7 +4816,7 @@ function yu() {
       }
     }
     t.Ajv2020 = a, e.exports = t = a, e.exports.Ajv2020 = a, Object.defineProperty(t, "__esModule", { value: !0 }), t.default = a;
-    var c = /* @__PURE__ */ or();
+    var c = /* @__PURE__ */ nr();
     Object.defineProperty(t, "KeywordCxt", { enumerable: !0, get: function() {
       return c.KeywordCxt;
     } });
@@ -5399,24 +4834,24 @@ function yu() {
     } }), Object.defineProperty(t, "CodeGen", { enumerable: !0, get: function() {
       return l.CodeGen;
     } });
-    var d = /* @__PURE__ */ co();
+    var d = /* @__PURE__ */ to();
     Object.defineProperty(t, "ValidationError", { enumerable: !0, get: function() {
       return d.default;
     } });
-    var m = /* @__PURE__ */ sr();
+    var m = /* @__PURE__ */ rr();
     Object.defineProperty(t, "MissingRefError", { enumerable: !0, get: function() {
       return m.default;
     } });
   })(Vt, Vt.exports)), Vt.exports;
 }
-var $u = /* @__PURE__ */ yu();
-const bu = /* @__PURE__ */ Jc($u), vu = "https://json-schema.org/draft/2020-12/schema", wu = "https://raw.githubusercontent.com/omsf-eco-infra/alchemy-viz/main/schema/alchemy-viz.schema.json", _u = "alchemy-viz payload", Su = "Python-to-TypeScript contract bridge for gufe visualizations. Source of truth both languages are downstream of it. This schema is not strictly versioned or published as it is only internally consumed by this codebase. Schema description: one schema object per gufe class: every $def named *Viz is the visualization form of exactly one GufeTokenizable, it carries that object's `gufe-key`. Every reference from one gufe object to another is that object's gufe key, and the objects themselves live in the `registry` on the root payload. So a ligand network's nodes are keys, a chemical system's components and a transformation's protocol are keys and each one resolves to a complete, drawable object. An alchemical network whose forty systems share one protein carries that PDB once and points at it forty times, and the browser can still drill into it, because what it points at is a whole ProteinComponentViz. This is a single-shot dump rather than a conversation with a server, so the registry travels with the payload.", ku = [{ $ref: "#/$defs/SmallMoleculeComponentViz" }, { $ref: "#/$defs/ProteinComponentViz" }, { $ref: "#/$defs/SolvatedPDBComponentViz" }, { $ref: "#/$defs/ProteinMembraneComponentViz" }, { $ref: "#/$defs/SolventComponentViz" }, { $ref: "#/$defs/UnknownComponentViz" }, { $ref: "#/$defs/ProtocolViz" }, { $ref: "#/$defs/LigandAtomMappingViz" }, { $ref: "#/$defs/LigandNetworkViz" }, { $ref: "#/$defs/ChemicalSystemViz" }, { $ref: "#/$defs/TransformationViz" }, { $ref: "#/$defs/AlchemicalNetworkViz" }], Cu = /* @__PURE__ */ JSON.parse('{"GufeKey":{"title":"GufeKey","description":"A gufe key: the identity of a GufeTokenizable, of the form \'ClassName-<hex digest>\'. It is deterministic and repeatable within a software environment. Only its non-emptiness is checked","type":"string","minLength":1},"ComponentKey":{"title":"ComponentKey","description":"A gufe key naming a ComponentViz in the registry. Identical to GufeKey at validation time: JSON Schema has no way to say \'this string is the gufe-key of an entry in that array, and that entry has this type\', because that is a join across two parts of the document. What the name buys is that the referent\'s type is stated in the contract and carried into the generated TypeScript, instead of living only in a test and a view.","$ref":"#/$defs/GufeKey"},"SmallMoleculeComponentKey":{"title":"SmallMoleculeComponentKey","description":"A gufe key naming a SmallMoleculeComponentViz in the registry. Resolving it yields the whole molecule, SDF included. See ComponentKey for what the schema can and cannot check about that.","$ref":"#/$defs/GufeKey"},"ChemicalSystemKey":{"title":"ChemicalSystemKey","description":"A gufe key naming a ChemicalSystemViz in the registry. See ComponentKey for what the schema can and cannot check about that.","$ref":"#/$defs/GufeKey"},"ProtocolKey":{"title":"ProtocolKey","description":"A gufe key naming a ProtocolViz in the registry. Every transformation of a network usually names the same one. See ComponentKey for what the schema can and cannot check about that.","$ref":"#/$defs/GufeKey"},"Registry":{"title":"Registry","description":"The pool of gufe objects this payload refers to by key, each a complete payload object in its own right. Entries are unique by `gufe-key` and sorted by (type, gufe-key) so a committed fixture is byte-stable. JSON Schema cannot express \'unique by a property\' or \'every reference resolves\', so both are covered by tests on the Python side and degraded over by the views.","type":"array","items":{"oneOf":[{"$ref":"#/$defs/ComponentViz"},{"$ref":"#/$defs/ProtocolViz"},{"$ref":"#/$defs/ChemicalSystemViz"}]}},"ComponentViz":{"title":"ComponentViz","description":"Any single chemical-system component","oneOf":[{"$ref":"#/$defs/SmallMoleculeComponentViz"},{"$ref":"#/$defs/ProteinComponentViz"},{"$ref":"#/$defs/SolvatedPDBComponentViz"},{"$ref":"#/$defs/ProteinMembraneComponentViz"},{"$ref":"#/$defs/SolventComponentViz"},{"$ref":"#/$defs/UnknownComponentViz"}]},"SmallMoleculeComponentViz":{"title":"SmallMoleculeComponentViz","description":"A small molecule, carried as a complete SDF record.","type":"object","properties":{"type":{"const":"SmallMoleculeComponentViz"},"gufe-key":{"$ref":"#/$defs/GufeKey"},"name":{"type":"string"},"sdf":{"type":"string","minLength":1,"description":"Complete inline SDF record, including the conformer."},"smiles":{"type":"string"},"total_charge":{"type":"integer","description":"Net formal charge. Displayed, never recomputed from the SDF."}},"required":["type","gufe-key","name","sdf","smiles","total_charge"],"additionalProperties":false},"ProteinComponentViz":{"title":"ProteinComponentViz","description":"A protein, carried as a complete PDB record.","type":"object","properties":{"type":{"const":"ProteinComponentViz"},"gufe-key":{"$ref":"#/$defs/GufeKey"},"name":{"type":"string"},"pdb":{"type":"string","minLength":1,"description":"Complete inline PDB representation."}},"required":["type","gufe-key","name","pdb"],"additionalProperties":false},"SolvatedPDBComponentViz":{"title":"SolvatedPDBComponentViz","description":"A protein with explicit solvent. A distinct type rather than a flag on ProteinComponentViz, because the discriminator is what a view dispatches on and the presence of waters changes what a sensible default representation is.","type":"object","properties":{"type":{"const":"SolvatedPDBComponentViz"},"gufe-key":{"$ref":"#/$defs/GufeKey"},"name":{"type":"string"},"pdb":{"type":"string","minLength":1,"description":"Complete inline PDB representation, including explicit solvent."}},"required":["type","gufe-key","name","pdb"],"additionalProperties":false},"ProteinMembraneComponentViz":{"title":"ProteinMembraneComponentViz","description":"A protein embedded in a membrane.","type":"object","properties":{"type":{"const":"ProteinMembraneComponentViz"},"gufe-key":{"$ref":"#/$defs/GufeKey"},"name":{"type":"string"},"pdb":{"type":"string","minLength":1,"description":"Complete inline PDB representation of the protein and membrane system."}},"required":["type","gufe-key","name","pdb"],"additionalProperties":false},"SolventComponentViz":{"title":"SolventComponentViz","description":"Bulk solvent settings. There is no structure to draw, so these are flat fields suitable for rendering as a settings card.","type":"object","properties":{"type":{"const":"SolventComponentViz"},"gufe-key":{"$ref":"#/$defs/GufeKey"},"name":{"type":"string"},"smiles":{"type":"string","minLength":1},"positive_ion":{"type":"string"},"negative_ion":{"type":"string"},"neutralize":{"type":"boolean"},"ion_concentration":{"type":"string","description":"Display-form concentration with units, for example \'0.15 molar\'. A string rather than a number because the unit is part of the value and the view only ever prints it."}},"required":["type","gufe-key","name","smiles","positive_ion","negative_ion","neutralize","ion_concentration"],"additionalProperties":false},"UnknownComponentViz":{"title":"UnknownComponentViz","description":"The graceful fallback for a component type this build does not recognize. gufe supports custom Component subclasses, so meeting one is an expected outcome rather than an error, and the browser answers it with \'sorry, there is no visualization for this\'. This covers an unrecognized type only: a recognized component whose serializer fails is a bug, and raises in Python rather than arriving here wearing a disguise.","type":"object","properties":{"type":{"const":"UnknownComponentViz"},"gufe-key":{"$ref":"#/$defs/GufeKey"},"name":{"type":"string"},"gufe_type":{"type":"string","minLength":1,"description":"The gufe class name, so the panel can say which type it could not draw."}},"required":["type","gufe-key","name","gufe_type"],"additionalProperties":false},"ProtocolViz":{"title":"ProtocolViz","description":"A gufe Protocol, named. Every transformation in an alchemical network usually shares one, so this is a registry entry that many edges point at rather than a class name repeated per edge. Settings are deliberately absent for now: they are large, deeply nested, and nothing draws them yet, adding a `settings` field later is additive and breaks nothing.","type":"object","properties":{"type":{"const":"ProtocolViz"},"gufe-key":{"$ref":"#/$defs/GufeKey"},"name":{"type":"string"},"gufe_type":{"type":"string","minLength":1,"description":"The Protocol\'s class name, which is what identifies it to a reader, a Protocol has no name of its own, so `name` is usually empty."}},"required":["type","gufe-key","name","gufe_type"],"additionalProperties":false},"ChemicalSystemViz":{"title":"ChemicalSystemViz","description":"A gufe ChemicalSystem: labels mapped to the gufe keys of its components.","type":"object","properties":{"type":{"const":"ChemicalSystemViz"},"gufe-key":{"$ref":"#/$defs/GufeKey"},"name":{"type":"string"},"components":{"type":"object","description":"ChemicalSystem labels mapped to the gufe keys of the components in the registry.","additionalProperties":{"$ref":"#/$defs/ComponentKey"}},"registry":{"$ref":"#/$defs/Registry"}},"required":["type","gufe-key","name","components"],"additionalProperties":false},"AtomMapping":{"title":"AtomMapping","description":"Atom index correspondence from molecule A to molecule B, as a list of index pairs. A list rather than an object keyed by A\'s index, because JSON object keys can only be strings: keying by index would put decimal strings such as \'12\' in the payload and leave both languages casting them back to integers, and it is Python\'s dict-of-int shape only by resemblance. As a list, both indices stay integers, and \'an entry has a B index for every A index\' becomes a `required` the schema states rather than a convention a reader has to trust. Pairs are ordered by `index_A` so a committed fixture is byte-stable.","type":"array","items":{"type":"object","properties":{"index_A":{"type":"integer","minimum":0,"description":"An atom index in molecule A."},"index_B":{"type":"integer","minimum":0,"description":"The atom index in molecule B that it maps to."}},"required":["index_A","index_B"],"additionalProperties":false}},"Annotations":{"title":"Annotations","description":"Free-form mapping metadata. gufe puts nothing here by design and every mapper picks its own keys, so this is deliberately open. Values are whatever survived being made JSON-safe. Displayed but never interpreted, with the single exception of \'score\'.","type":"object"},"LigandAtomMappingViz":{"title":"LigandAtomMappingViz","description":"One atom mapping between two small molecules. This is also what an edge of a ligand network is because the two endpoints are gufe keys either way: standalone they resolve in this object\'s own registry, and in a network they resolve in the network\'s, where they are the same entries the nodes name. `componentA` and `componentB` are the molecules the two sides of `componentA_to_componentB` index into: an `index_A` is an atom of the SmallMoleculeComponentViz that `componentA` names, and an `index_B` an atom of `componentB`\'s.","type":"object","properties":{"type":{"const":"LigandAtomMappingViz"},"gufe-key":{"$ref":"#/$defs/GufeKey"},"name":{"type":"string"},"componentA":{"$ref":"#/$defs/SmallMoleculeComponentKey"},"componentB":{"$ref":"#/$defs/SmallMoleculeComponentKey"},"componentA_to_componentB":{"$ref":"#/$defs/AtomMapping"},"score":{"type":["number","null"],"description":"The \'score\' annotation when it is a plain number, otherwise null. This is the one annotation key that is interpreted rather than displayed: it drives the edge colouring and the force layout\'s link distance."},"annotations":{"$ref":"#/$defs/Annotations"},"registry":{"$ref":"#/$defs/Registry"}},"required":["type","gufe-key","name","componentA","componentB","componentA_to_componentB","score","annotations"],"additionalProperties":false},"LigandNetworkViz":{"title":"LigandNetworkViz","description":"A ligand network: the ligands in the registry, the nodes as keys into it, and the mappings as edges. Deliberately not gufe\'s GraphML: that format embeds a gufe to_json moldict per node, so forwarding it would relocate the decoding problem into the browser rather than avoid it.","type":"object","properties":{"type":{"const":"LigandNetworkViz"},"gufe-key":{"$ref":"#/$defs/GufeKey"},"name":{"type":"string"},"registry":{"$ref":"#/$defs/Registry"},"nodes":{"type":"array","description":"The gufe key of each ligand, resolved in `registry`.","items":{"$ref":"#/$defs/SmallMoleculeComponentKey"}},"edges":{"type":"array","description":"The mappings, whose `componentA` and `componentB` name nodes of this network. JSON Schema cannot express that referential constraint, so a Python test covers it, and the view drops a dangling edge with a banner rather than failing.","items":{"$ref":"#/$defs/LigandAtomMappingViz"}}},"required":["type","gufe-key","name","registry","nodes","edges"],"additionalProperties":false},"TransformationViz":{"title":"TransformationViz","description":"A transformation between two chemical systems, both named by gufe key, as is its protocol: `stateA` is the system it starts from, `stateB` the one it ends at, and every edge of a network usually names the same protocol. This is also what an edge of an alchemical network is (there is no separate edge type) because `stateA` and `stateB` are keys either way, and in a network they are the keys the nodes name. NonTransformation uses this type too: it exposes the same stateA and stateB properties, both its single system, so it renders as a diff with no differences.","type":"object","properties":{"type":{"const":"TransformationViz"},"gufe-key":{"$ref":"#/$defs/GufeKey"},"name":{"type":"string"},"protocol":{"$ref":"#/$defs/ProtocolKey"},"stateA":{"$ref":"#/$defs/ChemicalSystemKey"},"stateB":{"$ref":"#/$defs/ChemicalSystemKey"},"mappings":{"type":"array","items":{"$ref":"#/$defs/LigandAtomMappingViz"}},"registry":{"$ref":"#/$defs/Registry"}},"required":["type","gufe-key","name","protocol","stateA","stateB","mappings"],"additionalProperties":false},"AlchemicalNetworkViz":{"title":"AlchemicalNetworkViz","description":"A graph of chemical systems joined by transformations. What repeats here is not the nodes and edges themselves but what they are made of: in practice every system shares one protein and every transformation shares one protocol. Both live in the registry, once, as whole objects so this view can show composition and topology while still letting a reader open a node and see the protein.","type":"object","properties":{"type":{"const":"AlchemicalNetworkViz"},"gufe-key":{"$ref":"#/$defs/GufeKey"},"name":{"type":"string"},"registry":{"$ref":"#/$defs/Registry"},"nodes":{"type":"array","description":"The gufe key of each ChemicalSystem, resolved in `registry`.","items":{"$ref":"#/$defs/ChemicalSystemKey"}},"edges":{"type":"array","description":"The transformations, whose `stateA` and `stateB` name nodes of this network.","items":{"$ref":"#/$defs/TransformationViz"}}},"required":["type","gufe-key","name","registry","nodes","edges"],"additionalProperties":false}}'), po = {
-  $schema: vu,
-  $id: wu,
-  title: _u,
-  description: Su,
-  oneOf: ku,
-  $defs: Cu
+var Wd = /* @__PURE__ */ Gd();
+const Jd = /* @__PURE__ */ Cc(Wd), Yd = "https://json-schema.org/draft/2020-12/schema", Xd = "https://raw.githubusercontent.com/omsf-eco-infra/alchemy-viz/main/schema/alchemy-viz.schema.json", Zd = "alchemy-viz payload", Qd = "Python-to-TypeScript contract bridge for gufe visualizations. Source of truth both languages are downstream of it. This schema is not strictly versioned or published as it is only internally consumed by this codebase. Schema description: one schema object per gufe class: every $def named *Viz is the visualization form of exactly one GufeTokenizable, it carries that object's `gufe-key`. Every reference from one gufe object to another is that object's gufe key, and the objects themselves live in the `registry` on the root payload. So a ligand network's nodes are keys, a chemical system's components and a transformation's protocol are keys and each one resolves to a complete, drawable object. An alchemical network whose forty systems share one protein carries that PDB once and points at it forty times, and the browser can still drill into it, because what it points at is a whole ProteinComponentViz. This is a single-shot dump rather than a conversation with a server, so the registry travels with the payload.", eu = [{ $ref: "#/$defs/SmallMoleculeComponentViz" }, { $ref: "#/$defs/ProteinComponentViz" }, { $ref: "#/$defs/SolvatedPDBComponentViz" }, { $ref: "#/$defs/ProteinMembraneComponentViz" }, { $ref: "#/$defs/SolventComponentViz" }, { $ref: "#/$defs/UnknownComponentViz" }, { $ref: "#/$defs/ProtocolViz" }, { $ref: "#/$defs/LigandAtomMappingViz" }, { $ref: "#/$defs/LigandNetworkViz" }, { $ref: "#/$defs/ChemicalSystemViz" }, { $ref: "#/$defs/TransformationViz" }, { $ref: "#/$defs/AlchemicalNetworkViz" }], tu = /* @__PURE__ */ JSON.parse('{"GufeKey":{"title":"GufeKey","description":"A gufe key: the identity of a GufeTokenizable, of the form \'ClassName-<hex digest>\'. It is deterministic and repeatable within a software environment. Only its non-emptiness is checked","type":"string","minLength":1},"ComponentKey":{"title":"ComponentKey","description":"A gufe key naming a ComponentViz in the registry. Identical to GufeKey at validation time: JSON Schema has no way to say \'this string is the gufe-key of an entry in that array, and that entry has this type\', because that is a join across two parts of the document. What the name buys is that the referent\'s type is stated in the contract and carried into the generated TypeScript, instead of living only in a test and a view.","$ref":"#/$defs/GufeKey"},"SmallMoleculeComponentKey":{"title":"SmallMoleculeComponentKey","description":"A gufe key naming a SmallMoleculeComponentViz in the registry. Resolving it yields the whole molecule, SDF included. See ComponentKey for what the schema can and cannot check about that.","$ref":"#/$defs/GufeKey"},"ChemicalSystemKey":{"title":"ChemicalSystemKey","description":"A gufe key naming a ChemicalSystemViz in the registry. See ComponentKey for what the schema can and cannot check about that.","$ref":"#/$defs/GufeKey"},"ProtocolKey":{"title":"ProtocolKey","description":"A gufe key naming a ProtocolViz in the registry. Every transformation of a network usually names the same one. See ComponentKey for what the schema can and cannot check about that.","$ref":"#/$defs/GufeKey"},"Registry":{"title":"Registry","description":"The pool of gufe objects this payload refers to by key, each a complete payload object in its own right. Entries are unique by `gufe-key` and sorted by (type, gufe-key) so a committed fixture is byte-stable. JSON Schema cannot express \'unique by a property\' or \'every reference resolves\', so both are covered by tests on the Python side and degraded over by the views.","type":"array","items":{"oneOf":[{"$ref":"#/$defs/ComponentViz"},{"$ref":"#/$defs/ProtocolViz"},{"$ref":"#/$defs/ChemicalSystemViz"}]}},"ComponentViz":{"title":"ComponentViz","description":"Any single chemical-system component","oneOf":[{"$ref":"#/$defs/SmallMoleculeComponentViz"},{"$ref":"#/$defs/ProteinComponentViz"},{"$ref":"#/$defs/SolvatedPDBComponentViz"},{"$ref":"#/$defs/ProteinMembraneComponentViz"},{"$ref":"#/$defs/SolventComponentViz"},{"$ref":"#/$defs/UnknownComponentViz"}]},"SmallMoleculeComponentViz":{"title":"SmallMoleculeComponentViz","description":"A small molecule, carried as a complete SDF record.","type":"object","properties":{"type":{"const":"SmallMoleculeComponentViz"},"gufe-key":{"$ref":"#/$defs/GufeKey"},"name":{"type":"string"},"sdf":{"type":"string","minLength":1,"description":"Complete inline SDF record, including the conformer."},"smiles":{"type":"string"},"total_charge":{"type":"integer","description":"Net formal charge. Displayed, never recomputed from the SDF."}},"required":["type","gufe-key","name","sdf","smiles","total_charge"],"additionalProperties":false},"ProteinComponentViz":{"title":"ProteinComponentViz","description":"A protein, carried as a complete PDB record.","type":"object","properties":{"type":{"const":"ProteinComponentViz"},"gufe-key":{"$ref":"#/$defs/GufeKey"},"name":{"type":"string"},"pdb":{"type":"string","minLength":1,"description":"Complete inline PDB representation."}},"required":["type","gufe-key","name","pdb"],"additionalProperties":false},"SolvatedPDBComponentViz":{"title":"SolvatedPDBComponentViz","description":"A protein with explicit solvent. A distinct type rather than a flag on ProteinComponentViz, because the discriminator is what a view dispatches on and the presence of waters changes what a sensible default representation is.","type":"object","properties":{"type":{"const":"SolvatedPDBComponentViz"},"gufe-key":{"$ref":"#/$defs/GufeKey"},"name":{"type":"string"},"pdb":{"type":"string","minLength":1,"description":"Complete inline PDB representation, including explicit solvent."}},"required":["type","gufe-key","name","pdb"],"additionalProperties":false},"ProteinMembraneComponentViz":{"title":"ProteinMembraneComponentViz","description":"A protein embedded in a membrane.","type":"object","properties":{"type":{"const":"ProteinMembraneComponentViz"},"gufe-key":{"$ref":"#/$defs/GufeKey"},"name":{"type":"string"},"pdb":{"type":"string","minLength":1,"description":"Complete inline PDB representation of the protein and membrane system."}},"required":["type","gufe-key","name","pdb"],"additionalProperties":false},"SolventComponentViz":{"title":"SolventComponentViz","description":"Bulk solvent settings. There is no structure to draw, so these are flat fields suitable for rendering as a settings card.","type":"object","properties":{"type":{"const":"SolventComponentViz"},"gufe-key":{"$ref":"#/$defs/GufeKey"},"name":{"type":"string"},"smiles":{"type":"string","minLength":1},"positive_ion":{"type":"string"},"negative_ion":{"type":"string"},"neutralize":{"type":"boolean"},"ion_concentration":{"type":"string","description":"Display-form concentration with units, for example \'0.15 molar\'. A string rather than a number because the unit is part of the value and the view only ever prints it."}},"required":["type","gufe-key","name","smiles","positive_ion","negative_ion","neutralize","ion_concentration"],"additionalProperties":false},"UnknownComponentViz":{"title":"UnknownComponentViz","description":"The graceful fallback for a component type this build does not recognize. gufe supports custom Component subclasses, so meeting one is an expected outcome rather than an error, and the browser answers it with \'sorry, there is no visualization for this\'. This covers an unrecognized type only: a recognized component whose serializer fails is a bug, and raises in Python rather than arriving here wearing a disguise.","type":"object","properties":{"type":{"const":"UnknownComponentViz"},"gufe-key":{"$ref":"#/$defs/GufeKey"},"name":{"type":"string"},"gufe_type":{"type":"string","minLength":1,"description":"The gufe class name, so the panel can say which type it could not draw."}},"required":["type","gufe-key","name","gufe_type"],"additionalProperties":false},"ProtocolViz":{"title":"ProtocolViz","description":"A gufe Protocol, named. Every transformation in an alchemical network usually shares one, so this is a registry entry that many edges point at rather than a class name repeated per edge. Settings are deliberately absent for now: they are large, deeply nested, and nothing draws them yet, adding a `settings` field later is additive and breaks nothing.","type":"object","properties":{"type":{"const":"ProtocolViz"},"gufe-key":{"$ref":"#/$defs/GufeKey"},"name":{"type":"string"},"gufe_type":{"type":"string","minLength":1,"description":"The Protocol\'s class name, which is what identifies it to a reader, a Protocol has no name of its own, so `name` is usually empty."}},"required":["type","gufe-key","name","gufe_type"],"additionalProperties":false},"ChemicalSystemViz":{"title":"ChemicalSystemViz","description":"A gufe ChemicalSystem: labels mapped to the gufe keys of its components.","type":"object","properties":{"type":{"const":"ChemicalSystemViz"},"gufe-key":{"$ref":"#/$defs/GufeKey"},"name":{"type":"string"},"components":{"type":"object","description":"ChemicalSystem labels mapped to the gufe keys of the components in the registry.","additionalProperties":{"$ref":"#/$defs/ComponentKey"}},"registry":{"$ref":"#/$defs/Registry"}},"required":["type","gufe-key","name","components"],"additionalProperties":false},"AtomMapping":{"title":"AtomMapping","description":"Atom index correspondence from molecule A to molecule B, as a list of index pairs. A list rather than an object keyed by A\'s index, because JSON object keys can only be strings: keying by index would put decimal strings such as \'12\' in the payload and leave both languages casting them back to integers, and it is Python\'s dict-of-int shape only by resemblance. As a list, both indices stay integers, and \'an entry has a B index for every A index\' becomes a `required` the schema states rather than a convention a reader has to trust. Pairs are ordered by `index_A` so a committed fixture is byte-stable.","type":"array","items":{"type":"object","properties":{"index_A":{"type":"integer","minimum":0,"description":"An atom index in molecule A."},"index_B":{"type":"integer","minimum":0,"description":"The atom index in molecule B that it maps to."}},"required":["index_A","index_B"],"additionalProperties":false}},"Annotations":{"title":"Annotations","description":"Free-form mapping metadata. gufe puts nothing here by design and every mapper picks its own keys, so this is deliberately open. Values are whatever survived being made JSON-safe. Displayed but never interpreted, with the single exception of \'score\'.","type":"object"},"LigandAtomMappingViz":{"title":"LigandAtomMappingViz","description":"One atom mapping between two small molecules. This is also what an edge of a ligand network is because the two endpoints are gufe keys either way: standalone they resolve in this object\'s own registry, and in a network they resolve in the network\'s, where they are the same entries the nodes name. `componentA` and `componentB` are the molecules the two sides of `componentA_to_componentB` index into: an `index_A` is an atom of the SmallMoleculeComponentViz that `componentA` names, and an `index_B` an atom of `componentB`\'s.","type":"object","properties":{"type":{"const":"LigandAtomMappingViz"},"gufe-key":{"$ref":"#/$defs/GufeKey"},"name":{"type":"string"},"componentA":{"$ref":"#/$defs/SmallMoleculeComponentKey"},"componentB":{"$ref":"#/$defs/SmallMoleculeComponentKey"},"componentA_to_componentB":{"$ref":"#/$defs/AtomMapping"},"score":{"type":["number","null"],"description":"The \'score\' annotation when it is a plain number, otherwise null. This is the one annotation key that is interpreted rather than displayed: it drives the edge colouring and the force layout\'s link distance."},"annotations":{"$ref":"#/$defs/Annotations"},"registry":{"$ref":"#/$defs/Registry"}},"required":["type","gufe-key","name","componentA","componentB","componentA_to_componentB","score","annotations"],"additionalProperties":false},"LigandNetworkViz":{"title":"LigandNetworkViz","description":"A ligand network: the ligands in the registry, the nodes as keys into it, and the mappings as edges. Deliberately not gufe\'s GraphML: that format embeds a gufe to_json moldict per node, so forwarding it would relocate the decoding problem into the browser rather than avoid it.","type":"object","properties":{"type":{"const":"LigandNetworkViz"},"gufe-key":{"$ref":"#/$defs/GufeKey"},"name":{"type":"string"},"registry":{"$ref":"#/$defs/Registry"},"nodes":{"type":"array","description":"The gufe key of each ligand, resolved in `registry`.","items":{"$ref":"#/$defs/SmallMoleculeComponentKey"}},"edges":{"type":"array","description":"The mappings, whose `componentA` and `componentB` name nodes of this network. JSON Schema cannot express that referential constraint, so a Python test covers it, and the view drops a dangling edge with a banner rather than failing.","items":{"$ref":"#/$defs/LigandAtomMappingViz"}}},"required":["type","gufe-key","name","registry","nodes","edges"],"additionalProperties":false},"TransformationViz":{"title":"TransformationViz","description":"A transformation between two chemical systems, both named by gufe key, as is its protocol: `stateA` is the system it starts from, `stateB` the one it ends at, and every edge of a network usually names the same protocol. This is also what an edge of an alchemical network is (there is no separate edge type) because `stateA` and `stateB` are keys either way, and in a network they are the keys the nodes name. NonTransformation uses this type too: it exposes the same stateA and stateB properties, both its single system, so it renders as a diff with no differences.","type":"object","properties":{"type":{"const":"TransformationViz"},"gufe-key":{"$ref":"#/$defs/GufeKey"},"name":{"type":"string"},"protocol":{"$ref":"#/$defs/ProtocolKey"},"stateA":{"$ref":"#/$defs/ChemicalSystemKey"},"stateB":{"$ref":"#/$defs/ChemicalSystemKey"},"mappings":{"type":"array","items":{"$ref":"#/$defs/LigandAtomMappingViz"}},"registry":{"$ref":"#/$defs/Registry"}},"required":["type","gufe-key","name","protocol","stateA","stateB","mappings"],"additionalProperties":false},"AlchemicalNetworkViz":{"title":"AlchemicalNetworkViz","description":"A graph of chemical systems joined by transformations. What repeats here is not the nodes and edges themselves but what they are made of: in practice every system shares one protein and every transformation shares one protocol. Both live in the registry, once, as whole objects so this view can show composition and topology while still letting a reader open a node and see the protein.","type":"object","properties":{"type":{"const":"AlchemicalNetworkViz"},"gufe-key":{"$ref":"#/$defs/GufeKey"},"name":{"type":"string"},"registry":{"$ref":"#/$defs/Registry"},"nodes":{"type":"array","description":"The gufe key of each ChemicalSystem, resolved in `registry`.","items":{"$ref":"#/$defs/ChemicalSystemKey"}},"edges":{"type":"array","description":"The transformations, whose `stateA` and `stateB` name nodes of this network.","items":{"$ref":"#/$defs/TransformationViz"}}},"required":["type","gufe-key","name","registry","nodes","edges"],"additionalProperties":false}}'), so = {
+  $schema: Yd,
+  $id: Xd,
+  title: Zd,
+  description: Qd,
+  oneOf: eu,
+  $defs: tu
 }, Zm = [
   "AlchemicalNetworkViz",
   "ChemicalSystemViz",
@@ -5430,35 +4865,600 @@ const bu = /* @__PURE__ */ Jc($u), vu = "https://json-schema.org/draft/2020-12/s
   "SolventComponentViz",
   "TransformationViz",
   "UnknownComponentViz"
-], ho = po.$id, mo = new bu({ allErrors: !0, strict: !1 });
-mo.addSchema(po, ho);
-const fi = mo.getSchema(ho), Eu = Object.entries(po.$defs).filter(
+], io = so.$id, ao = new Jd({ allErrors: !0, strict: !1 });
+ao.addSchema(so, io);
+const ai = ao.getSchema(io), nu = Object.entries(so.$defs).filter(
   ([e, t]) => t.properties?.type?.const === e
-).map(([e]) => e).sort(), Ca = /* @__PURE__ */ new Map();
-for (const e of Eu) {
-  const t = mo.getSchema(`${ho}#/$defs/${e}`);
-  t && Ca.set(e, t);
+).map(([e]) => e).sort(), fa = /* @__PURE__ */ new Map();
+for (const e of nu) {
+  const t = ao.getSchema(`${io}#/$defs/${e}`);
+  t && fa.set(e, t);
 }
-const pi = { valid: !0, issues: [] };
-function hi(e) {
+const ci = { valid: !0, issues: [] };
+function li(e) {
   return (e ?? []).map((t) => ({
     path: t.instancePath || "",
     message: t.keyword === "additionalProperties" ? `unknown property ${JSON.stringify(t.params.additionalProperty)}` : t.message ?? "is invalid"
   }));
 }
-function xu(e) {
+function ru(e) {
   if (e == null || typeof e != "object" || Array.isArray(e))
     return {
       valid: !1,
       issues: [{ path: "", message: "must be a JSON object" }]
     };
-  const t = e.type, n = typeof t == "string" ? Ca.get(t) : void 0;
-  return n ? n(e) ? pi : { valid: !1, issues: hi(n.errors) } : fi(e) ? pi : { valid: !1, issues: hi(fi.errors) };
+  const t = e.type, n = typeof t == "string" ? fa.get(t) : void 0;
+  return n ? n(e) ? ci : { valid: !1, issues: li(n.errors) } : ai(e) ? ci : { valid: !1, issues: li(ai.errors) };
 }
-function Au(e, t = 8) {
+function ou(e, t = 8) {
   const n = e.slice(0, t).map((r) => `${r.path || "(root)"}: ${r.message}`);
   return e.length > t && n.push(`... and ${e.length - t} more`), n.join(`
 `);
+}
+function N(e, t, n) {
+  const r = document.createElement(e);
+  return t && (r.style.cssText = t), n != null && (r.textContent = n), r;
+}
+function Ie(e) {
+  return String(e ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+function ve(e) {
+  if (e == null) return "unknown error";
+  const t = e.message;
+  if (typeof t == "string" && t) return t;
+  const n = String(e);
+  return n === "[object Object]" ? e.name || "unknown error" : n;
+}
+const Nt = (e) => e.toLocaleString("en-US"), Qe = "-", Kn = (e, t) => e.length > t ? `${e.slice(0, t - 1)}...` : e;
+function pa(e, t) {
+  if (t(e.clientWidth), typeof ResizeObserver > "u") return () => {
+  };
+  const n = new ResizeObserver(() => t(e.clientWidth));
+  return n.observe(e), () => n.disconnect();
+}
+const su = 460;
+function co(e, t, n = su) {
+  let r = null;
+  return pa(e, (s) => {
+    const o = s > 0 && s < n;
+    o !== r && (r = o, t(o));
+  });
+}
+const iu = ["debug", "gufe-debug"], au = "debug", cu = "ALCHEMY_VIZ_DEBUG";
+function lu() {
+  return !!globalThis[cu];
+}
+function du() {
+  try {
+    const e = globalThis.location?.search;
+    if (!e) return !1;
+    const t = new URLSearchParams(e);
+    return iu.some((n) => t.has(n));
+  } catch {
+    return !1;
+  }
+}
+function uu(e) {
+  return e?.hasAttribute?.(au) ? !0 : lu() || du();
+}
+function fu(e) {
+  try {
+    return JSON.stringify(e, null, 2) ?? String(e);
+  } catch (t) {
+    return `<could not be stringified: ${ve(t)}>`;
+  }
+}
+function pu(e, t, n) {
+  if (!uu(n)) return;
+  const r = fu(t), s = t?.type, o = `[alchemy-viz] ${e}${typeof s == "string" ? ` ${s}` : ""} (${r.length} chars)`, i = typeof console.groupCollapsed == "function";
+  i ? console.groupCollapsed(o) : console.log(o), console.log(r), console.log(t), i && console.groupEnd?.();
+}
+const Je = {
+  dark: {
+    appBg: "#2b2b40",
+    panelBg: "#33334d",
+    cardBg: "#33334d",
+    cardBgHover: "#3d3d5c",
+    cardBgActive: "#1f3a63",
+    cardBorder: "#45455e",
+    cardBorderActive: "#4182e4",
+    splitBorder: "#45455e",
+    toolbarBg: "#33334d",
+    toolbarBorder: "#45455e",
+    tooltipBg: "#33334d",
+    tooltipBorder: "#45455e",
+    titleColor: "#51cbee",
+    textPrimary: "#f2f3f7",
+    textMuted: "#b9bccb",
+    textMuted2: "#8f93a6",
+    selectBg: "#2b2b40",
+    selectBorder: "#45455e",
+    labelBg: "#33334d",
+    labelFg: "#51cbee",
+    badgeBg: "#1f3a63",
+    badgeFg: "#51cbee",
+    switcherBg: "rgba(43,43,64,0.94)",
+    btnBg: "#33334d",
+    btnBgHover: "#3d3d5c",
+    btnBgActive: "#4182e4",
+    btnFg: "#f2f3f7",
+    btnBorder: "#45455e",
+    okBg: "#14532d",
+    okFg: "#86efac",
+    warnBg: "#3b1d1d",
+    warnFg: "#ffb4b4",
+    warnBorder: "#7f2a2a",
+    errorFg: "#ff8080",
+    viewerBg: "0x2b2b40",
+    canvas2DBg: "#2b2b40",
+    diffUnchanged: "#64748b",
+    diffChanged: "#d9a300",
+    diffAdded: "#2a9d4a",
+    diffRemoved: "#d62828",
+    netCanvasBg: "#2b2b40",
+    netNodeFill: "#33334d",
+    netNodeStroke: "#6a6c82",
+    netNodeLabel: "#f2f3f7",
+    netMol2dBg: "#2b2b40",
+    netNodeCaption: "#b9bccb",
+    netMol2dCaption: "#b9bccb",
+    netInitials: "#51cbee",
+    netMatchFill: "#4a3c22",
+    netMatchStroke: "#e69f00",
+    netMatchAtom: "#e69f00",
+    netEdgeRamp: ["#45455e", "#51cbee"],
+    netEdgeLine: "#8f93a6",
+    netEdgeLabel: "#f2f3f7",
+    netHaloColor: "#51cbee",
+    netEdgeSelect: "#e0457e",
+    netGroupFill: ["#1f3a63", "#12403c", "#3a1f37", "#4a3c22", "#243a5e"],
+    netGroupStroke: ["#4182e4", "#00bdaa", "#c060b8", "#e69f00", "#8f93a6"],
+    netProtocolStroke: [
+      "#4182e4",
+      "#00bdaa",
+      "#c060b8",
+      "#e69f00",
+      "#5ec26a",
+      "#f4714e",
+      "#9d8df1",
+      "#ef6f9b",
+      "#b5c94a",
+      "#c7cbdd"
+    ]
+  },
+  light: {
+    appBg: "#ffffff",
+    panelBg: "#f7f8fa",
+    cardBg: "#ffffff",
+    cardBgHover: "#f0f4fb",
+    cardBgActive: "#e6effc",
+    cardBorder: "#eeeeee",
+    cardBorderActive: "#4182e4",
+    splitBorder: "#eeeeee",
+    toolbarBg: "#f7f8fa",
+    toolbarBorder: "#eeeeee",
+    tooltipBg: "#ffffff",
+    tooltipBorder: "#cccccc",
+    titleColor: "#4182e4",
+    textPrimary: "#333333",
+    textMuted: "#666666",
+    textMuted2: "#999999",
+    selectBg: "#ffffff",
+    selectBorder: "#cccccc",
+    labelBg: "#f7f8fa",
+    labelFg: "#4182e4",
+    badgeBg: "#e6effc",
+    badgeFg: "#4182e4",
+    switcherBg: "rgba(255,255,255,0.94)",
+    btnBg: "#ffffff",
+    btnBgHover: "#f0f4fb",
+    btnBgActive: "#4182e4",
+    btnFg: "#333333",
+    btnBorder: "#cccccc",
+    okBg: "#dcfce7",
+    okFg: "#166534",
+    warnBg: "#fee2e2",
+    warnFg: "#991b1b",
+    warnBorder: "#fecaca",
+    errorFg: "#c33",
+    viewerBg: "0xffffff",
+    canvas2DBg: "#ffffff",
+    diffUnchanged: "#94a3b8",
+    diffChanged: "#b45309",
+    diffAdded: "#2a9d4a",
+    diffRemoved: "#d62828",
+    netCanvasBg: "#ffffff",
+    netNodeFill: "#ffffff",
+    netNodeStroke: "#cccccc",
+    netNodeLabel: "#333333",
+    netMol2dBg: "#ffffff",
+    netNodeCaption: "#666666",
+    netMol2dCaption: "#666666",
+    netInitials: "#4182e4",
+    netMatchFill: "#fdf1d8",
+    netMatchStroke: "#e69f00",
+    netMatchAtom: "#c07d00",
+    netEdgeRamp: ["#e8eaef", "#4182e4"],
+    netEdgeLine: "#999999",
+    netEdgeLabel: "#333333",
+    netHaloColor: "#51cbee",
+    netEdgeSelect: "#c2185b",
+    netGroupFill: ["#e6effc", "#d9f5f2", "#f6e7f4", "#fdf1d8", "#eef0f4"],
+    netGroupStroke: ["#4182e4", "#009e8f", "#8a2283", "#c07d00", "#666666"],
+    netProtocolStroke: [
+      "#2f6fd0",
+      "#009e8f",
+      "#8a2283",
+      "#c07d00",
+      "#2e8b3d",
+      "#d1441c",
+      "#6a4fd0",
+      "#b3306a",
+      "#6f7d1c",
+      "#4a5160"
+    ]
+  }
+};
+function hu() {
+  try {
+    return globalThis.matchMedia?.("(prefers-color-scheme: dark)").matches ?? !1;
+  } catch {
+    return !1;
+  }
+}
+const di = "data-gufe-theme";
+function lo() {
+  return hu() ? "dark" : "light";
+}
+let ue = Je[lo()];
+const ha = "--gufe-", ma = Object.keys(Je.light).filter(
+  (e) => e !== "viewerBg" && typeof Je.light[e] == "string"
+), j = Object.fromEntries(ma.map((e) => [e, `var(${ha}${e})`])), Er = (e) => ma.map((t) => `${ha}${t}:${e[t]};`).join("");
+function mu() {
+  return [
+    `:root{color-scheme:light dark;${Er(Je.light)}}`,
+    `@media (prefers-color-scheme:dark){:root:not([${di}="light"]){${Er(Je.dark)}}}`,
+    `:root[${di}="dark"]{${Er(Je.dark)}}`,
+    // A button's three states, in one place. Every button in the codebase is
+    // built from `BUTTON.base`, which deliberately sets no background: these do,
+    // so that hovering is a stylesheet rule rather than a pair of handlers on
+    // every button, written slightly differently each time.
+    `.gufe-btn{background:${j.btnBg};}`,
+    `.gufe-btn:hover:not(:disabled){background:${j.btnBgHover};}`,
+    `.gufe-btn[aria-pressed="true"],.gufe-btn[aria-expanded="true"],.gufe-btn[data-gufe-on="1"]{background:${j.btnBgActive};}`,
+    ".gufe-btn:disabled{opacity:.5;cursor:default;}",
+    // The same for a pickable card or row, whose selected state is `aria-pressed`
+    // for the same reason: it is the accessible fact, so styling from it cannot
+    // drift out of step with what a screen reader is told.
+    `.gufe-pick{background:${j.cardBg};border-color:${j.cardBorder};}`,
+    `.gufe-pick:hover{background:${j.cardBgHover};}`,
+    `.gufe-pick[aria-pressed="true"]{background:${j.cardBgActive};border-color:${j.cardBorderActive};}`,
+    // A chip that selects what it counts. Its resting state is no background at
+    // all - it is a count in a row of counts, not a control asking to be pressed
+    // - so it is its own rule rather than a `gufe-pick` with the ground removed.
+    ".gufe-chip{background:none;}",
+    `.gufe-chip:hover{background:${j.cardBgHover};}`,
+    `.gufe-chip[aria-pressed="true"]{background:${j.cardBgActive};color:${j.textPrimary};}`
+  ].join(`
+`);
+}
+const ui = "alchemy-viz-theme";
+function ga() {
+  if (typeof document > "u" || document.getElementById(ui)) return;
+  const e = document.createElement("style");
+  e.id = ui, e.textContent = mu(), document.head.appendChild(e);
+}
+const ee = {
+  family: "'Inter',system-ui,sans-serif",
+  mono: "ui-monospace,SFMono-Regular,Menlo,monospace",
+  /** Label captions and dense readouts. */
+  tiny: "10px",
+  /** The default for chrome: chips, legends, list rows. */
+  small: "11px",
+  /** Body text, toolbars, form controls. */
+  body: "12px",
+  /** Pane labels and anything heading a section of a view. */
+  heading: "13px",
+  /** A view's title. */
+  title: "15px",
+  /**
+   * The one value a card is built around: a formula, a concentration. Large
+   * enough that a reader takes it from the shape of the card rather than from
+   * reading a row, which is the only reason to use it - a card with two of
+   * these has no hierarchy left.
+   */
+  display: "26px"
+}, ge = {
+  normal: "400",
+  bold: "700"
+}, X = {
+  xs: "2px",
+  sm: "4px",
+  md: "6px",
+  lg: "8px",
+  xl: "10px",
+  xxl: "14px"
+}, Ee = {
+  sm: "3px",
+  md: "6px",
+  lg: "8px",
+  xl: "10px",
+  pill: "999px"
+}, ke = {
+  title: j.titleColor,
+  primary: j.textPrimary,
+  muted: j.textMuted,
+  faint: j.textMuted2,
+  error: j.errorFg
+}, Lt = {
+  card: j.cardBg,
+  /**
+   * Where a 3D engine draws. Interface, not chemistry: it is the paper.
+   *
+   * The one literal here, and a function so it is read when a viewer is built
+   * rather than when this module loads. 3Dmol wants `0x2b2b40`, which is not a
+   * colour CSS has ever heard of, so this is the one surface a custom property
+   * cannot carry.
+   */
+  viewer: () => ue.viewerBg
+}, fi = {
+  // `max-width` and `box-sizing` are what keep a button inside whatever holds
+  // it. A label wider than the menu column would otherwise run out over the
+  // picture, and `width:100%` on a padded, bordered button means 100% plus the
+  // padding and the border - twenty pixels past the edge of the panel.
+  base: `color:${j.btnFg};border:1px solid ${j.btnBorder};padding:${X.sm} 9px;font-size:${ee.small};font-weight:${ge.bold};border-radius:${Ee.sm};cursor:pointer;font-family:inherit;max-width:100%;box-sizing:border-box;`,
+  /** What the stylesheet in `theme.ts` paints. */
+  className: "gufe-btn"
+}, ya = `background:${j.selectBg};color:${j.textPrimary};border:1px solid ${j.selectBorder};border-radius:${Ee.md};padding:${X.sm} ${X.lg};font-size:${ee.body};cursor:pointer;font-family:inherit;`, $a = `${ya}width:100%;box-sizing:border-box;cursor:text;`, ba = "24px", gu = `display:flex;align-items:flex-start;gap:12px;padding:9px ${X.xxl};flex-shrink:0;line-height:${ba};background:${j.toolbarBg};border-bottom:1px solid ${j.toolbarBorder};`, Xn = { min: "236px", max: "340px" }, et = {
+  min: "--gufe-menu-min",
+  max: "--gufe-menu-max",
+  ruleX: "--gufe-menu-rule-x",
+  ruleY: "--gufe-menu-rule-y"
+}, va = `display:flex;flex-direction:column;gap:${X.lg};flex:1;min-width:var(${et.min},${Xn.min});max-width:var(${et.max},${Xn.max});box-sizing:border-box;padding:${X.xl};min-height:0;overflow-y:auto;background:${j.panelBg};border:0 solid ${j.splitBorder};border-right-width:var(${et.ruleX},1px);border-bottom-width:var(${et.ruleY},0);`, yu = "45%", $u = "flex:1 1 auto;min-height:84px;overflow:auto;display:flex;flex-direction:column;gap:3px;", pi = `display:flex;align-items:center;gap:${X.xl};flex-wrap:wrap;padding:${X.lg} ${X.xxl};flex-shrink:0;background:${j.toolbarBg};border-top:1px solid ${j.toolbarBorder};`, bu = `flex-shrink:0;padding:${X.sm} ${X.xl};font-size:${ee.heading};font-weight:${ge.bold};color:${j.labelFg};background:${j.labelBg};`, uo = `position:absolute;top:${X.md};left:${X.md};z-index:10;pointer-events:none;max-width:calc(100% - ${X.xxl} - ${X.xxl});white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:${X.xs} ${X.lg};border-radius:${Ee.md};font-size:${ee.heading};font-weight:${ge.bold};color:${j.labelFg};background:${j.labelBg};`, vu = `padding:${X.xs} ${X.lg};border-radius:${Ee.md};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:${j.labelFg};background:${j.labelBg};`, wu = `position:absolute;top:${X.lg};left:${X.lg};z-index:15;display:flex;align-items:center;gap:${X.md};min-width:0;max-width:calc(100% - ${X.xxl} - ${X.xxl});`, _u = "42px", Su = `display:flex;flex-direction:column;gap:${X.xs};padding:${X.xxl} 18px;border-radius:${Ee.xl};background:${j.cardBg};border:1px solid ${j.cardBorder};`, fo = {
+  card: `display:flex;flex-direction:column;align-items:flex-start;gap:${X.sm};padding:${X.lg} ${X.xl};text-align:left;border-radius:${Ee.lg};border:1px solid;cursor:pointer;font-family:inherit;font-size:${ee.body};width:100%;`,
+  /** The compact form: one line in a network menu's list rather than a card. */
+  row: `display:flex;align-items:center;gap:${X.md};padding:5px ${X.lg};border:1px solid;border-radius:${X.md};text-align:left;font-family:inherit;font-size:${ee.small};cursor:pointer;width:100%;min-width:0;color:${j.textPrimary};`,
+  className: "gufe-pick"
+}, ku = `position:absolute;z-index:30;pointer-events:none;opacity:0;transition:opacity .12s ease;padding:7px ${X.xl};border-radius:${Ee.md};font-size:${ee.small};line-height:1.5;max-width:260px;background:${j.tooltipBg};border:1px solid ${j.tooltipBorder};color:${j.textPrimary};box-shadow:0 4px 14px rgba(0,0,0,0.28);`, wa = `position:absolute;bottom:${X.xl};right:${X.xl};display:flex;gap:${X.sm};padding:${X.sm};border-radius:${Ee.md};z-index:10;background:${j.switcherBg};box-shadow:0 2px 8px rgba(0,0,0,0.25);`, Cu = `font-family:${ee.mono};font-size:${ee.small};line-height:1.7;color:${j.textMuted};`, qr = `font-size:${ee.small};font-weight:${ge.bold};letter-spacing:.08em;text-transform:uppercase;color:${j.textMuted2};`, Pe = {
+  row: `display:flex;flex-wrap:wrap;align-items:center;gap:${X.xs} ${X.sm};font-size:${ee.small};`,
+  plain: `display:inline-flex;align-items:center;padding:${X.xs} ${X.md};border:1px solid transparent;border-radius:${Ee.pill};font-family:inherit;font-size:${ee.small};color:${j.textMuted};`,
+  /**
+   * A chip that selects what it counts.
+   *
+   * Deliberately sets no `background`: like `BUTTON` and `PICK`, resting, hover
+   * and picked are one stylesheet rule keyed off `aria-pressed`, and an inline
+   * background would beat it. Pair it with `CHIP.className`.
+   */
+  button: `cursor:pointer;border-color:${j.btnBorder};`,
+  /**
+   * A chip that is read rather than clicked: a value the card is quoting, in a
+   * box that says so. Drawn like a button and deliberately not one, so it does
+   * not invite the click a `button` chip answers.
+   */
+  outline: `background:${j.btnBg};border-color:${j.btnBorder};color:${j.textPrimary};`,
+  /**
+   * What a `button` chip's border goes back to.
+   *
+   * The same value `button` sets, named so that a chip which overrides its
+   * border to say something - the alchemical network's protocol chips, where the
+   * picked one takes the colour its lines are drawn in - has a resting value to
+   * put back without reaching into the palette for it.
+   */
+  restBorder: j.btnBorder,
+  className: "gufe-chip"
+}, Eu = `font-size:${ee.small};line-height:1.6;color:${j.textMuted2};`;
+function Ve(e, t, n) {
+  const r = N("span", "display:inline-flex;align-items:center;gap:5px;white-space:nowrap;");
+  n && r.appendChild(
+    N("span", `width:8px;height:8px;border-radius:50%;background:${n};display:inline-block;`)
+  );
+  const s = N("span");
+  return s.innerHTML = `${Ie(e)} <b style="color:${ke.primary};">${Ie(t)}</b>`, r.appendChild(s), r;
+}
+function lt(e, t) {
+  const n = N("div", "", `⚠ ${t}`);
+  return n.style.cssText = `position:absolute;top:${X.xl};left:50%;transform:translateX(-50%);max-width:90%;z-index:20;padding:${X.md} ${X.xxl};border-radius:${Ee.md};font-size:${ee.body};background:${j.warnBg};color:${j.warnFg};border:1px solid ${j.warnBorder};`, e.appendChild(n), n;
+}
+function $e(e, t = !1) {
+  return N(
+    "div",
+    `flex:1;display:flex;align-items:center;justify-content:center;text-align:center;padding:24px;font-size:${ee.heading};color:${t ? ke.error : ke.faint};`,
+    e
+  );
+}
+function sr(e, t = "") {
+  const n = N("div", gu);
+  return n.className = "gufe-header", n.titleEl = N(
+    "span",
+    `font-weight:${ge.bold};font-size:${ee.title};color:${ke.title};letter-spacing:.02em;`,
+    e
+  ), n.statsEl = N(
+    "div",
+    `display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-left:auto;font-size:${ee.small};color:${ke.muted};`
+  ), n.textEl = N("div", "display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;flex:1;min-width:0;"), n.toggleEl = N("div", `display:flex;align-items:center;height:${ba};flex-shrink:0;`), n.appendChild(n.toggleEl), n.textEl.appendChild(n.titleEl), t && (n.sourceEl = N(
+    "span",
+    `font-family:${ee.mono};font-size:${ee.small};color:${ke.faint};min-width:0;overflow-wrap:anywhere;`,
+    t
+  ), n.sourceEl.className = "gufe-header-source", n.sourceEl.title = `Generated from ${t}`, n.textEl.appendChild(n.sourceEl)), n.textEl.appendChild(n.statsEl), n.appendChild(n.textEl), n;
+}
+function Zn(e, t, n = !1) {
+  const r = N("div", "display:flex;gap:12px;align-items:baseline;padding:5px 0;min-width:0;");
+  r.appendChild(
+    N(
+      "span",
+      `flex:0 0 128px;font-size:${ee.tiny};font-weight:${ge.bold};letter-spacing:.08em;text-transform:uppercase;color:${ke.faint};`,
+      e
+    )
+  );
+  const s = N(
+    "span",
+    `flex:1;min-width:0;user-select:text;cursor:text;overflow-wrap:anywhere;color:${ke.primary};` + (n ? `font-family:${ee.mono};font-size:${ee.small};` : `font-size:${ee.body};`),
+    t
+  );
+  return s.title = t, r.appendChild(s), r;
+}
+function ir(e) {
+  return N(
+    "span",
+    `padding:1px 7px;border-radius:${Ee.xl};font-size:${ee.tiny};font-weight:${ge.bold};letter-spacing:.04em;white-space:nowrap;background:${j.badgeBg};color:${j.badgeFg};`,
+    e
+  );
+}
+function po() {
+  return N("div", Su);
+}
+function _a() {
+  const e = N("div", "flex:1;position:relative;min-height:0;min-width:0;"), t = N("div", "position:absolute;inset:0;");
+  return t.dataset.gufeViewer = "", e.appendChild(t), { wrap: e, container: t };
+}
+const Vr = "data-gufe-hide-name";
+function ho(e) {
+  return !e.closest(`[${Vr}]`);
+}
+const Sa = "ALCHEMY_VIZ_VIEW_STATE";
+function ka(e) {
+  const t = globalThis[Sa];
+  if (!t || typeof t != "object") return null;
+  const n = t, r = n[e];
+  return delete n[e], r ?? null;
+}
+function mo() {
+  let e = 0, t = !0;
+  return {
+    start() {
+      const n = ++e;
+      return () => t && n === e;
+    },
+    stop() {
+      t = !1, e++;
+    }
+  };
+}
+const xu = 150, hi = "data-gufe-shell";
+class Fe extends HTMLElement {
+  #e = null;
+  #t = null;
+  #n = null;
+  #r = null;
+  #o = null;
+  /**
+   * Bumped by every teardown. A render captures it and refuses to adopt its
+   * handle if it has moved on - which is what stops a slow view (3Dmol behind a
+   * CDN fetch) from installing itself into an element that has since been given
+   * a different payload, or removed from the document entirely.
+   */
+  #s = 0;
+  /** The message shown before any payload arrives. */
+  placeholder() {
+    return "Waiting for data...";
+  }
+  set payload(t) {
+    this.#e = t, this.isConnected && this.#a();
+  }
+  get payload() {
+    return this.#e;
+  }
+  connectedCallback() {
+    ga(), this.style.display = "flex", this.style.flexDirection = "column", this.style.width = this.style.width || "100%";
+    const t = this.style.height;
+    this.style.height = t || "100%", !t && !this.parentElement?.closest(`[${hi}]`) && this.#d() && (this.style.maxHeight = "100vh"), this.style.background = j.appBg, this.style.color = j.textPrimary, this.style.fontFamily = ee.family, typeof ResizeObserver < "u" && !this.#r && (this.#r = new ResizeObserver(() => {
+      this.#o && clearTimeout(this.#o), this.#o = setTimeout(() => this.#t?.onResize?.(), xu);
+    }), this.#r.observe(this)), this.#a();
+  }
+  disconnectedCallback() {
+    this.#i(), this.#r?.disconnect(), this.#r = null;
+  }
+  /** Release whatever the mounted view owns and empty the element. */
+  #i() {
+    if (this.#s++, this.#o && (clearTimeout(this.#o), this.#o = null), this.#t?.cleanup)
+      try {
+        this.#t.cleanup();
+      } catch (t) {
+        console.warn("[alchemy-viz] cleanup failed:", t);
+      }
+    this.#t = null, this.replaceChildren(), this.#n = null;
+  }
+  /**
+   * Whether nothing has given this element a `max-height` already - inline, or
+   * in a stylesheet, which is how a page raises the ceiling above.
+   */
+  #d() {
+    if (typeof getComputedStyle != "function") return !0;
+    const t = getComputedStyle(this).maxHeight;
+    return !t || t === "none";
+  }
+  /** Tear the mounted view down and hand back a fresh, empty shell. */
+  #u() {
+    return this.#i(), this.#n = N(
+      "div",
+      // `flex:1;min-height:0` and not height alone: inside a host clamped by the
+      // ceiling above, the shell has to be shrinkable or it overflows it.
+      `width:100%;height:100%;flex:1 1 auto;min-height:0;display:flex;flex-direction:column;overflow:hidden;background:${j.appBg};`
+    ), this.#n.setAttribute(hi, ""), this.appendChild(this.#n), this.#n;
+  }
+  /**
+   * Build the view for the current payload.
+   *
+   * Deliberately *not* an `async` method. A synchronous `renderView` - which is
+   * what the current views are - must install its handle before this returns,
+   * or two `payload` assignments in a row would tear down nothing the first
+   * time and leak the first view's viewer. An `await` here would defer that
+   * assignment by a microtask and do exactly that.
+   */
+  #a() {
+    const t = this.#u(), n = this.#s;
+    if (this.#e == null) {
+      t.appendChild($e(this.placeholder()));
+      return;
+    }
+    let r;
+    try {
+      r = this.renderView(t, this.#e);
+    } catch (s) {
+      this.#l(t, n, s);
+      return;
+    }
+    r instanceof Promise ? r.then(
+      (s) => this.#c(s, n),
+      (s) => this.#l(t, n, s)
+    ) : this.#c(r, n);
+  }
+  /** Take ownership of a view's handle, unless it belongs to a dead render. */
+  #c(t, n) {
+    if (n !== this.#s || !this.isConnected) {
+      try {
+        t?.cleanup?.();
+      } catch (r) {
+        console.warn("[alchemy-viz] cleanup of a superseded view failed:", r);
+      }
+      return;
+    }
+    this.#t = t || null;
+  }
+  #l(t, n, r) {
+    n === this.#s && (console.warn("[alchemy-viz] render failed:", r), t.replaceChildren($e(`Failed to render: ${ve(r)}`, !0)));
+  }
+  /** Force a resize pass - for hosts that know they resized us. */
+  resize() {
+    this.#t?.onResize?.();
+  }
+  /**
+   * What the mounted view would need to be restored as it is now, or null when
+   * it has nothing to say. See `ViewHandle.viewState`.
+   */
+  viewState() {
+    return this.#t?.viewState?.() ?? null;
+  }
+}
+function ze(e, t) {
+  typeof customElements > "u" || customElements.get(e) || customElements.define(e, t);
+}
+const Ca = "source", Au = "ALCHEMY_VIZ_SOURCE";
+function Bt(e) {
+  const t = e?.getAttribute?.(Ca);
+  if (t && t.trim()) return t.trim();
+  const n = globalThis[Au];
+  return typeof n == "string" ? n.trim() : "";
 }
 const go = {
   AlchemicalNetworkViz: "gufe-alchemical-network",
@@ -5485,10 +5485,10 @@ function Pu(e) {
       message: "This payload has no `type`, so there is nothing to say what it is."
     };
   if (!go[t]) return Ru(t);
-  const { valid: n, issues: r } = xu(e);
+  const { valid: n, issues: r } = ru(e);
   return n ? null : {
     message: `This payload says it is a ${t}, but it does not match the alchemy-viz schema.`,
-    detail: Au(r)
+    detail: ou(r)
   };
 }
 function Ru(e) {
@@ -5502,14 +5502,14 @@ class Mu extends Fe {
     return "Waiting for data...";
   }
   renderView(t, n) {
-    Kc("payload", n, this);
+    pu("payload", n, this);
     const r = Pu(n);
     if (r)
       return t.appendChild(Nu(r, n)), {};
     const s = n.type, o = go[s], i = document.createElement(o);
     i.style.cssText = "flex:1;min-height:0;min-width:0;";
     const a = Bt(this);
-    return a && i.setAttribute(pa, a), i.payload = n, t.appendChild(i), {
+    return a && i.setAttribute(Ca, a), i.payload = n, t.appendChild(i), {
       onResize: () => i.resize?.(),
       // Removing the child fires its own `disconnectedCallback`, which is where
       // its viewers and observers are released
@@ -5544,13 +5544,13 @@ function Ou(e) {
 }
 ze("alchemy-view", Mu);
 function ft(e = "", t) {
-  const n = N("button", jo.base + e, t);
-  return n.className = jo.className, n.type = "button", n;
+  const n = N("button", fi.base + e, t);
+  return n.className = fi.className, n.type = "button", n;
 }
 function Ur(e, t) {
   e.setAttribute("aria-pressed", String(t));
 }
-function qt(e, t = oo.className) {
+function qt(e, t = fo.className) {
   const n = N("button", e);
   return n.className = t, n.type = "button", n.setAttribute("aria-pressed", "false"), n;
 }
@@ -5592,14 +5592,14 @@ function Ea(e, t, n, r = {}) {
   if (r.fit) {
     const { pane: m, bar: b } = r.fit;
     let v = 0;
-    d = ra(m, ($) => {
+    d = pa(m, ($) => {
       l || (v = b.offsetWidth || v), v && o.setCompact(v > $ - Tu);
     });
   }
   return o.cleanup = () => d(), o;
 }
 function yo(e, t, n, r) {
-  const s = N("select", aa);
+  const s = N("select", ya);
   for (const i of e) {
     const a = N("option", "", i.label);
     a.value = i.id, s.appendChild(a);
@@ -6297,7 +6297,7 @@ const Ar = {
   variableAttachmentColour: [0.3, 0.3, 0.3, 1]
 };
 function ur() {
-  return no() === "dark";
+  return lo() === "dark";
 }
 function za() {
   return Je[ur() ? "dark" : "light"].canvas2DBg;
@@ -6740,7 +6740,7 @@ class Qf extends Fe {
       `${Rr}display:flex;align-items:center;justify-content:center;overflow:hidden;padding:8px;background:${za()};`
     );
     a.appendChild(c);
-    const l = fa();
+    const l = _a();
     l.wrap.style.cssText = Rr, a.appendChild(l.wrap);
     const d = N(
       "div",
@@ -6770,7 +6770,7 @@ class Qf extends Fe {
       );
       Q.title = L, v.appendChild(Q);
     }
-    const $ = io(t), w = N("div", ro, s || "Unnamed molecule");
+    const $ = ho(t), w = N("div", uo, s || "Unnamed molecule");
     $ && a.appendChild(w);
     const u = ut(
       "small-molecule.mode",
@@ -6785,7 +6785,7 @@ class Qf extends Fe {
       }
     }, y = (R) => {
       h = R, c.style.visibility = h === "2d" ? "visible" : "hidden", l.wrap.style.visibility = wt(h) ? "visible" : "hidden", d.style.visibility = h === "info" ? "visible" : "hidden", w.style.display = h === "info" || !$ ? "none" : "block", A.disabled = !wt(h), A.style.opacity = wt(h) ? "1" : "0.5", wt(h) && S && (S.setStyle({}, Yr[h]), S.resize(), S.render()), p();
-    }, C = N("div", ua), A = xa(
+    }, C = N("div", wa), A = xa(
       "Spin",
       _,
       (R) => {
@@ -6863,10 +6863,10 @@ function Va(e) {
 }
 function Ua(e) {
   return [
-    `${Pt(e.chains)} chains`,
-    `${Pt(e.residues)} residues`,
-    `${Pt(e.atoms)} atoms`,
-    `${Pt(e.hetatms)} HETATM` + (e.waters > 0 ? ` (${Pt(e.waters)} water)` : "")
+    `${Nt(e.chains)} chains`,
+    `${Nt(e.residues)} residues`,
+    `${Nt(e.atoms)} atoms`,
+    `${Nt(e.hetatms)} HETATM` + (e.waters > 0 ? ` (${Nt(e.waters)} water)` : "")
   ];
 }
 function np(e, t) {
@@ -6993,7 +6993,7 @@ function Ga(e, t) {
   };
 }
 function Eo(e, t) {
-  e.style.setProperty(et.min, t ? "0" : Jn.min), e.style.setProperty(et.max, t ? "none" : Jn.max), e.style.setProperty(et.ruleX, t ? "0" : "1px"), e.style.setProperty(et.ruleY, t ? "1px" : "0"), e.style.maxHeight = t ? Pc : "";
+  e.style.setProperty(et.min, t ? "0" : Xn.min), e.style.setProperty(et.max, t ? "none" : Xn.max), e.style.setProperty(et.ruleX, t ? "0" : "1px"), e.style.setProperty(et.ruleY, t ? "1px" : "0"), e.style.maxHeight = t ? yu : "";
 }
 const op = !1, xo = ".menuOpen";
 function sp() {
@@ -7093,7 +7093,7 @@ function pp(e) {
     "}"
   ), Object.keys(e.views).length && t.push(
     "// Where the camera was, what was selected, where the layout settled.",
-    `globalThis[${JSON.stringify(ha)}] = ${JSON.stringify(e.views)};`
+    `globalThis[${JSON.stringify(Sa)}] = ${JSON.stringify(e.views)};`
   ), t.length ? [...t, ""] : t;
 }
 function hp(e, t, n) {
@@ -7218,7 +7218,7 @@ function Zr(e) {
   return !Array.isArray(e) || e.length < 4 ? null : e.every((t) => typeof t == "number" && Number.isFinite(t)) ? e.slice() : null;
 }
 function vp(e) {
-  const t = e.tagName.toLowerCase().replace(/^gufe-/, ""), n = ma(t);
+  const t = e.tagName.toLowerCase().replace(/^gufe-/, ""), n = ka(t);
   return !n || typeof n != "object" ? null : Zr(n.camera);
 }
 function Ya(e) {
@@ -7240,7 +7240,7 @@ function Ya(e) {
   let a = vp(e.element), c = null, l = null, d = !0;
   const m = N("div", "flex:1;min-height:0;position:relative;display:flex;flex-direction:row;");
   e.host.appendChild(m);
-  const b = N("div", Oc);
+  const b = N("div", wu);
   m.appendChild(b);
   const v = ({ label: C, controls: A }) => {
     const P = N("div", "display:flex;flex-direction:column;gap:6px;min-width:0;flex-shrink:0;");
@@ -7256,7 +7256,7 @@ function Ya(e) {
   }, $ = N("div", `display:flex;flex-direction:column;gap:2px;font-size:${ee.small};color:${j.textMuted};`), w = v({ label: "Contents", controls: [$] });
   w.style.display = "none";
   const g = Ao(b, () => {
-    const C = N("div", `${da}padding-top:${Tc};`), A = Ct(
+    const C = N("div", `${va}padding-top:${_u};`), A = Ct(
       _i,
       i.rep,
       (I) => {
@@ -7305,13 +7305,13 @@ function Ya(e) {
       c?.resize(), c?.render();
     },
     extras: Po
-  }), h = io(e.element) ? e.title || e.fallbackTitle : "";
+  }), h = ho(e.element) ? e.title || e.fallbackTitle : "";
   h && b.appendChild(
-    N("div", `${Nc}pointer-events:none;font-size:${ee.heading};font-weight:${ge.bold};`, h)
+    N("div", `${vu}pointer-events:none;font-size:${ee.heading};font-weight:${ge.bold};`, h)
   ), m.appendChild(g.panel);
-  const _ = fa();
+  const _ = _a();
   m.appendChild(_.wrap);
-  const S = to(m, (C) => {
+  const S = co(m, (C) => {
     m.style.flexDirection = C ? "column" : "row", Eo(g.panel, C), c?.resize(), c?.render();
   }), f = N(
     "div",
@@ -7681,7 +7681,7 @@ function sc(e, t, n = !0) {
 }
 const Rp = 250;
 function Mp(e) {
-  const t = N("div", "display:flex;flex-direction:column;gap:8px;"), n = N("input", ca);
+  const t = N("div", "display:flex;flex-direction:column;gap:8px;"), n = N("input", $a);
   n.type = "text", n.placeholder = e.placeholder, n.value = e.remember.get(), n.spellcheck = !1, n.setAttribute("aria-label", e.label), t.appendChild(n);
   const r = N("div", `font-size:${ee.tiny};line-height:1.5;min-height:1.5em;color:${j.textMuted2};`);
   t.appendChild(r);
@@ -7800,7 +7800,7 @@ const Ci = new Intl.Collator(void 0, { numeric: !0, sensitivity: "base" });
 function ac(e) {
   const t = Hr(`${e.namespace}.query`), n = ut(`${e.namespace}.tab`, "nodes", ["nodes", "edges"]);
   let r = n.get();
-  const s = N("div", da), o = Ct(
+  const s = N("div", va), o = Ct(
     [
       { id: "nodes", label: e.words.nodes.tab, title: `List the ${e.words.nodes.plural}` },
       { id: "edges", label: e.words.edges.tab, title: `List the ${e.words.edges.plural}` }
@@ -7812,7 +7812,7 @@ function ac(e) {
   );
   for (const u of Array.from(o.children)) u.style.flex = "1";
   o.style.gap = "0", s.appendChild(o);
-  const i = N("input", ca);
+  const i = N("input", $a);
   s.appendChild(i);
   const a = Mp({
     placeholder: e.smarts.placeholder,
@@ -7825,7 +7825,7 @@ function ac(e) {
   for (const u of e.filters?.(() => w()) ?? []) s.appendChild(u);
   const c = N("div", `font-size:${ee.small};color:${j.textMuted2};`);
   s.appendChild(c);
-  const l = N("div", Rc);
+  const l = N("div", $u);
   s.appendChild(l), s.appendChild(N("div", `font-size:${ee.tiny};line-height:1.5;color:${j.textMuted2};`, ic));
   const d = zp({
     nodes: e.nodes,
@@ -7841,7 +7841,7 @@ function ac(e) {
     e.selected.clear(), e.resetFilters?.(), w(), e.refresh();
   }, s.appendChild(m);
   function b(u, g, h) {
-    const _ = qt(oo.row), S = g.every((p) => e.selected.has(p));
+    const _ = qt(fo.row), S = g.every((p) => e.selected.has(p));
     _.setAttribute("aria-pressed", String(S)), u.before && _.appendChild(u.before);
     const f = N("span", "flex:1;min-width:0;overflow-wrap:anywhere;", u.name);
     return f.title = u.title, _.appendChild(f), _.onclick = (p) => {
@@ -8097,7 +8097,7 @@ function Kp(e, t) {
     clear: a,
     box(c) {
       const l = N("div", "flex:1;display:flex;flex-direction:column;position:relative;min-height:0;"), d = N("div", "flex:1;position:relative;min-height:0;");
-      d.dataset.gufeViewer = "", l.appendChild(d), t && l.appendChild(N("div", ro, c)), n.appendChild(l);
+      d.dataset.gufeViewer = "", l.appendChild(d), t && l.appendChild(N("div", uo, c)), n.appendChild(l);
       const m = { container: d, viewer: null, interaction: null };
       return r.push(m), m;
     },
@@ -8241,7 +8241,7 @@ const Zp = {
 }, Qp = {
   core: "0x888888",
   pairLine: "0xd9a300"
-}, hc = () => no() === "dark" ? Zp : Qp, Tr = 420, We = {
+}, hc = () => lo() === "dark" ? Zp : Qp, Tr = 420, We = {
   stick: 0.15,
   sphere: 0.25,
   markStick: 0.18,
@@ -8367,7 +8367,7 @@ function ch(e, t) {
       "div",
       `flex:1;min-height:0;display:flex;align-items:center;justify-content:center;padding:8px;background:${za()};`
     );
-    return i.appendChild($e("Loading 2D depiction...")), o.appendChild(i), e.named && o.appendChild(N("div", ro, s.mol.name)), e.element.appendChild(o), { box: i, side: s };
+    return i.appendChild($e("Loading 2D depiction...")), o.appendChild(i), e.named && o.appendChild(N("div", uo, s.mol.name)), e.element.appendChild(o), { box: i, side: s };
   });
   wo().then((s) => {
     const o = qf(n, s), i = Xp(s, t.from.sdf, t.to.sdf, n.layout, n.alignPair ? t.pairs : null);
@@ -8447,7 +8447,7 @@ function lh(e, t, n) {
   const C = Object.entries(n.annotations ?? {}).filter(([P]) => P !== "score");
   if (!C.length) return;
   d.appendChild(N("div", qr, "Annotations"));
-  const A = N("div", `${jc}color:${ke.faint};`);
+  const A = N("div", `${Cu}color:${ke.faint};`);
   for (const [P, T] of C)
     A.appendChild(N("div", "", `${P}: ${String(T)}`));
   d.appendChild(A);
@@ -8568,9 +8568,9 @@ class gh extends Fe {
       return t.appendChild($e(r.problem, r.isError)), {};
     const s = r.pair, o = N("div", "position:relative;flex:1;min-height:0;display:flex;flex-direction:column;");
     t.appendChild(o);
-    const i = Kp(o, io(t)), a = ut("atom-mapping.mode", "plain", Oi.map(($) => $.id));
+    const i = Kp(o, ho(t)), a = ut("atom-mapping.mode", "plain", Oi.map(($) => $.id));
     let c = a.get();
-    const l = N("div", ua), d = Ea(
+    const l = N("div", wa), d = Ea(
       Oi,
       c,
       ($) => {
@@ -8579,7 +8579,7 @@ class gh extends Fe {
       { remember: a, fit: { pane: o, bar: l } }
     );
     l.appendChild(d), o.appendChild(l);
-    const m = ao(), b = {
+    const m = mo(), b = {
       plain: oh,
       colored: sh,
       openfe: ih,
@@ -8684,7 +8684,7 @@ const Tt = { initial: 0.58, min: 0.25, max: 0.8 }, Oe = 38, zi = 1.5, jr = {
   tickMultiplier: 2
 };
 function jh(e) {
-  const t = N("div", zc);
+  const t = N("div", ku);
   return e.appendChild(t), {
     show(n, r, s) {
       t.innerHTML = n, t.style.left = `${r + 14}px`, t.style.top = `${s - 10}px`, t.style.opacity = "1";
@@ -8930,7 +8930,7 @@ class Kh extends Fe {
       nodeType: "SmallMoleculeComponentViz",
       edges: n.edges ?? [],
       ends: (E) => [E.componentA, E.componentB]
-    }), c = er(n.name || "Ligand network", Bt(this));
+    }), c = sr(n.name || "Ligand network", Bt(this));
     c.statsEl.appendChild(Ve("ligands", String(s.length))), c.statsEl.appendChild(Ve("mappings", String(o.length))), t.appendChild(c);
     const l = N("div", "flex:1;display:flex;flex-direction:row;min-height:0;overflow:hidden;");
     t.appendChild(l);
@@ -9018,7 +9018,7 @@ class Kh extends Fe {
     ), a && lt(y, `${a} mapping${a === 1 ? "" : "s"} name a ligand this network does not contain`);
     const A = w(), P = jh(y);
     let T = null;
-    const R = wh(ma(yh), s.length);
+    const R = wh(ka(yh), s.length);
     let L = R && { scale: R.scale, tx: R.tx, ty: R.ty };
     const I = R ? R.nodes : null;
     let Q = !1, V = o.length ? { kind: "edge", index: 0 } : null;
@@ -9028,7 +9028,7 @@ class Kh extends Fe {
     }
     const q = () => T?.transform() ?? { scale: 1, tx: 0, ty: 0 };
     let Y = !1;
-    const re = ao(), U = () => {
+    const re = mo(), U = () => {
       if (!V) {
         C.message(o.length ? $h : "Click a ligand to see it.");
         return;
@@ -9683,7 +9683,7 @@ function um(e) {
   return e.name ? e.name : e.type === "UnknownComponentViz" ? e.gufe_type : "(unnamed)";
 }
 function fm(e) {
-  return e.type === "UnknownComponentViz" ? tr(e.gufe_type) : null;
+  return e.type === "UnknownComponentViz" ? ir(e.gufe_type) : null;
 }
 function pm(e) {
   const t = N("span", "display:inline-flex;");
@@ -9810,7 +9810,7 @@ class gm extends Fe {
       const re = N(
         "div",
         `display:flex;align-items:stretch;gap:${X.sm};width:auto;flex-shrink:0;max-width:100%;min-width:0;`
-      ), U = qt(`${oo.card}flex:1;width:auto;min-width:0;box-sizing:border-box;`);
+      ), U = qt(`${fo.card}flex:1;width:auto;min-width:0;box-sizing:border-box;`);
       if (U.appendChild(
         N("span", `font-weight:700;color:${j.textPrimary};overflow-wrap:anywhere;`, q.title)
       ), U.appendChild(
@@ -9829,7 +9829,7 @@ class gm extends Fe {
     }), I();
     const Q = S.findIndex((q) => q.key === C.get());
     T(Q < 0 ? 0 : Q);
-    const V = to(a, (q) => {
+    const V = co(a, (q) => {
       a.style.flexDirection = q ? "column" : "row", d.orient(q), c.style.maxHeight = q ? dm : "none", c.style.borderBottom = q ? `1px solid ${j.splitBorder}` : "none", l.style.flexDirection = q ? "row" : "column", l.style.flexWrap = q ? "wrap" : "nowrap", p?.resize?.();
     });
     return {
@@ -9891,7 +9891,7 @@ function Lr(e, t, n) {
     `min-width:0;font-size:${ee.body};font-weight:600;color:${j.textPrimary};overflow-wrap:anywhere;`,
     s.name
   );
-  return o.title = s.name, r.appendChild(o), s.type && r.appendChild(tr(s.type)), r;
+  return o.title = s.name, r.appendChild(o), s.type && r.appendChild(ir(s.type)), r;
 }
 function wm(e, t, n, r) {
   const s = N("div", `display:flex;flex-direction:column;gap:${X.sm};min-width:0;`), o = N("div", `display:flex;align-items:center;gap:${X.md};min-width:0;`);
@@ -9999,9 +9999,9 @@ class Cm extends Fe {
         g.has(y) && p.appendChild(Ve(y, "", No[y]));
       m.appendChild(p);
     }
-    const h = N("div", Mc, a.length ? "Atom mapping" : "What changes");
+    const h = N("div", bu, a.length ? "Atom mapping" : "What changes");
     $.appendChild(h);
-    const _ = to(t, (p) => {
+    const _ = co(t, (p) => {
       d.style.flexDirection = p ? "column" : "row", v.orient(p), m.style.maxHeight = p ? "45%" : "none", m.style.borderBottom = p ? `1px solid ${j.splitBorder}` : "none", h.style.display = p ? "block" : "none";
     }), S = (p, y, C) => (C(0), y.length > 1 && $.appendChild(_m(y, C)), $.appendChild(p), b = p, {
       onResize: () => p.resize?.(),
@@ -10364,7 +10364,7 @@ class Gm extends Fe {
     const u = () => {
       const W = w ? $.get(w.protocol["gufe-key"]) : void 0;
       p?.setProtocol(W ?? null, w?.color ?? ue.netEdgeLine);
-    }, g = er(n.name || "Alchemical network", Bt(this));
+    }, g = sr(n.name || "Alchemical network", Bt(this));
     d.length !== s.length && g.statsEl.appendChild(Ve("ligands", String(d.length))), g.statsEl.appendChild(Ve("systems", String(s.length))), g.statsEl.appendChild(Ve("transformations", String(o.length))), c.signatures.length > 1 && g.statsEl.appendChild(Ve("legs", c.names.join(", "))), v.length === 1 && g.statsEl.appendChild(Bm(v[0])), v.length > 1 && g.statsEl.appendChild(
       qm(v, (W) => {
         w = W, u();
@@ -10460,7 +10460,7 @@ class Gm extends Fe {
       `${a} transformation${a === 1 ? "" : "s"} name a system this network does not contain`
     );
     let H = !1, z = !1, k = null;
-    const E = ao(), D = new Map(d.map((W, M) => [W["gufe-key"], R[M].charge])), te = b.some(
+    const E = mo(), D = new Map(d.map((W, M) => [W["gufe-key"], R[M].charge])), te = b.some(
       (W) => (D.get(W.to["gufe-key"]) ?? 0) !== (D.get(W.from["gufe-key"]) ?? 0)
     );
     Oa(re, () => p?.reset(), "Reset pan and zoom"), te && q.appendChild(this.#e());
@@ -10502,7 +10502,7 @@ class Gm extends Fe {
    * one line at a time.
    */
   #e() {
-    const t = N("div", Io), n = N("div", "display:flex;align-items:center;gap:6px;min-width:0;");
+    const t = N("div", pi), n = N("div", "display:flex;align-items:center;gap:6px;min-width:0;");
     return n.appendChild(N("span", `width:24px;height:0;border-top:2px dashed ${j.netEdgeLine};flex-shrink:0;`)), n.appendChild(N("span", `font-size:${ee.small};color:${j.textMuted};`, "net charge change")), t.appendChild(n), t;
   }
   /**
@@ -10547,7 +10547,7 @@ class Gm extends Fe {
    * never opened in here.
    */
   #t(t, n) {
-    const r = N("div", `${Io}border-top:none;border-bottom:1px solid ${j.toolbarBorder};display:none;`);
+    const r = N("div", `${pi}border-top:none;border-bottom:1px solid ${j.toolbarBorder};display:none;`);
     t.appendChild(r);
     const s = fc(t);
     let o = "";
@@ -10819,15 +10819,15 @@ class Wm extends Fe {
     return "Waiting for a Protocol payload...";
   }
   renderView(t, n) {
-    const r = er(n.gufe_type || n.name || "Protocol", Bt(this));
-    r.statsEl.appendChild(tr(n.gufe_type)), t.appendChild(r);
+    const r = sr(n.gufe_type || n.name || "Protocol", Bt(this));
+    r.statsEl.appendChild(ir(n.gufe_type)), t.appendChild(r);
     const s = N(
       "div",
       "flex:1;min-height:0;overflow:auto;display:flex;align-items:center;justify-content:center;padding:24px;"
     );
     t.appendChild(s);
-    const o = so();
-    return o.style.maxWidth = "460px", o.appendChild(Yn("gufe class", n.gufe_type, !0)), n.name && o.appendChild(Yn("Name", n.name)), o.appendChild(
+    const o = po();
+    return o.style.maxWidth = "460px", o.appendChild(Zn("gufe class", n.gufe_type, !0)), n.name && o.appendChild(Zn("Name", n.name)), o.appendChild(
       N(
         "div",
         `padding-top:10px;font-size:${ee.small};line-height:1.6;color:${j.textMuted2};`,
@@ -10875,7 +10875,7 @@ class Ym extends Fe {
       "flex:1;min-height:0;overflow:auto;display:flex;align-items:flex-start;justify-content:center;padding:24px;"
     );
     t.appendChild(r);
-    const s = so();
+    const s = po();
     s.style.maxWidth = "560px", s.style.width = "100%", s.style.gap = "0";
     const o = ta("Solvent", !0), i = N("div", "display:flex;align-items:flex-end;gap:18px;flex-wrap:wrap;"), a = N("div", "display:flex;flex-direction:column;gap:5px;min-width:0;"), c = N(
       "div",
@@ -10915,7 +10915,7 @@ class Ym extends Fe {
     ), d.appendChild(
       N(
         "div",
-        Ic,
+        Eu,
         u ? "Counter-ions are added on top of the concentration above, enough to cancel whatever net charge the rest of the system carries." : "Only the concentration above: nothing is added to cancel the net charge the rest of the system carries."
       )
     ), s.appendChild(d), r.appendChild(s), {};
@@ -10927,11 +10927,11 @@ class Xm extends Fe {
     return "Waiting for a component payload...";
   }
   renderView(t, n) {
-    const r = er(n.name || "Unnamed component", Bt(this));
-    r.statsEl.appendChild(tr(n.gufe_type)), t.appendChild(r);
+    const r = sr(n.name || "Unnamed component", Bt(this));
+    r.statsEl.appendChild(ir(n.gufe_type)), t.appendChild(r);
     const s = N("div", "flex:1;min-height:0;overflow:auto;display:flex;align-items:center;justify-content:center;padding:24px;");
     t.appendChild(s);
-    const o = so();
+    const o = po();
     return o.style.maxWidth = "460px", o.appendChild(
       N(
         "div",
@@ -10944,11 +10944,11 @@ class Xm extends Fe {
         `font-size:${ee.body};line-height:1.6;padding-bottom:10px;color:${j.textMuted};`,
         "gufe lets a project define its own Component subclasses, so this is a component this build has never been taught to draw - not a broken payload. Everything gufe knows about it that survives serialization is below."
       )
-    ), o.appendChild(Yn("Name", n.name || "(unnamed)")), o.appendChild(Yn("gufe class", n.gufe_type, !0)), s.appendChild(o), {};
+    ), o.appendChild(Zn("Name", n.name || "(unnamed)")), o.appendChild(Zn("gufe class", n.gufe_type, !0)), s.appendChild(o), {};
   }
 }
 ze("gufe-unknown-component", Xm);
-ia();
+ga();
 typeof globalThis < "u" && (globalThis.alchemyViz = { settings: Iu, reset: Lu });
 export {
   Zm as PAYLOAD_TYPES,

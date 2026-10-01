@@ -1,0 +1,166 @@
+# Tag -> npm.
+#
+# `git tag -a v0.1.0 -m "v0.1.0" && git push origin v0.1.0`
+#
+# publishes 0.1.0. The same tag drives `publish-pypi.yml`, so both registries
+# carry the same version and the same `alchemy-viz.js`.
+#
+# `workflow_dispatch` is the rehearsal: same build, same checks, stopping at
+# `npm publish --dry-run`. npm has no TestPyPI, and a published version cannot
+# be replaced.
+name: Release (npm)
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  # The package is the committed bundle plus a manifest, and a CDN caches a
+  # version forever, so freshness gates the release rather than being assumed.
+  generated:
+    name: generated artifacts are fresh
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # setuptools-scm needs the tags
+
+      - uses: prefix-dev/setup-pixi@v0.8.1
+        with:
+          cache: true
+
+      - run: pixi run check-generated
+
+  build:
+    name: pack the tarball
+    needs: generated
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: prefix-dev/setup-pixi@v0.8.1
+        with:
+          cache: true
+
+      # setuptools-scm reads the same tag and must reach the same number, so
+      # the tag has to be spelled a way both ecosystems accept: `v1.2.3` or
+      # `v1.2.3-rc.1`, never PEP 440's `v1.2.3rc1`. Fail here rather than
+      # halfway through the release.
+      - name: version from the tag
+        id: version
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            version="${GITHUB_REF#refs/tags/v}"
+            if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+              echo "::error::tag $GITHUB_REF is not semver npm will take." \
+                   "Use v1.2.3 or v1.2.3-rc.1, not PEP 440's v1.2.3rc1." >&2
+              exit 1
+            fi
+          else
+            # No tag on a dispatch, and nothing is published; name the commit.
+            version="0.0.0-dev.${GITHUB_SHA::7}"
+          fi
+          echo "version=$version" >>"$GITHUB_OUTPUT"
+          echo "publishing alchemy-viz@$version"
+
+      - run: pixi run npm-dist
+
+      - name: stamp the version on the manifest
+        working-directory: npm
+        run: npm version "${{ steps.version.outputs.version }}" --no-git-tag-version --allow-same-version
+
+      # Packed once: smoke checks this tarball and publish uploads it, so what
+      # is tested and what ships cannot diverge.
+      - name: npm pack
+        working-directory: npm
+        run: |
+          tarball=$(npm pack)
+          mkdir -p "$RUNNER_TEMP/npm-dist"
+          mv "$tarball" "$RUNNER_TEMP/npm-dist/"
+          ls -l "$RUNNER_TEMP/npm-dist"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: npm-tarball
+          path: ${{ runner.temp }}/npm-dist/*.tgz
+
+  # What `npm install alchemy-viz` lands in: no repository, no tsconfig of
+  # ours, no ambient type packages. The last gate before an irreversible upload.
+  smoke:
+    name: install the tarball and compile against it
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4 # for the script and the typescript version
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: npm-tarball
+          path: ${{ runner.temp }}/npm-dist
+
+      - run: bash scripts/check_npm.sh "$RUNNER_TEMP/npm-dist/alchemy-viz-${{ needs.build.outputs.version }}.tgz"
+
+  publish:
+    name: publish to npm
+    needs: [build, smoke]
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    environment:
+      name: npm
+      url: https://www.npmjs.com/package/alchemy-viz
+    permissions:
+      id-token: write # signs the provenance attestation
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          registry-url: https://registry.npmjs.org
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: npm-tarball
+          path: ${{ runner.temp }}/npm-dist
+
+      # `--provenance` is the wheel's Trusted Publishing counterpart: a signed
+      # statement, minted from the OIDC token above, that this tarball was
+      # built by this workflow at this commit. Publishing itself still needs a
+      # token, because npm's trusted publishing only takes over once the
+      # package exists; swap NODE_AUTH_TOKEN for one after the first release.
+      - name: npm publish
+        working-directory: ${{ runner.temp }}/npm-dist
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish "alchemy-viz-${{ needs.build.outputs.version }}.tgz" --provenance --access public
+
+  # Same tarball, same command, nothing uploaded.
+  publish-dry-run:
+    name: npm publish --dry-run
+    needs: [build, smoke]
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          registry-url: https://registry.npmjs.org
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: npm-tarball
+          path: ${{ runner.temp }}/npm-dist
+
+      - name: npm publish --dry-run
+        working-directory: ${{ runner.temp }}/npm-dist
+        run: npm publish "alchemy-viz-${{ needs.build.outputs.version }}.tgz" --access public --dry-run
