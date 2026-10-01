@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Generate `ts/src/schema/types.ts` from `schema/gufe-viz.schema.json`.
+ * Generate `ts/src/schema/types.ts` from `schema/alchemy-viz.schema.json`.
  *
  * The generated types are the TypeScript end of the contract: nothing in
  * `ts/src` describes a payload shape by hand, so a field added to the schema
@@ -14,14 +14,14 @@ import { dirname, join, relative } from "node:path";
 import { compile } from "json-schema-to-typescript";
 
 const REPO = join(import.meta.dirname, "..");
-const INPUT = join(REPO, "schema", "gufe-viz.schema.json");
+const INPUT = join(REPO, "schema", "alchemy-viz.schema.json");
 const OUTPUT = join(REPO, "ts", "src", "schema", "types.ts");
 
 const BANNER = `/* eslint-disable */
 /**
  * GENERATED - do not edit by hand.
  *
- * Source:  schema/gufe-viz.schema.json  (the source of truth)
+ * Source:  schema/alchemy-viz.schema.json  (the source of truth)
  * Command: pixi run types
  *
  * CI rebuilds this file and fails if it differs from what is committed, so an
@@ -62,7 +62,7 @@ if (!types_.length) {
 
 types += `
 /** The root union, under the name the rest of the codebase refers to it by. */
-export type Payload = GufeVizPayload;
+export type Payload = AlchemyVizPayload;
 
 /**
  * Every declared \`type\`, including those whose view has not been built yet.

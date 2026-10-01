@@ -9,10 +9,11 @@ from __future__ import annotations
 
 import json
 import re
+from collections import Counter
 
 import pytest
-from gufe_viz import payload_for
-from gufe_viz.components import component_payload
+from alchemy_viz import payload_for
+from alchemy_viz.components import component_payload
 
 from .conftest import REPO, SCHEMA_PATH
 
@@ -119,9 +120,9 @@ class TestContractParity:
         renders the "no visualization for X yet" panel, which is what a build
         should do when handed a payload whose view has not been written.
         """
-        source = (REPO / "ts" / "src" / "gufe-view.ts").read_text(encoding="utf-8")
+        source = (REPO / "ts" / "src" / "alchemy-view.ts").read_text(encoding="utf-8")
         table = re.search(r"VIEW_TAGS[^=]*=\s*\{(.*?)\}", source, re.S)
-        assert table, "could not find VIEW_TAGS in ts/src/gufe-view.ts"
+        assert table, "could not find VIEW_TAGS in ts/src/alchemy-view.ts"
 
         ts_types = set(re.findall(r"^\s*(\w+):", table.group(1), re.M))
         assert ts_types, "VIEW_TAGS parsed as empty - has its shape changed?"
@@ -189,7 +190,7 @@ class TestDispatch:
         Derived from the live class hierarchy so that a future gufe inserting a
         new subclass fails this rather than passing quietly.
         """
-        from gufe_viz.components import COMPONENT_BUILDERS
+        from alchemy_viz.components import COMPONENT_BUILDERS
 
         classes = [klass for klass, _ in COMPONENT_BUILDERS]
         for later, klass in enumerate(classes):
@@ -411,9 +412,57 @@ class TestBuilders:
         assert [entry["name"] for entry in named["registry"]] == [entry["smiles"] for entry in named["registry"]]
         assert sorted(e["score"] for e in unnamed["edges"]) == sorted(e["score"] for e in named["edges"])
 
+    def test_the_three_network_sizes_are_all_present_and_well_formed(self):
+        """Three ligands, ten and two hundred, so a view change can be seen at each.
+
+        A view that reads well on three nodes can be unusable on two hundred, and
+        the level-of-detail rule only does anything above a size no fixture used
+        to reach. The sizes are pinned because that is the point of the trio: a
+        regeneration that quietly produced three networks of the same size would
+        still pass everything else in this file.
+        """
+        from .conftest import read_example
+
+        sizes = {
+            "ligand_network.json": (3, 3),
+            "ligand_network_medium.json": (10, 9),
+            "ligand_network_large.json": (200, 594),
+        }
+
+        for name, (nodes, edges) in sizes.items():
+            payload = read_example(name)
+            assert payload["type"] == "LigandNetworkViz", name
+            assert len(payload["nodes"]) == nodes, name
+            assert len(payload["edges"]) == edges, name
+
+            # The registry deduplicates at every size, which is what keeps the
+            # large payload proportional to its ligands rather than to its edges.
+            assert len(payload["registry"]) == nodes, name
+            assert len({entry["gufe-key"] for entry in payload["registry"]}) == nodes, name
+
+            for edge in payload["edges"]:
+                assert edge["componentA"] in payload["nodes"], name
+                assert edge["componentB"] in payload["nodes"], name
+
+            _validate(payload)
+
+    def test_the_two_real_networks_have_scores_a_view_can_colour_by(self):
+        """Every edge of both mapper-planned networks carries a score.
+
+        The large network is not in this: its scores are an arithmetic ramp, and
+        asserting anything about them would be asserting that a load generator
+        still generates load.
+        """
+        from .conftest import read_example
+
+        for name in ("ligand_network.json", "ligand_network_medium.json"):
+            scores = [edge["score"] for edge in read_example(name)["edges"]]
+            assert all(isinstance(score, float) for score in scores), name
+            assert all(0.0 <= score <= 1.0 for score in scores), name
+
     def test_a_score_annotation_becomes_the_edge_score(self):
         """`score` is the one annotation key the edge colouring reads."""
-        from gufe_viz.networks import mapping_score
+        from alchemy_viz.networks import mapping_score
 
         assert mapping_score({"score": 0.0}) == 0.0
         assert mapping_score({"score": 1}) == 1.0
@@ -448,6 +497,51 @@ class TestBuilders:
         assert "sdf" not in solvent
         assert "pdb" not in solvent
         _validate(payload)
+
+    def test_the_complex_fixture_carries_a_ligand_actually_in_the_binding_site(self):
+        """The one claim ``chemical_system_complex.json`` exists to make.
+
+        A protein and a ligand in one system prove nothing on their own: a view
+        that draws both at once is only worth having if the two share a frame,
+        and a fixture whose ligand floats a hundred angstrom off the protein
+        would make that view look broken while the code was right. Nothing
+        arranges the pose - the ligands were docked upstream in OpenFE's RBFE
+        tutorial and are carried through gufe unmoved - so this asserts the
+        property rather than a transformation: the ligand is in contact with the
+        protein, and not on top of it.
+
+        The bounds are loose on purpose. This is not re-deriving the docking; it
+        is catching a fixture rebuilt from ligands and a protein that no longer
+        belong together, which is a hundred-angstrom error and not a tenth of
+        one.
+        """
+        import math
+
+        from .conftest import read_example
+
+        payload = read_example("chemical_system_complex.json")
+        registry = _registry(payload)
+        ligand = registry[payload["components"]["ligand"]]
+        protein = registry[payload["components"]["protein"]]
+
+        lines = ligand["sdf"].splitlines()
+        atom_count = int(lines[3][0:3])
+        ligand_atoms = [tuple(float(line[i : i + 10]) for i in (0, 10, 20)) for line in lines[4 : 4 + atom_count]]
+        assert ligand_atoms
+
+        protein_atoms = [
+            (float(line[30:38]), float(line[38:46]), float(line[46:54]))
+            for line in protein["pdb"].splitlines()
+            if line.startswith(("ATOM", "HETATM"))
+        ]
+        assert protein_atoms
+
+        nearest = min(math.dist(a, b) for a in protein_atoms for b in ligand_atoms)
+        # Touching: a docked ligand is in van der Waals contact with the site.
+        assert nearest < 4.0, f"the ligand is {nearest:.1f} A from the nearest protein atom, so it is not bound"
+        # And not fused into it, which is what a frame mismatch that happened to
+        # land nearby would look like.
+        assert nearest > 1.0, f"the ligand overlaps the protein at {nearest:.1f} A"
 
     def test_transformation_names_its_states_and_protocol_by_key(self, every_payload_type):
         """A transformation's states are complete ChemicalSystemViz objects, and
@@ -499,6 +593,195 @@ class TestBuilders:
         protocols = [entry for entry in network["registry"] if entry["type"] == "ProtocolViz"]
         assert len(protocols) == 1
         assert {edge["protocol"] for edge in network["edges"]} == {protocols[0]["gufe-key"]}
+
+    def test_the_three_alchemical_network_sizes_are_all_present_and_well_formed(self):
+        """The alchemical trio, pinned the way the ligand trio is.
+
+        Same argument as ``test_the_three_network_sizes_are_all_present_and_
+        well_formed``: the sizes are the point of having three, so a
+        regeneration that quietly produced three networks of one size would
+        still pass everything else here. The middle one is a binding campaign,
+        so its edge count is twice its mappings - one solvent leg and one
+        complex leg each - and its node count is twice its ligands.
+        """
+        from .conftest import read_example
+
+        sizes = {
+            "alchemical_network.json": (3, 3),
+            "alchemical_network_medium.json": (20, 18),
+            "alchemical_network_large.json": (200, 594),
+        }
+
+        for name, (nodes, edges) in sizes.items():
+            payload = read_example(name)
+            assert payload["type"] == "AlchemicalNetworkViz", name
+            assert len(payload["nodes"]) == nodes, name
+            assert len(payload["edges"]) == edges, name
+            assert len(set(payload["nodes"])) == nodes, name
+
+            registry = _registry(payload)
+            for edge in payload["edges"]:
+                assert edge["stateA"] in payload["nodes"], name
+                assert edge["stateB"] in payload["nodes"], name
+                # Every node resolves, and every component of every node with it.
+                for state in (edge["stateA"], edge["stateB"]):
+                    for component in registry[state]["components"].values():
+                        assert registry[component]["type"].endswith("ComponentViz"), name
+
+            _validate(payload)
+
+    def test_the_binding_campaign_shares_one_protein_across_its_complex_leg(self):
+        """The claim the shared-protocol test makes about proteins, on real data.
+
+        ``alchemical_network_medium.json`` is the only fixture where a protein
+        reaches an alchemical node, and it reaches half of them: ten complex
+        systems and ten solvent ones. The registry carries that protein once, so
+        the payload is the size of one protein rather than of ten - which is the
+        whole argument for a registry, made at the size where it matters.
+        """
+        from .conftest import read_example
+
+        payload = read_example("alchemical_network_medium.json")
+        registry = _registry(payload)
+
+        proteins = [entry for entry in payload["registry"] if entry["type"] == "ProteinComponentViz"]
+        assert len(proteins) == 1
+
+        with_protein = [
+            key for key in payload["nodes"] if proteins[0]["gufe-key"] in registry[key]["components"].values()
+        ]
+        assert len(with_protein) == len(payload["nodes"]) // 2
+
+    def test_an_absolute_network_is_a_star_of_edges_that_carry_no_mapping(self):
+        """The shape an ABFE or ASFE set makes, which no relative fixture has.
+
+        A relative transformation carries a ligand at both ends and a mapping
+        between them. An absolute one carries a ligand at one end only and no
+        mapping at all, so the payload has two things in it that the four
+        relative networks never produce: a chemical system with no small
+        molecule in it, and a transformation whose ``mappings`` is empty. Both
+        are what the views have to survive, and this is where they come from.
+
+        Every edge ends at the one reference state, which is what makes the
+        graph a star rather than a row of disjoint pairs - see
+        :func:`scripts.make_examples._absolute_network`.
+        """
+        from .conftest import read_example
+
+        payload = read_example("alchemical_network_absolute.json")
+        registry = _registry(payload)
+
+        assert payload["edges"], "an absolute network with no edges proves nothing"
+        for edge in payload["edges"]:
+            assert edge["mappings"] == []
+
+        def ligands(key: str) -> list[str]:
+            return [
+                component
+                for component in registry[key]["components"].values()
+                if registry[component]["type"] == "SmallMoleculeComponentViz"
+            ]
+
+        # One end of every edge carries a ligand and the other carries none.
+        for edge in payload["edges"]:
+            assert len(ligands(edge["stateA"])) == 1
+            assert ligands(edge["stateB"]) == []
+
+        # And it is the same reference state every time, so the nodes are the
+        # ligands plus one rather than twice the edges.
+        references = {edge["stateB"] for edge in payload["edges"]}
+        assert len(references) == 1
+        assert len(payload["nodes"]) == len(payload["edges"]) + 1
+
+        _validate(payload)
+
+    def test_a_mixed_network_carries_relative_and_absolute_edges_at_once(self):
+        """Both kinds in one graph, which is what a planner really produces.
+
+        ``alchemical_network_mixed.json`` runs four TYK2 mappings in both legs
+        and anchors two of its ligands with an absolute transformation each. The
+        point of the fixture is that the two kinds are told apart by the payload
+        alone: an edge with a mapping against an edge without one, and a third
+        composition - the apo protein - beside the two legs.
+        """
+        from .conftest import read_example
+
+        payload = read_example("alchemical_network_mixed.json")
+        registry = _registry(payload)
+
+        relative = [edge for edge in payload["edges"] if edge["mappings"]]
+        absolute = [edge for edge in payload["edges"] if not edge["mappings"]]
+        assert len(relative) == 8
+        assert len(absolute) == 2
+
+        def composition(key: str) -> tuple[str, ...]:
+            return tuple(sorted({registry[c]["type"] for c in registry[key]["components"].values()}))
+
+        compositions = {composition(key) for key in payload["nodes"]}
+        assert compositions == {
+            ("SmallMoleculeComponentViz", "SolventComponentViz"),
+            ("ProteinComponentViz", "SmallMoleculeComponentViz", "SolventComponentViz"),
+            ("ProteinComponentViz", "SolventComponentViz"),
+        }
+
+        # The absolute transformations meet at the apo system, and start from
+        # complex systems the relative edges already reach - anchors in the
+        # network rather than two more pairs beside it.
+        apo = {edge["stateB"] for edge in absolute}
+        assert len(apo) == 1
+        assert composition(*apo) == ("ProteinComponentViz", "SolventComponentViz")
+        relative_ends = {edge[side] for edge in relative for side in ("stateA", "stateB")}
+        assert {edge["stateA"] for edge in absolute} <= relative_ends
+
+        # One protein for the whole graph, complex systems and apo alike.
+        proteins = [entry for entry in payload["registry"] if entry["type"] == "ProteinComponentViz"]
+        assert len(proteins) == 1
+
+        _validate(payload)
+
+    def test_a_network_may_name_a_protocol_per_transformation(self):
+        """Three protocols over twenty transformations, which one field per edge allows.
+
+        ``alchemical_network_protocols.json`` is the fixture for the thing the
+        schema has always said and no other example showed: ``protocol`` is a
+        field of a transformation, not of a network. Most of its edges name a
+        relative protocol, four name another, and the two absolute anchors name a
+        third - so a reader of the payload can tell which part of the campaign
+        was run how, and the registry holds each protocol once however many edges
+        point at it.
+        """
+        from .conftest import read_example
+
+        payload = read_example("alchemical_network_protocols.json")
+        registry = _registry(payload)
+
+        named = [edge["protocol"] for edge in payload["edges"]]
+        assert len(named) == 20
+        counts = Counter(registry[key]["gufe_type"] for key in named)
+        assert counts == Counter(
+            {
+                "RelativeHybridTopologyProtocol": 14,
+                "NonEquilibriumCyclingProtocol": 4,
+                "AbsoluteSolvationProtocol": 2,
+            }
+        )
+
+        # Once each in the registry, whatever the edges do: a protocol is a
+        # registry entry for the same reason a protein is.
+        entries = [entry for entry in payload["registry"] if entry["type"] == "ProtocolViz"]
+        assert len(entries) == 3
+        assert {entry["gufe-key"] for entry in entries} == set(named)
+        # A Protocol has no name of its own, so the class name is all a reader gets.
+        assert all(entry["name"] == "" for entry in entries)
+
+        # The absolute edges are the ones with no mapping, and they are the ones
+        # under the protocol that decouples rather than mutates - which is why
+        # this campaign names more than one in the first place.
+        absolute = [edge for edge in payload["edges"] if not edge["mappings"]]
+        assert len(absolute) == 2
+        assert {registry[edge["protocol"]]["gufe_type"] for edge in absolute} == {"AbsoluteSolvationProtocol"}
+
+        _validate(payload)
 
     def test_a_registry_entry_is_the_same_object_as_a_standalone_payload(self):
         """The claim the one-object-per-gufe-class rule is making, asserted directly.

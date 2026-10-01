@@ -12,7 +12,7 @@ import { describe, expect, it } from "vitest";
 
 import { PAYLOAD_TYPES } from "../src/schema/types.js";
 import { formatIssues, SCHEMA_TYPES, validateAs, validatePayload } from "../src/schema/validate.js";
-import { VIEW_TAGS } from "../src/gufe-view.js";
+import { VIEW_TAGS } from "../src/alchemy-view.js";
 import {
   applyMutation,
   appliesTo,

@@ -26,9 +26,6 @@ export type RegistryEntry = ComponentViz | ProtocolViz | ChemicalSystemViz;
 /** A resolved registry: gufe key -> the object it names. */
 export type RegistryIndex = ReadonlyMap<GufeKey, RegistryEntry>;
 
-/** The empty index, for a payload that refers to nothing. */
-export const EMPTY_REGISTRY: RegistryIndex = new Map();
-
 interface MaybeCarriesRegistry {
   registry?: Registry;
 }
@@ -88,6 +85,35 @@ export function lookupOfType<T extends RegistryEntry>(
 }
 
 /**
+ * The entries `keys` name, in the order first asked for, without duplicates.
+ *
+ * This is the registry half of cutting a payload loose. A view that hands part
+ * of its payload to another element - a network handing a chemical system to
+ * `<gufe-chemical-system>`, a transformation handing a mapping to
+ * `<gufe-atom-mapping>` - has to send the objects that part refers to along
+ * with it, because the receiving element resolves keys against its own payload
+ * and nothing else.
+ *
+ * Deduplicating matters rather than being tidy: the two states of a solvent-leg
+ * transformation name the same solvent, and a registry is unique by gufe key.
+ * A key that resolves to nothing is skipped, which leaves the receiving view to
+ * report the gap exactly as it would have if the whole payload had arrived with
+ * that hole in it.
+ */
+export function entriesFor(registry: RegistryIndex, keys: Iterable<GufeKey | undefined>): RegistryEntry[] {
+  const entries: RegistryEntry[] = [];
+  const seen = new Set<GufeKey>();
+  for (const key of keys) {
+    if (!key || seen.has(key)) continue;
+    const entry = registry.get(key);
+    if (!entry) continue;
+    seen.add(key);
+    entries.push(entry);
+  }
+  return entries;
+}
+
+/**
  * A label for a registry entry.
  *
  * gufe's own network fixtures have unnamed molecules, and a row of blank circles
@@ -99,4 +125,25 @@ export function entryLabel(entry: { name?: string; "gufe-key": GufeKey }): strin
   if (entry.name) return entry.name;
   const tail = entry["gufe-key"].split("-").pop() ?? entry["gufe-key"];
   return tail.slice(0, 6);
+}
+
+/**
+ * What a protocol is called where something else is naming it.
+ *
+ * A Protocol has no name of its own, so its class name is what identifies it -
+ * and every one of those class names ends in `Protocol`, which whatever is
+ * labelling it has already said. `AbsoluteSolvationProtocol` next to
+ * `RelativeHybridTopologyProtocol` is two long labels whose only difference is
+ * at the front; dropping the tail leaves the label saying the part that tells
+ * them apart, whether that is a row of chips on a network's header or the
+ * `protocol` line of a transformation in the pane.
+ *
+ * Only a tail, and only where something is left: a protocol whose class is
+ * called exactly `Protocol` keeps that name rather than being drawn as nothing,
+ * and `ProtocolWithSettings` is untouched because the word is not at the end.
+ */
+export function protocolLabel(protocol: ProtocolViz): string {
+  const name = protocol.gufe_type || protocol.name || "Protocol";
+  const stem = name.endsWith("Protocol") ? name.slice(0, -"Protocol".length) : name;
+  return stem || name;
 }

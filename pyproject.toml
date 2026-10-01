@@ -6,9 +6,17 @@ requires = [
 ]
 
 [project]
-name = "gufe-viz"
+name = "alchemy-viz"
 description = "Visualization tools for gufe"
 readme = "README.md"
+keywords = [
+  "alchemical-free-energy",
+  "cheminformatics",
+  "computational-chemistry",
+  "gufe",
+  "openfe",
+  "visualization",
+]
 license = "MIT"
 license-files = [ "LICENSE" ]
 authors = [ { name = "The OpenFE developers", email = "openfe@omsf.io" } ]
@@ -23,47 +31,63 @@ classifiers = [
   "Programming Language :: Python :: 3.14",
   "Topic :: Scientific/Engineering :: Bio-Informatics",
   "Topic :: Scientific/Engineering :: Chemistry",
+  "Topic :: Scientific/Engineering :: Visualization",
 ]
 dynamic = [ "version" ]
-# Everything pip-installable is declared here, including gufe, because this is
-# the only file a `pip install` can see. pixi.toml lists gufe as well, and that
-# is not an oversight: a PyPI requirement is satisfied by a conda package only
-# when that package is also in pixi's own dependency table, so the entry there
-# is what redirects this requirement to conda-forge instead of to PyPI. Remove
-# it from either file and something breaks - pip users lose the constraint, or
-# pixi tries to resolve gufe from PyPI and fails.
+# Deliberately empty, and gufe is deliberately not here.
 #
-# The `>=1.12` floor is doing real work. PyPI's gufe is a single 0.4 release
-# predating the 1.0 API, so this makes `pip install gufe-viz` fail with
-# "Could not find a version that satisfies the requirement gufe>=1.12 (from
-# versions: 0.4)" rather than quietly installing a gufe whose API is gone. The
-# floor is also where SolvatedPDBComponent and ProteinMembraneComponent appear.
-dependencies = [
+# alchemy-viz is an optional companion to an openfe install, not a part of it.
+# The environment it lands in already has gufe, from conda-forge. The gufe on
+# PyPI is a single 0.4 release predating the 1.0 API, so a hard `gufe>=1.12`
+# requirement would be unsatisfiable at resolution time and would fail the
+# install for exactly the people who already have a working gufe sitting in the
+# same environment. Leaving it out is what lets `pip install alchemy-viz`
+# succeed into an openfe environment and bind to the gufe already there.
+#
+# The requirement has not disappeared, it has moved to import time:
+# `alchemy_viz._gufe.require_gufe` raises with the conda-forge instruction. See
+# the `gufe` extra below, and `pixi.toml`, which is what pulls the real one in
+# for development.
+dependencies = []
+# Declarative form of the same requirement, for anyone whose resolver can
+# actually reach a gufe >=1.12 - a conda-forge-backed pip, or a future PyPI
+# release. `pip install alchemy-viz[gufe]` is the assertion "I expect this to be
+# resolvable here"; plain `pip install alchemy-viz` makes no such claim.
+optional-dependencies.gufe = [
   "gufe>=1.12",
+]
+# The live notebook layer. `alchemy_viz.view()` works without this, returning the
+# static page. With anywidget we get update-in-place instead of the picture.
+optional-dependencies.notebook = [
+  "anywidget>=0.9",
 ]
 optional-dependencies.test = [
   "jsonschema>=4",
   "pytest>=7",
 ]
-urls.Homepage = "https://github.com/omsf-eco-infra/gufe-viz"
-urls.Issues = "https://github.com/omsf-eco-infra/gufe-viz/issues"
-scripts.gufe-viz = "gufe_viz.cli:main"
+urls.Homepage = "https://github.com/omsf-eco-infra/alchemy-viz"
+urls.Issues = "https://github.com/omsf-eco-infra/alchemy-viz/issues"
+scripts.alchemy-viz = "alchemy_viz.cli:main"
 
 [tool.setuptools]
-package-dir = { "" = "python" }
 packages.find.where = [ "python" ]
+# `python/tests/` has an `__init__.py`, so an unfiltered find() discovers it as a
+# top-level package named `tests` and installs it into site-packages, where it
+# collides with every other project that ships one. Only alchemy_viz ships.
+packages.find.include = [ "alchemy_viz*" ]
 packages.find.namespaces = false
+package-dir = { "" = "python" }
 include-package-data = true
-zip-safe = false
 # The Vite bundle and the HTML template are build artifacts, committed to the
 # repo so `pip install .` needs no Node toolchain.
-package-data.gufe_viz = [ "_assets/*" ]
+package-data.alchemy_viz = [ "_assets/*" ]
+zip-safe = false
 
 [tool.setuptools_scm]
 fallback_version = "0.0.0"
 
 [tool.ruff]
-target-version = "py311"
+target-version = "py312"
 line-length = 120
 format.docstring-code-format = true
 lint.select = [
@@ -72,5 +96,5 @@ lint.select = [
   "UP", # pyupgrade
 ]
 
-[tool.pytest.ini_options]
-testpaths = [ "python/tests" ]
+[tool.pytest]
+ini_options.testpaths = [ "python/tests" ]

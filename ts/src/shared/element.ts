@@ -1,21 +1,30 @@
 /**
- * The component model: every `<gufe-*>` element is a custom element with
- * the same three-beat lifecycle.
+ * The component model: every `<gufe-*>` element is a custom element with the
+ * same three-beat lifecycle.
  *
  *   create   `connectedCallback`  - build the DOM, start engines
  *   update   `payload` setter     - tear the old view down, build the new one
  *   destroy  `disconnectedCallback` - kill viewers, observers and timers
  *
  * This is also what makes component reuse structural rather than conventional:
- * embedding one
- * view inside another is `host.appendChild(document.createElement('gufe-...'))`,
- * and the embedded element cleans itself up when its parent removes it. And it
- * is the whole of the future notebook-widget story - an anywidget wrapper
- * creates one element and sets `.payload`.
+ * embedding one view inside another is
+ * `host.appendChild(document.createElement('gufe-...'))`, and the embedded
+ * element cleans itself up when its parent removes it. And it is the whole of
+ * the future notebook-widget story - an anywidget wrapper creates one element
+ * and sets `.payload`.
+ *
+ * Two things here are about that lifecycle rather than part of it.
+ * `connectedCallback` installs the palette, because every view goes through it
+ * and no host should have to know a stylesheet exists. And `generations` is the
+ * same staleness guard the element keeps for itself, in a form a view can use
+ * inside one render - a paint that lands after the thing that asked for it has
+ * moved on must be dropped, wherever it was started.
  */
 
-import { centredMessage, el, errText } from "./dom.js";
-import { T } from "./theme.js";
+import { el, errText } from "./dom.js";
+import { FONT } from "./style.js";
+import { centredMessage } from "./panels.js";
+import { installTheme, V } from "./theme.js";
 
 /**
  * What a view hands back so the element can drive it afterwards.
@@ -27,13 +36,90 @@ import { T } from "./theme.js";
 export interface ViewHandle {
   onResize?(): void;
   cleanup?(): void;
+  /**
+   * What this view would need to be put back the way it is right now.
+   *
+   * Everything a `Setting` covers is already remembered, so this is for the rest:
+   * where the camera is, what is selected, where a layout settled. All of it is
+   * about *the payload on screen* rather than about how the reader likes to
+   * look at things, which is exactly why it is not a setting.
+   *
+   * The value must be JSON, because the only hosts that ask for it are the ones
+   * sending it somewhere else. `seededViewState` is the way back in.
+   */
+  viewState?(): unknown;
+}
+
+/**
+ * The global a host puts view state in for the next render to pick up.
+ *
+ * A global rather than an attribute or a property: the state has to be readable
+ * while the view is building itself, which is before any caller has a handle on
+ * anything to set it on. `debug.ts` uses one for the same reason.
+ */
+export const VIEW_STATE_GLOBAL = "ALCHEMY_VIZ_VIEW_STATE";
+
+/**
+ * Take the state a host left for `key`, if any. One-shot.
+ *
+ * Removed as it is read, so that a second view of the same kind on the page
+ * builds itself normally instead of opening on the first one's camera, and so
+ * that a re-render after a resize does not keep undoing what the reader has
+ * done since.
+ */
+export function seededViewState(key: string): unknown {
+  const seeds = (globalThis as Record<string, unknown>)[VIEW_STATE_GLOBAL];
+  if (!seeds || typeof seeds !== "object") return null;
+  const store = seeds as Record<string, unknown>;
+  const found = store[key];
+  delete store[key];
+  return found ?? null;
+}
+
+/**
+ * A generation counter, for work that finishes after it may have been
+ * superseded.
+ *
+ * The same problem `AlchemyElement` solves for itself with `#generation`, in the
+ * form a view can use inside one render. Anything a view starts and then waits
+ * on - a force layout relaxed off the next turn, an engine behind a CDN fetch -
+ * can land after a resize, a mode switch or a teardown has moved on, and then
+ * paints into a stage that belongs to something else. Both graph views drew a
+ * stack of graphs down one canvas this way, and the mapping view could draw one
+ * mode's boxes into another mode's stage.
+ *
+ * `start()` hands back the question "is this still the current one", which is
+ * also false once `stop()` has been called - so a view being torn down needs no
+ * second flag beside the counter.
+ */
+export function generations(): { start(): () => boolean; stop(): void } {
+  let era = 0;
+  let running = true;
+  return {
+    start() {
+      const mine = ++era;
+      return () => running && mine === era;
+    },
+    stop() {
+      running = false;
+      era++;
+    },
+  };
 }
 
 /** Debounce for the resize observer: a graph view re-lays out its whole
  * simulation, and dragging a window edge would otherwise fire that per pixel. */
 const RESIZE_DEBOUNCE_MS = 150;
 
-export abstract class GufeElement<P> extends HTMLElement {
+/**
+ * Marks the wrapper every view is built inside.
+ *
+ * Read by `connectedCallback`: a view whose parent carries this is nested in
+ * another one, and so already has a height to fill.
+ */
+const SHELL_ATTRIBUTE = "data-gufe-shell";
+
+export abstract class AlchemyElement<P> extends HTMLElement {
   #payload: P | null = null;
   #handle: ViewHandle | null = null;
   #shell: HTMLDivElement | null = null;
@@ -71,12 +157,37 @@ export abstract class GufeElement<P> extends HTMLElement {
   }
 
   connectedCallback(): void {
-    this.style.display = "block";
+    // The palette, once per document. Here rather than at module scope because
+    // it writes to `document.head`, and the bundle is evaluated in places that
+    // have no document yet; every view goes through this, so no host has to know
+    // the stylesheet exists.
+    installTheme();
+    // A flex column rather than a block, so the shell inside is an item this
+    // element can shrink. That is what makes the ceiling below bite.
+    this.style.display = "flex";
+    this.style.flexDirection = "column";
     this.style.width = this.style.width || "100%";
-    this.style.height = this.style.height || "100%";
-    this.style.background = T.appBg;
-    this.style.color = T.textPrimary;
-    this.style.fontFamily = "'Inter',system-ui,sans-serif";
+    const ownHeight = this.style.height;
+    this.style.height = ownHeight || "100%";
+    // The ceiling that goes with that `100%`, and only with it.
+    //
+    // A page that never says how tall the container is - a bare `<div>` in a
+    // notebook cell, a document without `height:100%` on `html, body` - makes
+    // the `100%` resolve to the content's own height. The view then grows to
+    // whatever it holds instead of scrolling inside a frame, and a menu listing
+    // two hundred ligands pushes its own buttons off the bottom of the page.
+    // The viewport is the honest ceiling for a view that was told to fill its
+    // parent and never told what that means.
+    //
+    // Three cases keep their own height instead: an element the page sized
+    // itself, one nested in another gufe view - whose parent is our own shell,
+    // which always has a height - and one the page gave a `max-height`.
+    if (!ownHeight && !this.parentElement?.closest(`[${SHELL_ATTRIBUTE}]`) && this.#noMaxHeight()) {
+      this.style.maxHeight = "100vh";
+    }
+    this.style.background = V.appBg;
+    this.style.color = V.textPrimary;
+    this.style.fontFamily = FONT.family;
 
     // A host can resize the element without any event firing, so watch it.
     if (typeof ResizeObserver !== "undefined" && !this.#observer) {
@@ -107,7 +218,7 @@ export abstract class GufeElement<P> extends HTMLElement {
       try {
         this.#handle.cleanup();
       } catch (e) {
-        console.warn("[gufe-viz] cleanup failed:", e);
+        console.warn("[alchemy-viz] cleanup failed:", e);
       }
     }
     this.#handle = null;
@@ -115,13 +226,29 @@ export abstract class GufeElement<P> extends HTMLElement {
     this.#shell = null;
   }
 
+  /**
+   * Whether nothing has given this element a `max-height` already - inline, or
+   * in a stylesheet, which is how a page raises the ceiling above.
+   */
+  #noMaxHeight(): boolean {
+    if (typeof getComputedStyle !== "function") return true;
+    const declared = getComputedStyle(this).maxHeight;
+    return !declared || declared === "none";
+  }
+
   /** Tear the mounted view down and hand back a fresh, empty shell. */
   #resetShell(): HTMLDivElement {
     this.#teardown();
     this.#shell = el(
       "div",
-      `width:100%;height:100%;display:flex;flex-direction:column;overflow:hidden;background:${T.appBg};`,
+      // `flex:1;min-height:0` and not height alone: inside a host clamped by the
+      // ceiling above, the shell has to be shrinkable or it overflows it.
+      `width:100%;height:100%;flex:1 1 auto;min-height:0;display:flex;flex-direction:column;` +
+        `overflow:hidden;background:${V.appBg};`,
     );
+    // What tells a nested view that its parent has a height already. See the
+    // ceiling in `connectedCallback`.
+    this.#shell.setAttribute(SHELL_ATTRIBUTE, "");
     this.appendChild(this.#shell);
     return this.#shell;
   }
@@ -171,7 +298,7 @@ export abstract class GufeElement<P> extends HTMLElement {
       try {
         handle?.cleanup?.();
       } catch (e) {
-        console.warn("[gufe-viz] cleanup of a superseded view failed:", e);
+        console.warn("[alchemy-viz] cleanup of a superseded view failed:", e);
       }
       return;
     }
@@ -180,13 +307,21 @@ export abstract class GufeElement<P> extends HTMLElement {
 
   #renderFailed(host: HTMLDivElement, generation: number, e: unknown): void {
     if (generation !== this.#generation) return;
-    console.warn("[gufe-viz] render failed:", e);
+    console.warn("[alchemy-viz] render failed:", e);
     host.replaceChildren(centredMessage(`Failed to render: ${errText(e)}`, true));
   }
 
   /** Force a resize pass - for hosts that know they resized us. */
   resize(): void {
     this.#handle?.onResize?.();
+  }
+
+  /**
+   * What the mounted view would need to be restored as it is now, or null when
+   * it has nothing to say. See `ViewHandle.viewState`.
+   */
+  viewState(): unknown {
+    return this.#handle?.viewState?.() ?? null;
   }
 }
 

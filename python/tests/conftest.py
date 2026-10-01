@@ -14,7 +14,7 @@ import pytest
 
 REPO = pathlib.Path(__file__).resolve().parent.parent.parent
 EXAMPLES_DIR = REPO / "examples"
-SCHEMA_PATH = REPO / "schema" / "gufe-viz.schema.json"
+SCHEMA_PATH = REPO / "schema" / "alchemy-viz.schema.json"
 MUTATIONS_PATH = REPO / "python" / "tests" / "mutations.json"
 
 
@@ -65,8 +65,8 @@ def every_payload_type() -> dict[str, dict]:
     import warnings
 
     import gufe
-    from gufe_viz import payload_for
-    from gufe_viz.components import component_payload
+    from alchemy_viz import payload_for
+    from alchemy_viz.components import component_payload
     from rdkit import Chem
     from rdkit.Chem import AllChem
 
@@ -220,5 +220,31 @@ def apply_mutation(payload: dict, mutation: dict) -> dict:
 
 
 def applies_to(mutation: dict, payload: dict) -> bool:
+    """Whether ``mutation`` is meant for ``payload``.
+
+    ``types`` selects on the payload's own type. ``pathType`` selects on the
+    type of the object the path lands *inside*, which is what a row aimed at one
+    entry of a registry needs: entries are sorted by ``(type, gufe-key)``, so an
+    index naming a small molecule in one fixture names a protein in the next,
+    and "a small molecule carrying a pdb" applied to a protein asserts nothing -
+    the field is native there, and the payload stays valid. Selecting on the
+    entry rather than on the index is what keeps such a row honest as fixtures
+    are added.
+    """
     types = mutation.get("types")
-    return types is None or payload.get("type") in types
+    if types is not None and payload.get("type") not in types:
+        return False
+
+    wanted = mutation.get("pathType")
+    if wanted is None:
+        return True
+
+    try:
+        node = payload
+        for part in _split(mutation["path"])[:-1]:
+            node = _descend(node, part, mutation["path"])
+    except PointerMissing:
+        # The path is absent here, which `apply_mutation` would report as a skip
+        # anyway. Not selecting it is the same answer, one step earlier.
+        return False
+    return isinstance(node, dict) and node.get("type") in wanted
