@@ -2,29 +2,13 @@
  * The bundle entry point.
  *
  * Importing this registers every `<gufe-*>` custom element. Each gufe/schema
- * type has a corresponding `<gufe-*>` element. This is what `to_html` inlines
- * and what the notebook widget loads.
+ * type has a corresponding `<gufe-*>` element. Consumed by `to_html`.
  *
- * ## Why there is almost nothing exported here
- *
- * The whole of the browser-facing contract is two lines a host writes:
+ * The whole of the browser-facing part is two lines in the host:
  *
  *     document.querySelector("alchemy-view").payload = payload;
  *
- * That is what `python/alchemy_viz/html.py` does, what `notebook.py` does, and what
- * `ts/tests/bundle.test.ts` drives the built artifact through. Every test in the
- * suite imports this file for its side effects alone and then reaches into
- * `src/**` directly for anything it needs to inspect.
- *
- * What is exported is what something outside actually reads, and nothing else.
- * A file that re-exports the internals reads as a public API, which makes every
- * rename inside `shared/` look like a breaking change and pulls `export` onto
- * things that have one caller.
- *
- * `VIEW_TAGS` and `PAYLOAD_TYPES` stay because `bundle.test.ts` asks the built
- * bundle which types it draws, rather than being told in a fixture that goes
- * stale the day a view lands. Anything else a host turns out to need is one line
- * to add back, with a caller to justify it.
+ * `python/alchemy_viz/html.py` and `notebook.py` both call this.
  */
 
 import "./alchemy-view.js";
@@ -60,6 +44,15 @@ export { VIEW_TAGS } from "./alchemy-view.js";
 
 /** Every `type` the schema declares, drawn or not. */
 export { PAYLOAD_TYPES } from "./schema/validate.js";
+
+/**
+ * The payload shapes, for a TypeScript caller. Not internals: `types.ts` is
+ * generated from the schema both languages are downstream of, so a rename
+ * here is a breaking change already. On the main entry rather than a subpath
+ * so the import a consumer already has is where the types are; `export type`
+ * erases at build time, so the bundle is unchanged.
+ */
+export type * from "./schema/types.js";
 
 /**
  * The settings a view has remembered, on the console.

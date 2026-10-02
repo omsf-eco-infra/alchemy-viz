@@ -27,18 +27,24 @@
  * the browser actually get?", which is otherwise unreadable inside the page.
  */
 
-import { el } from "./shared/dom.js";
-import { centredMessage } from "./shared/panels.js";
-import { logPayload } from "./shared/debug.js";
-import { SOURCE_ATTRIBUTE, sourceName } from "./shared/source.js";
+import type { PayloadType } from './schema/types.js';
 import {
-  defineElement,
+  formatIssues,
+  validatePayload,
+} from './schema/validate.js';
+import { logPayload } from './shared/debug.js';
+import { el } from './shared/dom.js';
+import {
   AlchemyElement,
+  defineElement,
   type ViewHandle,
-} from "./shared/element.js";
-import { V } from "./shared/theme.js";
-import { formatIssues, validatePayload } from "./schema/validate.js";
-import type { PayloadType } from "./schema/types.js";
+} from './shared/element.js';
+import { centredMessage } from './shared/panels.js';
+import {
+  SOURCE_ATTRIBUTE,
+  sourceName,
+} from './shared/source.js';
+import { V } from './shared/theme.js';
 
 /**
  * The dispatch table: `type` -> custom element tag.
@@ -223,3 +229,14 @@ function describePayload(payload: unknown): string | null {
 }
 
 defineElement("alchemy-view", AlchemyView);
+
+/**
+ * `createElement("alchemy-view")` and `querySelector` typed as the element.
+ * Without this, the published package hands a consumer a plain `HTMLElement`
+ * and `.payload =` is a type error.
+ */
+declare global {
+  interface HTMLElementTagNameMap {
+    "alchemy-view": AlchemyView;
+  }
+}

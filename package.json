@@ -1,13 +1,14 @@
 {
-  "name": "alchemy-viz",
+  "name": "alchemy-viz-dev",
   "version": "0.0.0",
   "private": true,
-  "description": "Visualization tools for gufe - TypeScript custom elements",
+  "description": "Development manifest; npm/package.json is the published one.",
   "license": "MIT",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build --config vite.lib.config.ts",
+    "build:npm": "rm -rf npm/dist && mkdir -p npm/dist && cp python/alchemy_viz/_assets/alchemy-viz.js schema/alchemy-viz.schema.json npm/dist/ && cp LICENSE npm/LICENSE && tsc -p tsconfig.npm.json --outDir npm/dist",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",

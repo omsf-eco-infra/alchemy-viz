@@ -44,6 +44,27 @@ html = to_html(obj)  # the same page as a string; writes nothing
 
 `view()` takes a live gufe object or an alchemy-viz payload dict.
 
+### Embedding into a webpage
+
+Embed the visualization module directly into your own websites:
+
+```bash
+npm install alchemy-viz
+```
+
+```ts
+import "alchemy-viz";
+// Or from a CDN with no build step:
+// import "https://cdn.jsdelivr.net/gh/omsf-eco-infra/alchemy-viz@main/python/alchemy_viz/_assets/alchemy-viz.js";
+import type { AlchemyVizPayload } from "alchemy-viz";
+
+const payload: AlchemyVizPayload = await (await fetch("payload.json")).json();
+
+const view = document.createElement("alchemy-view");
+document.body.append(view);
+view.payload = payload;
+```
+
 ## Documentation
 
 | Doc | Description |

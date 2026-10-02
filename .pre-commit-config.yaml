@@ -25,6 +25,8 @@ repos:
       - id: check-toml
       - id: check-yaml
       - id: check-json
+        # tsconfig files are JSONC; a strict JSON parser chokes on comments.
+        exclude: ^tsconfig\..*\.json$
       - id: debug-statements
       - id: destroyed-symlinks
       - id: end-of-file-fixer

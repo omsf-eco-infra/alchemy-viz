@@ -1,0 +1,50 @@
+{
+  "name": "alchemy-viz",
+  "version": "0.0.0",
+  "description": "Browser visualizations for gufe and OpenFE objects: ligands, proteins, atom mappings, ligand networks and alchemical campaigns.",
+  "license": "MIT",
+  "author": "The OpenFE developers <openfe@omsf.io>",
+  "homepage": "https://github.com/omsf-eco-infra/alchemy-viz#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/omsf-eco-infra/alchemy-viz.git",
+    "directory": "npm"
+  },
+  "bugs": {
+    "url": "https://github.com/omsf-eco-infra/alchemy-viz/issues"
+  },
+  "keywords": [
+    "alchemical-free-energy",
+    "cheminformatics",
+    "computational-chemistry",
+    "custom-elements",
+    "gufe",
+    "molecule-viewer",
+    "openfe",
+    "visualization"
+  ],
+  "type": "module",
+  "sideEffects": [
+    "./dist/alchemy-viz.js"
+  ],
+  "types": "./dist/index.d.ts",
+  "main": "./dist/alchemy-viz.js",
+  "module": "./dist/alchemy-viz.js",
+  "unpkg": "./dist/alchemy-viz.js",
+  "jsdelivr": "./dist/alchemy-viz.js",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/alchemy-viz.js"
+    },
+    "./schema.json": "./dist/alchemy-viz.schema.json",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  }
+}

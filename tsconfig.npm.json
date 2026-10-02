@@ -1,0 +1,23 @@
+{
+  // The declaration build, for the npm package only. `tsconfig.json` is the
+  // editor's view of the repository - sources, tests and the Vite configs,
+  // checked but never emitted. This one emits, and starts from
+  // `ts/src/index.ts` alone so the shipped `.d.ts` tree is exactly what the
+  // published entry point can reach: not the dev pages, not the tests.
+  //
+  // `types: []` because node, vite/client and vitest/globals are development
+  // dependencies; leaving them in would make a consumer's `tsc` demand
+  // @types/node to read a payload type.
+  //
+  // Declarations only: the runtime half of the package is the Vite bundle.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": [],
+    "noEmit": false,
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "rootDir": "ts/src"
+  },
+  "include": ["ts/src/index.ts"],
+  "exclude": ["ts/src/dev"]
+}
